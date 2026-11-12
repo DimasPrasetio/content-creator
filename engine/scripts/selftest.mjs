@@ -53,6 +53,8 @@ if (real) {
 } else {
   copyFileSync(SAMPLE_MD, p.script);
   copyFileSync(SAMPLE_AUDIO, src);
+  // waktu per kata sampel (hasil forced alignment ElevenLabs): sinkron tanpa whisper & tanpa kredit
+  copyFileSync(SAMPLE_AUDIO.replace(/\.mp3$/, ".align.json"), src.replace(/\.mp3$/, ".align.json"));
 }
 const scenesN = real ? 2 : 3;
 const lines = real

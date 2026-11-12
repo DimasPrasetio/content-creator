@@ -19,7 +19,8 @@
     "music": "node scripts/eleven_audio.mjs music",
     "export": "node scripts/export.mjs",
     "selftest": "node scripts/selftest.mjs",
-    "drive": "node scripts/drive.mjs"
+    "drive": "node scripts/drive.mjs",
+    "brand": "node scripts/brand.mjs"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.77.0",

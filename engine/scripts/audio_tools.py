@@ -1,14 +1,18 @@
 """Alat analisis audio untuk pipeline video.
 
 Pemakaian:
-  python audio_tools.py words <wav> [--lang id]          -> JSON kata + timestamp (faster-whisper)
+  python audio_tools.py words <wav> [--lang id]          -> JSON kata + timestamp (faster-whisper; model opsional)
   python audio_tools.py pitch <wav> <start:end> ...      -> JSON nada (F0 median) & rasio voiced per segmen (detik)
   python audio_tools.py speaker <ref.wav> <wav> <start:end> ... -> kemiripan suara (cosine) tiap segmen vs referensi
-  python audio_tools.py prosody <wav> [--lang id]          -> ekspresi: variasi nada (semitone), kejelasan kata, tempo
+  python audio_tools.py prosody <wav> [--lang id] [--no-asr] -> ekspresi: variasi nada (semitone), kejelasan kata (whisper), tempo
   python audio_tools.py score <ref.wav> <wav> [--lang id]  -> nilai satu take (kejelasan, ekspresi, kemiripan) untuk memilih take terbaik
   python audio_tools.py onset <wav> <start:end> ...        -> formant F1/F2 di awal segmen (cek bunyi vokal, mis. "E Ai" vs "A-i")
   python audio_tools.py quiet <wav> <start:end> ...        -> detik paling hening (RMS 20 ms) di tiap rentang
 """
+
+import os as _os
+_os.environ["PATH"] = _os.pathsep.join([_os.path.expanduser("~/.local/share/content-creator/tools/bin"), _os.path.expanduser("~/.local/bin"), _os.environ.get("PATH", "")])
+
 
 import json
 import sys
@@ -147,15 +151,17 @@ def speaker(ref: str, path: str, ranges: list[tuple[float, float]]) -> list[floa
     return out
 
 
-def prosody(path: str, lang: str = "id") -> dict:
+def prosody(path: str, lang: str = "id", asr: bool = True) -> dict:
     """Ukuran 'hidup'-nya suara: variasi nada (st), rentang nada, kejelasan ASR, kata per detik."""
     data, sr = sf.read(path, always_2d=True)
     x = data.mean(axis=1)
     win, hop = int(0.04 * sr), int(0.01 * sr)
     f0 = [f for i in range(0, len(x) - win, hop) if (f := _f0(x[i : i + win], sr))]
     st = 12 * np.log2(np.array(f0) / np.median(f0)) if f0 else np.array([0.0])
-    ws = words(path, lang)
     dur = len(x) / sr
+    if not asr:
+        return {"pitch_std_st": round(float(np.std(st)), 2), "pitch_range_st": round(float(np.percentile(st, 90) - np.percentile(st, 10)), 2)}
+    ws = words(path, lang)
     return {
         "pitch_std_st": round(float(np.std(st)), 2),
         "pitch_range_st": round(float(np.percentile(st, 90) - np.percentile(st, 10)), 2),
@@ -177,7 +183,7 @@ if __name__ == "__main__":
         print(json.dumps(pitch(path, rs)))
     elif cmd == "prosody":
         lang = sys.argv[sys.argv.index("--lang") + 1] if "--lang" in sys.argv else "id"
-        print(json.dumps(prosody(path, lang), ensure_ascii=False))
+        print(json.dumps(prosody(path, lang, "--no-asr" not in sys.argv), ensure_ascii=False))
     elif cmd == "score":
         lang = sys.argv[sys.argv.index("--lang") + 1] if "--lang" in sys.argv else "id"
         take = sys.argv[3]

@@ -1,4 +1,6 @@
 {
+  "sync": "auto",
+  "qa": { "asr": "auto" },
   "provider": "elevenlabs",
   "elevenlabs": {
     "voice": "George",

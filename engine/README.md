@@ -11,7 +11,7 @@ Jalankan dari folder `Engine/`.
 
 | Perintah | Fungsi |
 | --- | --- |
-| `npm run check` | Cek kesiapan: folder project, ffmpeg, ElevenLabs (key dari `.env.local`, sisa kuota, voice default) atau VoiceStudio, mesin motion-graphics-v4, referensi narator, venv analisis, model transkripsi, browser render |
+| `npm run check` | Cek kesiapan: folder project, ffmpeg, ElevenLabs (key dari `.env.local`, sisa kuota, voice default) atau VoiceStudio, mesin motion-graphics-v4, referensi narator, venv analisis, whisper (opsional), browser render |
 | `npm run voice -- <nama>` | Buat voice over + sinkron kata. Default ElevenLabs dari `Projects/<nama>/script.txt` (dengan tag ekspresi). Opsi: `--voice=<nama\|id>`, `--profile=<slug>`, `--provider=voicestudio`, `--force` (buat ulang suara, memakai kredit lagi) |
 | `npm run voice -- <nama> --audio=<file>` | Pakai voice over yang sudah jadi dari luar (mis. ElevenLabs mp3): TTS dilewati, audio hanya diseragamkan (mono 44,1 kHz, -16 LUFS, tanpa sisipan jeda) lalu disinkronkan per kata. Tag ekspresi seperti `[laugh]` tidak ditulis di naskah |
 | `npm run render -- <nama> --preview` | (Pop) 1 gambar per scene ke `Projects/<nama>/preview/` untuk cek visual (cepat). Tambah `--draft` untuk contoh frame dari naskah saja (timing perkiraan, tanpa suara) ke `preview/draft/` |
@@ -53,12 +53,15 @@ VoiceStudio (cadangan, opsional, aplikasi lokal macOS) harus terbuka bila dipaka
 ```bash
 cd Engine && npm install
 uv venv .venv --python 3.12 --python-preference only-managed
-uv pip install --python .venv/bin/python faster-whisper==1.2.1 numpy soundfile scipy resemblyzer "setuptools<81" playwright pillow
+uv pip install --python .venv/bin/python numpy soundfile scipy librosa webrtcvad-wheels "setuptools<81" playwright pillow
+uv pip install --python .venv/bin/python --no-deps resemblyzer
+# opsional: uv pip install --python .venv/bin/python faster-whisper==1.2.1   (+ model, lihat di bawah)
 .venv/bin/python -m playwright install chromium   # untuk motion-graphics-v4 dan jalur HTML
 # key ElevenLabs (dari root project): npx -y @elevenlabs/cli@latest onboard init
 ```
 
-Model transkripsi `deepdml/faster-whisper-large-v3-turbo-ct2` diunduh ke cache Hugging Face oleh `bin/setup.sh` (±1,6 GB, sekali).
+Whisper opsional: `bin/setup.sh --with-whisper` memasang faster-whisper + model `deepdml/faster-whisper-large-v3-turbo-ct2`
+(±1,8 GB) untuk QA kejelasan kata gratis, sinkron offline, dan VoiceStudio.
 
 ## Cara suara dibuat
 
@@ -68,8 +71,13 @@ Model transkripsi `deepdml/faster-whisper-large-v3-turbo-ct2` diunduh ke cache H
 - **Pelafalan** (`config.json` → `pronounce`): mis. `"AI": "E Ai"`. Hanya mengubah teks yang dibacakan; tulisan di layar tetap "AI". Tambahkan istilah lain bila pelafalannya salah.
 - **Gaya** (`> gaya: pelan` di scene): suara natural yang sama dengan volume sedikit lebih rendah, untuk kalimat sampingan. Bisikan sintetis tidak dipakai karena terdengar seperti mesin.
 - **Emosi lewat naskah**: tanda seru, tanda tanya, jeda `...`, dan interjeksi (Nah, Eh, Iya, beneran!) paling berpengaruh pada intonasi.
-- **Sinkron**: audio ditranskripsi per kata (faster-whisper) dan dicocokkan ke naskah; scene & elemen visual muncul saat katanya diucapkan.
-  Bila ASR salah mengeja istilah (mis. nama brand terdengar lain), tambahkan ke `config.json` → `asrAlias`.
+- **Sinkron**: waktu per kata dicocokkan ke naskah; scene & elemen visual muncul saat katanya diucapkan. Sumber waktu
+  (`config.json` → `sync`, frontmatter `sync:`, atau `--sync=`): `auto` (bawaan) = timestamps ElevenLabs yang ikut dikirim
+  bersama suara (gratis) → whisper lokal bila terpasang → forced alignment ElevenLabs (tarif Speech to Text, untuk cache
+  lama/audio luar). `eleven` / `whisper` memaksa salah satu. Audio luar boleh disertai `<file>.align.json` (`[{w,s,e}]`).
+  Bila whisper salah mengeja istilah, tambahkan ke `config.json` → `asrAlias` (tidak dipakai untuk sumber ElevenLabs).
+- **QA kejelasan kata** (`npm run qa -- <nama> --asr=auto|whisper|eleven|off`, atau `config.json` → `qa.asr`): `auto` =
+  whisper bila terpasang, selain itu dilewati; `eleven` = Speech to Text ElevenLabs (Scribe, memakai kuota STT).
 
 Batas yang perlu diketahui: hanya engine OmniVoice yang mendukung bahasa Indonesia, dan ia tidak punya kontrol emosi langsung. Untuk suara paling natural, ganti referensi narator dengan **rekaman manusia asli** 10-20 detik yang ekspresif (dengan izin pemilik suara): simpan sebagai `voices/narator-ekspresif.wav` + transkripnya di `.txt`.
 

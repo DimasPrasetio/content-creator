@@ -11,6 +11,10 @@ Pemakaian (dipanggil oleh scripts/html.mjs):
 - Tiap frame: await window.seek(t) -> screenshot JPEG (q95) -> ffmpeg H.264 yuv420p 30 fps.
 """
 
+import os as _os
+_os.environ["PATH"] = _os.pathsep.join([_os.path.expanduser("~/.local/share/content-creator/tools/bin"), _os.path.expanduser("~/.local/bin"), _os.environ.get("PATH", "")])
+
+
 import argparse
 import functools
 import http.server

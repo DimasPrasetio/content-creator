@@ -15,18 +15,22 @@ Docs and prompts are in Indonesian.*
   - **C · HTML motion** (15 skill dari [motion-graphics-skills](https://github.com/charlie947/motion-graphics-skills)):
     launch video premium, explainer dokumenter, keynote ala Apple, chart animasi, milestone, efek UI, opener 3D.
 - **Suara ElevenLabs** lewat SDK resmi, satu voice per video, profil suara per brand, seed tetap, jangkar konsistensi suara.
-- **Sinkron per kata**: transkripsi faster-whisper; elemen muncul tepat saat katanya diucapkan.
+- **Sinkron per kata**: waktu tiap kata langsung dari ElevenLabs (timestamps, tanpa biaya tambahan); elemen muncul tepat
+  saat katanya diucapkan. Whisper lokal opsional (`--with-whisper`) untuk QA kejelasan kata gratis / offline.
 - **QA otomatis**: format, loudness, konsistensi suara, kejelasan, sinkron, dan **cek tata letak** (teks terpotong, keluar
   bingkai, menabrak brand pojok, tertutup UI Reels).
 - **Paket posting**: subtitle SRT/VTT, thumbnail, caption + hashtag; ekspor 4:5 / 1:1 / 16:9.
 - **Hasil per brand**: `Result/<brand>/<nama>/` dan, setelah disetujui, salinan ke Google Drive (rclone).
 
 ## Kebutuhan
-- [Claude Code](https://claude.com/claude-code)
-- macOS atau Linux (Ubuntu 22.04/24.04 diuji untuk VPS), Node.js ≥ 20, ffmpeg (libx264), Python 3.12 lewat [uv](https://docs.astral.sh/uv/), rsync
-- Akun **ElevenLabs** (voice dari Voice Library butuh paket berbayar; paket free hanya voice premade)
-- Opsional: `rclone` + akun Google untuk unggah Drive; skill Anthropic `motion-graphics-v4` untuk jalur B
-- Disk ±5 GB (dependensi, browser render, model transkripsi ±1,6 GB), RAM 8 GB+
+- [Claude Code](https://claude.com/claude-code), macOS (dengan [Homebrew](https://brew.sh)) atau Linux (Ubuntu/Debian; root atau sudo tanpa password paling mulus)
+- 4 CPU, RAM 8 GB+, disk kosong ±4 GB (+1,8 GB bila memakai whisper); GPU tidak perlu
+- **Semua komponen pendukung dipasang otomatis oleh setup**: Node.js, ffmpeg, uv + Python 3.12, rclone, paket npm/Python,
+  Chromium, library sistem Chromium (Linux). Tidak ada model besar yang wajib diunduh.
+- Yang Anda siapkan sendiri hanya **akun**: ElevenLabs (wajib; voice Voice Library butuh paket berbayar), Google
+  Drive (opsional), dan skill Anthropic `motion-graphics-v4` (opsional, jalur B).
+
+Panduan lengkap, termasuk pola tim: **[docs/SETUP.md](docs/SETUP.md)**
 
 ## Pasang
 Di Claude Code:
@@ -35,8 +39,9 @@ Di Claude Code:
 /plugin install content-creator@content-creator
 /content-creator:setup
 ```
-`/content-creator:setup` memandu: memasang mesin ke folder **workspace** Anda (bawaan `~/ContentCreator`), dependensi,
-browser render, model transkripsi, key ElevenLabs (`elevenlabs onboard`), voice default, dan (opsional) Google Drive.
+`/content-creator:setup` memasang semuanya ke folder **workspace** Anda (bawaan `~/ContentCreator`), lalu memandu login
+ElevenLabs (`elevenlabs onboard`, klik Authorize di browser), voice default, dan (opsional) Google Drive. Profil brand
+bisa dibagikan antar anggota tim dengan `npm run brand -- pack/unpack`.
 Tanpa Claude Code, setup bisa dijalankan langsung: `bash bin/setup.sh ~/ContentCreator`.
 
 ## Pakai
@@ -48,7 +53,7 @@ Agent menanyakan hal yang perlu (tujuan, penonton, hook, CTA, rasa visual, rasa 
 frame + audisi suara, meminta persetujuan naskah sebelum memakai kredit, lalu memproduksi sampai `Result/<brand>/<nama>/`.
 
 Perintah mesin (dari `<workspace>/Engine`): `npm run check`, `voice`, `render`, `mg4`, `html`, `sound`, `qa`, `posting`,
-`export`, `drive`, `voices`, `selftest`. Rincian: [engine/README.md](engine/README.md).
+`export`, `drive`, `voices`, `brand`, `selftest`. Rincian: [engine/README.md](engine/README.md).
 
 ## Struktur
 ```

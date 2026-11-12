@@ -2,7 +2,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { ensureBrowser } from "@remotion/renderer";
-import { DIRS, ENGINE, ROOT, config, mg4Skill, run } from "./lib.mjs";
+import { DIRS, ENGINE, ROOT, config, mg4Skill, run, whisperReady } from "./lib.mjs";
 
 const cfg = config();
 let bad = 0;
@@ -26,7 +26,7 @@ for (const tool of ["ffmpeg", "ffprobe"]) {
 
 const provider = (cfg.provider ?? "voicestudio").toLowerCase();
 if (provider === "elevenlabs") {
-  if (!process.env.ELEVENLABS_API_KEY) fail("ELEVENLABS_API_KEY belum ada", "di root project: npx -y @elevenlabs/cli@latest onboard init");
+  if (!process.env.ELEVENLABS_API_KEY) fail("ELEVENLABS_API_KEY belum ada", "di folder workspace (bukan Engine/): npx -y @elevenlabs/cli@latest onboard init, lihat docs/SETUP.md");
   else
     try {
       const { eleven, quota } = await import("./eleven.mjs");
@@ -59,9 +59,33 @@ if (provider === "elevenlabs") {
     : fail("referensi suara narator tidak ada", "lihat Engine/README.md bagian Suara narator");
 }
 
+// Google Drive (opsional): rclone + remote + akses ke folder tujuan
+{
+  const d = cfg.drive ?? {};
+  const remote = d.remote ?? "gdrive";
+  if (!d.rootFolderId) console.log("  -    Google Drive belum diatur (opsional): isi drive.rootFolderId di config.local.json, lihat docs/SETUP.md");
+  else {
+    let remotes = null;
+    try {
+      remotes = run("rclone", ["listremotes"]);
+    } catch {
+      fail("rclone belum terpasang", "jalankan ulang /content-creator:setup");
+    }
+    if (remotes !== null && !remotes.split("\n").includes(`${remote}:`))
+      fail(`remote rclone "${remote}" belum ada`, `rclone config create ${remote} drive scope=drive root_folder_id=${d.rootFolderId}`);
+    else if (remotes !== null)
+      try {
+        const dirs = JSON.parse(run("rclone", ["lsjson", `${remote}:`, "--dirs-only", "--max-depth", "1"]));
+        ok(`Google Drive ${d.rootName || d.rootFolderId} bisa diakses (${dirs.length} folder brand)`);
+      } catch (e) {
+        fail(`Google Drive tidak bisa diakses: ${String(e.stderr || e.message).split("\n").find((l) => /ERROR|Failed|error/.test(l)) ?? "cek koneksi/izin"}`, "pastikan akun Google Anda punya akses Editor ke folder, lalu rclone config reconnect " + remote + ":");
+      }
+  }
+}
+
 try {
-  run(path.join(ENGINE, ".venv", "bin", "python"), ["-c", "import faster_whisper, resemblyzer, scipy, soundfile"]);
-  ok("venv analisis audio (faster-whisper, resemblyzer, scipy)");
+  run(path.join(ENGINE, ".venv", "bin", "python"), ["-c", "import resemblyzer, scipy, soundfile"]);
+  ok("venv analisis audio (resemblyzer, scipy)");
 } catch {
   fail("venv analisis audio belum siap", "lihat Engine/README.md bagian Persiapan");
 }
@@ -74,9 +98,10 @@ else
   } catch (e) {
     fail(`motion-graphics-v4 tidak bisa dicek: ${e.message.split("\n")[0]}`);
   }
-existsSync(path.join(process.env.HOME, ".cache/huggingface/hub/models--deepdml--faster-whisper-large-v3-turbo-ct2"))
-  ? ok("model transkripsi (whisper large-v3-turbo)")
-  : fail("model transkripsi belum ada", "jalankan /content-creator:setup (mengunduh model whisper large-v3-turbo, ±1,6 GB)");
+const syncMode = config().sync ?? "auto";
+if (whisperReady()) ok(`whisper large-v3-turbo (opsional): QA kejelasan kata & sinkron cadangan aktif · sinkron: ${syncMode}`);
+else if (syncMode === "whisper") fail("config sync=whisper, tetapi model whisper belum dipasang", "jalankan setup dengan --with-whisper, atau hapus \"sync\" dari config.local.json");
+else console.log("  -    whisper tidak dipasang (opsional): sinkron kata dari timestamps ElevenLabs; QA kejelasan kata lewat qa --asr=eleven");
 
 try {
   await ensureBrowser();

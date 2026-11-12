@@ -12,6 +12,10 @@ Storyboard per scene:
   "trans": slash/shutter/iris -> whoosh, cut -> scratch, flash -> riser + boom
 """
 
+import os as _os
+_os.environ["PATH"] = _os.pathsep.join([_os.path.expanduser("~/.local/share/content-creator/tools/bin"), _os.path.expanduser("~/.local/bin"), _os.environ.get("PATH", "")])
+
+
 import json
 import re
 import subprocess

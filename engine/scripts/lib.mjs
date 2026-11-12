@@ -4,6 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const ENGINE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+// alat yang dipasang setup ke folder pengguna (Node/ffmpeg/uv/rclone tanpa sudo) ikut dicari di PATH
+{
+  const home = process.env.HOME ?? "";
+  const extra = [path.join(home, ".local", "share", "content-creator", "tools", "bin"), path.join(home, ".local", "bin")];
+  process.env.PATH = [...extra, process.env.PATH ?? ""].join(path.delimiter);
+}
 export const ROOT = path.resolve(ENGINE, "..");
 export const DIRS = {
   projects: path.join(ROOT, "Projects"), // satu folder per video: brief, naskah, storyboard, suara, preview
@@ -69,7 +75,7 @@ export const brandProfile = (slug) => (slug ? readJson(path.join(DIRS.brands, sl
 export const findLogo = (file, slug) =>
   [slug && path.join(DIRS.brands, slug, "logo", file), path.join(ENGINE, "public", "brand", file)].find((f) => f && existsSync(f)) ?? null;
 
-// Rahasia: ELEVENLABS_API_KEY dari .env.local di root project (dibuat `elevenlabs onboard`). Jangan pernah mencetak isinya.
+// Rahasia: ELEVENLABS_API_KEY dari .env.local di folder workspace (dibuat `elevenlabs onboard`). Jangan pernah mencetak isinya.
 try {
   const f = path.join(ROOT, ".env.local");
   if (!process.env.ELEVENLABS_API_KEY && existsSync(f)) {
@@ -265,6 +271,13 @@ export const archiveResult = (name) => {
  * <workspace>/.claude/skills/, ~/.claude/skills/, skill tersinkron akun (~/.claude/skills/synced/...),
  * dan skill mode agent Claude desktop. null = jalur B (mg4) tidak tersedia di komputer ini.
  */
+/** Model whisper (opsional) sudah ada di cache Hugging Face? Dipasang lewat setup --with-whisper. */
+export const WHISPER_MODEL = "deepdml/faster-whisper-large-v3-turbo-ct2";
+export const whisperReady = () => {
+  const hub = process.env.HF_HUB_CACHE || path.join(process.env.HF_HOME || path.join(process.env.HOME ?? "", ".cache", "huggingface"), "hub");
+  return existsSync(path.join(hub, `models--${WHISPER_MODEL.replace("/", "--")}`, "snapshots"));
+};
+
 export const mg4Skill = () => {
   const home = process.env.HOME ?? "";
   const cands = [process.env.MG4_SKILL, path.join(ROOT, ".claude", "skills", "motion-graphics-v4"), path.join(home, ".claude", "skills", "motion-graphics-v4")];

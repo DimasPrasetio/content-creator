@@ -1,9 +1,11 @@
 // QA otomatis untuk satu video: format, loudness, konsistensi suara, bisikan, dan sinkron kata.
-// Pemakaian: npm run qa -- <nama>
+// Pemakaian: npm run qa -- <nama> [--asr=auto|whisper|eleven|off]
+//   --asr: cara memeriksa kejelasan kata [5]. auto (bawaan) = whisper bila modelnya dipasang, selain itu dilewati;
+//          eleven = Speech to Text ElevenLabs (Scribe, memakai kuota STT); off = dilewati.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, config, resolveName, run } from "./lib.mjs";
+import { ENGINE, P, alignTokens, config, normTokens, resolveName, run, whisperReady } from "./lib.mjs";
 
 const name = resolveName(process.argv.slice(2).find((a) => !a.startsWith("--")));
 const cfg = config();
@@ -53,13 +55,14 @@ console.log("\n[3] Konsistensi suara (kemiripan pembicara per scene vs jangkar v
 // ElevenLabs: dibandingkan dengan jangkar suara voice itu (pemakaian pertama voice+model), per scene.
 // Audio dari luar (voice --audio=...) memang bukan narator referensi: cek kemiripan dilewati.
 const anchorRef = timing.voiceAnchor && existsSync(path.join(ENGINE, timing.voiceAnchor.path)) ? path.join(ENGINE, timing.voiceAnchor.path) : null;
-const ref = anchorRef ?? (timing.external ? null : path.join(ENGINE, cfg.narrator.ref));
+const narRef = path.join(ENGINE, cfg.narrator?.ref ?? "");
+const ref = anchorRef ?? (timing.external || !existsSync(narRef) ? null : narRef);
 const sim = ref ? py(["speaker", ref, wav, ...ranges]) : [];
 // voice sama ≈ 0,91; voice ElevenLabs lain bisa 0,72-0,83 → ambang jangkar lebih ketat dari narator VoiceStudio
 const simMin = anchorRef ? (cfg.elevenlabs?.anchorMin ?? 0.86) : 0.8;
 const pitch = py(["pitch", wav, ...ranges]);
 if (anchorRef) console.log(`  -     ${timing.external}, jangkar ${timing.voiceAnchor.path} (dari ${timing.voiceAnchor.from})`);
-if (!ref) ok(`audio luar (${timing.external}), satu suara dari sumbernya; tidak dibandingkan dengan narator`);
+if (!ref) ok(timing.external ? `audio luar (${timing.external}), satu suara dari sumbernya; tidak dibandingkan dengan narator` : "belum ada jangkar/referensi suara untuk dibandingkan");
 else timing.scenes.forEach((s, i) => {
   const style = s.style ?? "normal";
   if (cfg.styles?.[style]?.whisper) return;
@@ -78,11 +81,26 @@ others.forEach((s) => {
 });
 
 console.log("\n[5] Ekspresi & kejelasan (suara hidup, bukan monoton)");
-const pr = py(["prosody", wav, "--lang", cfg.language ?? "id"]);
+const asrOpt = (process.argv.find((x) => x.startsWith("--asr="))?.slice(6) || cfg.qa?.asr || "auto").toLowerCase();
+const asrMode = asrOpt === "auto" ? (whisperReady() ? "whisper" : "off") : asrOpt;
+if (asrMode === "whisper" && !whisperReady()) throw new Error("--asr=whisper butuh model whisper (setup --with-whisper)");
+const pr = py(["prosody", wav, "--lang", cfg.language ?? "id", ...(asrMode === "whisper" ? [] : ["--no-asr"])]);
 check(pr.pitch_std_st >= 3.0, `variasi nada ${pr.pitch_std_st} semitone (>= 3.0; monoton biasanya < 2.5)`);
-check(pr.asr_prob_mean >= 0.9, `kejelasan kata rata-rata ${pr.asr_prob_mean} (>= 0.90)`);
 const nWords = timing.scenes.reduce((t, s) => t + (s.words ?? []).length, 0);
-check(pr.asr_prob_low <= Math.max(2, nWords * 0.02), `${pr.asr_prob_low} dari ${nWords} kata kurang jelas (maks 2%)`);
+if (asrMode === "whisper") {
+  check(pr.asr_prob_mean >= 0.9, `kejelasan kata rata-rata ${pr.asr_prob_mean} (>= 0.90, whisper)`);
+  check(pr.asr_prob_low <= Math.max(2, nWords * 0.02), `${pr.asr_prob_low} dari ${nWords} kata kurang jelas (maks 2%)`);
+} else if (asrMode === "eleven") {
+  // Scribe mendengarkan ulang audio: kata naskah yang tidak terdengar = terlewat / salah baca
+  const { transcribe } = await import("./eleven.mjs");
+  const ws = await transcribe(wav, cfg.language ?? "id");
+  const toks = timing.scenes.flatMap((s) => (s.words ?? []).flatMap((w) => normTokens(w.w)));
+  const { matched, total } = alignTokens(toks, ws);
+  const low = ws.filter((w) => w.p < 0.5).length;
+  check(matched / total >= 0.9, `${matched}/${total} kata naskah terdengar jelas (>= 90%, Speech to Text ElevenLabs)`);
+  check(low <= Math.max(2, nWords * 0.03), `${low} dari ${ws.length} kata kurang yakin (maks 3%)`);
+} else if (asrMode === "off") console.log("  -     kejelasan kata tidak dicek (tanpa whisper). Cek dengan mendengarkan, atau qa --asr=eleven (kuota STT)");
+else throw new Error(`--asr=${asrOpt} tidak dikenal (auto | whisper | eleven | off)`);
 
 console.log("\n[6] Pelafalan istilah (kamus config.json)");
 const toCheck = [];

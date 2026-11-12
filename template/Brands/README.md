@@ -13,6 +13,15 @@ Brands/<slug>/
 Brands/_selera.md  riwayat gaya & suara yang disukai/ditolak pengguna (diisi agent setelah tiap video)
 ```
 
+## Perintah
+
+```bash
+npm run brand -- new <slug> --name="Nama" --left="TEKS KIRI" --voice=<voice>   # buat profil
+npm run brand -- list
+npm run brand -- pack <slug> [--scenes=<file>.tsx]    # paket untuk anggota tim (tanpa key/token/video)
+npm run brand -- unpack <file>.brand.tar.gz           # pasang paket dari anggota tim
+```
+
 ## profile.json
 
 ```json

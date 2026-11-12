@@ -12,14 +12,19 @@
 // - Narasi dibagi per paragraf (±15-20 dtk); tiap paragraf dibuat beberapa take, lalu take terbaik dipilih
 //   otomatis (kejelasan kata, ekspresi nada, kemiripan suara dengan narator).
 // - Kamus pelafalan (config.json "pronounce") hanya mengubah teks yang dibacakan, bukan tulisan di layar.
-// - Setelah jadi, audio ditranskripsi per kata dan dicocokkan ke naskah: waktu scene & tiap kata
-//   disimpan agar visual muncul tepat saat kata diucapkan.
+// - Sinkron: waktu tiap kata dicocokkan ke naskah agar visual muncul tepat saat kata diucapkan. Sumber waktu
+//   (--sync= / frontmatter "sync:" / config "sync", bawaan auto):
+//     auto    timestamps ElevenLabs (ikut panggilan TTS, gratis) > whisper lokal (bila modelnya dipasang) >
+//             forced alignment ElevenLabs (tarif Speech to Text; untuk cache lama / audio luar)
+//     eleven  hanya ElevenLabs (timestamps atau forced alignment)
+//     whisper hanya whisper lokal (setup --with-whisper)
+//   Audio luar (--audio=x.mp3) boleh disertai x.align.json (daftar kata [{w,s,e}]) agar tanpa whisper/kredit.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, NAME_RE, P, alignTokens, brandProfile, config, duration, normTokens, parseScript, resolveName, run } from "./lib.mjs";
-import { errText, isPaidPlanError, quota, ttsToFile } from "./eleven.mjs";
+import { ENGINE, NAME_RE, P, alignTokens, brandProfile, config, duration, normTokens, parseScript, resolveName, run, whisperReady } from "./lib.mjs";
+import { alignmentWords, errText, forcedAlign, isPaidPlanError, quota, ttsWithTimestamps } from "./eleven.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -28,6 +33,7 @@ const force = args.includes("--force");
 const userAudio = args.find((a) => a.startsWith("--audio="))?.slice("--audio=".length);
 if (userAudio && !existsSync(userAudio)) throw new Error(`Audio tidak ditemukan: ${userAudio}`);
 let extAudio = userAudio;
+let elWords = null; // kata + waktu dari timestamps ElevenLabs (bila semua potongan punya alignment)
 const cfg = config();
 const FPS = 30;
 const PY = path.join(ENGINE, ".venv", "bin", "python");
@@ -49,7 +55,9 @@ const language = meta.language || cfg.language || "id";
 const speed = parseFloat(meta.speed || cfg.speed || 1);
 const narrator = cfg.narrator;
 const refPath = path.join(ENGINE, narrator.ref);
-const refText = readFileSync(path.join(ENGINE, narrator.refText), "utf8").trim();
+// referensi narator hanya dipakai VoiceStudio (milik workspace, tidak dibawa plugin)
+const refTextPath = path.join(ENGINE, narrator.refText);
+const refText = existsSync(refTextPath) ? readFileSync(refTextPath, "utf8").trim() : "";
 const styles = cfg.styles ?? { normal: { lufs: -16 } };
 for (const sc of scenes) {
   if (!styles[sc.style]) throw new Error(`Gaya "${sc.style}" tidak dikenal. Pilihan: ${Object.keys(styles).join(", ")}`);
@@ -65,6 +73,10 @@ const provider = userAudio
   : (args.find((a) => a.startsWith("--provider="))?.slice("--provider=".length) || meta.provider || cfg.provider || "voicestudio").toLowerCase();
 if (!["audio", "elevenlabs", "voicestudio"].includes(provider)) throw new Error(`Provider "${provider}" tidak dikenal (elevenlabs | voicestudio).`);
 
+if (provider === "voicestudio" && !whisperReady())
+  throw new Error("VoiceStudio memilih take terbaik dengan model whisper. Pasang dulu: bash <plugin>/bin/setup.sh --with-whisper");
+if (provider === "voicestudio" && (!existsSync(refPath) || !refText))
+  throw new Error(`VoiceStudio butuh rekaman narator: ${path.relative(ENGINE, refPath)} + ${path.relative(ENGINE, refTextPath)}`);
 if (provider === "voicestudio") try {
   const h = await fetch(`${cfg.ttsUrl}/health`, { signal: AbortSignal.timeout(5000) });
   if (!h.ok) throw new Error(String(h.status));
@@ -135,12 +147,14 @@ if (provider === "elevenlabs") {
     else parts.push(p);
   }
   const files = [];
+  const aligns = [];
   let need = 0;
   const jobs = parts.map((p, i) => {
     const h = createHash("sha1").update(JSON.stringify([p, voiceId, model, el.languageCode, vs, fmt, el.seed])).digest("hex").slice(0, 10);
     const f = path.join(cache, `el${i + 1}-${h}.mp3`);
+    const a = f.replace(/\.mp3$/, ".align.json");
     if (force || !existsSync(f)) need += p.length;
-    return { p, f };
+    return { p, f, a };
   });
   if (need) {
     // cek kuota karakter sebelum memakai kredit
@@ -152,7 +166,7 @@ if (provider === "elevenlabs") {
       if (/Kuota/.test(e.message)) throw e;
     }
   }
-  for (const [i, { p, f }] of jobs.entries()) {
+  for (const [i, { p, f, a }] of jobs.entries()) {
     const label = `ElevenLabs ${hit ?? voiceId} · ${model} · bagian ${i + 1}/${jobs.length}`;
     if (!force && existsSync(f)) {
       console.log(`${label}: dari cache`);
@@ -166,7 +180,7 @@ if (provider === "elevenlabs") {
       if (i > 0) opt.previousText = parts[i - 1].slice(-400);
       if (i < parts.length - 1) opt.nextText = parts[i + 1].slice(0, 400);
       try {
-        await ttsToFile(voiceId, p, opt, f);
+        writeFileSync(a, JSON.stringify(await ttsWithTimestamps(voiceId, p, opt, f)));
       } catch (e) {
         if (isPaidPlanError(e))
           throw new Error(`Voice "${hit ?? voiceId}" adalah voice library: paket ElevenLabs free tidak boleh memakainya lewat API. Upgrade paket (min. Starter) atau pilih voice premade, mis. --voice=Sarah.`);
@@ -175,7 +189,18 @@ if (provider === "elevenlabs") {
       console.log(`${((Date.now() - t0) / 1000).toFixed(0)} dtk`);
     }
     files.push(f);
+    aligns.push(existsSync(a) ? JSON.parse(readFileSync(a, "utf8")) : null);
   }
+  // waktu per kata dari timestamps; potongan digeser sesuai posisinya di audio gabungan
+  if (aligns.every(Boolean)) {
+    let off = 0;
+    elWords = [];
+    files.forEach((f, i) => {
+      const len = duration(f);
+      elWords.push(...alignmentWords(aligns[i], off, len));
+      off += len;
+    });
+  } else console.log("Sebagian audio dari cache lama tanpa timestamps: sinkron memakai cadangan (whisper / forced alignment).");
   if (files.length === 1) extAudio = files[0];
   else {
     const list = path.join(cache, "el-concat.txt");
@@ -202,7 +227,7 @@ for (const [i, sc] of scenes.entries()) {
 const tts = cfg.tts ?? {};
 const takes = Math.max(1, parseInt(meta.takes ?? tts.takes ?? 2));
 
-const refHash = createHash("sha1").update(readFileSync(refPath)).update(refText).digest("hex").slice(0, 8);
+const refHash = existsSync(refPath) ? createHash("sha1").update(readFileSync(refPath)).update(refText).digest("hex").slice(0, 8) : "none";
 const segs = [];
 for (const [bi, b] of (extAudio ? [] : blocks).entries()) {
   const text = speak(b.scenes.map((i) => scenes[i].text).join(" "));
@@ -276,16 +301,42 @@ if (extAudio) {
 }
 const baseTotal = duration(out);
 
-// --- Sinkron: transkripsi per kata lalu cocokkan ke naskah ---
-process.stdout.write("Menyelaraskan kata dengan audio... ");
+// --- Sinkron: waktu per kata (timestamps ElevenLabs / whisper / forced alignment) lalu cocokkan ke naskah ---
 const prompt = scenes.map((s) => s.text).join(" ");
-const asr = JSON.parse(execFileSync(PY, [TOOLS, "words", out, "--lang", language, "--prompt", prompt], { encoding: "utf8", maxBuffer: 64e6 }));
+const syncMode = (args.find((a) => a.startsWith("--sync="))?.slice(7) || meta.sync || cfg.sync || "auto").toLowerCase();
+if (!["auto", "eleven", "whisper"].includes(syncMode)) throw new Error(`sync "${syncMode}" tidak dikenal (auto | eleven | whisper)`);
+const sidecar = userAudio && [userAudio.replace(/\.[^./]+$/, ".align.json"), `${userAudio}.align.json`].find(existsSync);
+let asr;
+let syncSrc;
+if (elWords && syncMode !== "whisper") [asr, syncSrc] = [elWords, "timestamps ElevenLabs"];
+else if (sidecar && syncMode === "auto") [asr, syncSrc] = [JSON.parse(readFileSync(sidecar, "utf8")), `file ${path.basename(sidecar)}`];
+else if (syncMode !== "eleven" && whisperReady()) {
+  process.stdout.write("Transkripsi whisper... ");
+  asr = JSON.parse(execFileSync(PY, [TOOLS, "words", out, "--lang", language, "--prompt", prompt], { encoding: "utf8", maxBuffer: 64e6 }));
+  syncSrc = "whisper";
+} else if (syncMode !== "whisper" && process.env.ELEVENLABS_API_KEY) {
+  process.stdout.write("Forced alignment ElevenLabs (tarif Speech to Text)... ");
+  const spoken = extAudio && !el.applied ? prompt : speak(prompt);
+  try {
+    asr = await forcedAlign(out, spoken);
+  } catch (e) {
+    throw new Error(`Forced alignment ElevenLabs gagal: ${errText(e)}`);
+  }
+  syncSrc = "forced alignment ElevenLabs";
+} else
+  throw new Error(
+    syncMode === "whisper"
+      ? "Model whisper belum dipasang: jalankan setup dengan --with-whisper."
+      : "Tidak ada sumber waktu kata: buat suara lewat ElevenLabs, isi ELEVENLABS_API_KEY (forced alignment), atau pasang whisper (setup --with-whisper).",
+  );
+process.stdout.write(`Sinkron (${syncSrc}): `);
 const display = scenes.map((sc) => sc.text.split(/\s+/).filter(Boolean));
 const toks = [];
 // audio luar (--audio) tidak dibacakan lewat kamus pelafalan, jadi dicocokkan dengan teks asli
 display.forEach((words, si) => words.forEach((w, wi) => normTokens(extAudio && !el.applied ? w : speak(w)).forEach((t) => toks.push({ t, si, wi }))));
-// ejaan ASR yang keliru untuk istilah tertentu (config "asrAlias", mis. "kloud" -> "Cloud")
-const asrAlias = { ...(cfg.asrAlias ?? {}), ...(profile?.asrAlias ?? {}) };
+// ejaan ASR whisper yang keliru untuk istilah tertentu (config "asrAlias", mis. "kloud" -> "Cloud"); timestamps
+// ElevenLabs & forced alignment memakai teks naskah sendiri, jadi alias tidak diperlukan
+const asrAlias = syncSrc === "whisper" ? { ...(cfg.asrAlias ?? {}), ...(profile?.asrAlias ?? {}) } : {};
 const { times, matched, total: nTok } = alignTokens(
   toks.map((x) => x.t),
   asr.map((w) => ({ ...w, w: asrAlias[normTokens(w.w).join("")] ?? w.w })),
@@ -377,7 +428,7 @@ if (provider === "elevenlabs") {
 }
 writeFileSync(
   paths.timing,
-  JSON.stringify({ fps: FPS, totalFrames, audio: `audio/${name}.wav`, provider, ...(extAudio ? { external: elLabel || path.basename(extAudio) } : {}), ...(anchor ? { voiceAnchor: anchor } : {}), ...(profileName ? { profile: profileName } : {}), scenes: timed }, null, 2),
+  JSON.stringify({ fps: FPS, totalFrames, audio: `audio/${name}.wav`, provider, sync: syncSrc, ...(extAudio ? { external: elLabel || path.basename(extAudio) } : {}), ...(anchor ? { voiceAnchor: anchor } : {}), ...(profileName ? { profile: profileName } : {}), scenes: timed }, null, 2),
 );
 console.table(report);
 const lowScenes = report.filter((r, i) => r.kataTebakan > timed[i].words.length * 0.4);

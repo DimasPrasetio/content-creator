@@ -34,6 +34,7 @@ Prinsip:
 ## 0 · Persiapan (diam-diam, sebelum bertanya)
 
 - `cd "<workspace>/Engine" && npm run check` → kuota ElevenLabs, voice default bisa dipakai atau tidak, jalur visual mana yang tersedia.
+  Bila `node`/`npm`/`ffmpeg` tidak dikenali (alat dipasang setup ke folder pengguna), awali dengan `. ~/.config/content-creator/env.sh &&`.
   Setelah perubahan besar pada mesin atau pertama kali setelah upgrade paket: `npm run selftest` (tanpa kredit) dan,
   dengan izin pengguna, `npm run selftest -- --real-voice` (±120 karakter kredit) untuk menguji jalur API sungguhan.
 - Baca `Brands/_selera.md` dan `Brands/*/profile.json` (+ `brand.md`/`MOTION.md` bila ada). Brand yang sudah punya
@@ -161,8 +162,9 @@ bahwa voice premade beraksen Inggris dan rekomendasikan upgrade. Voice library b
 `npm run voices -- --add=<owner>:<id>:<Nama>` hanya setelah pengguna setuju. VoiceStudio (`--provider=voicestudio`)
 hanya bila pengguna sendiri memilihnya.
 
-**d. Kunci suara:** frontmatter `voice: <Nama>` dan, untuk brand berulang, `profile: <slug>`. Buat/perbarui
-`Brands/<slug>/profile.json` (format di `Brands/README.md`) setelah pengguna setuju.
+**d. Kunci suara:** frontmatter `voice: <Nama>` dan, untuk brand berulang, `profile: <slug>`. Buat profil dengan
+`npm run brand -- new <slug> --voice=<Nama>` (format di `Brands/README.md`) setelah pengguna setuju. Anggota tim memakai
+profil yang sama lewat `npm run brand -- pack <slug>` → kirim → `npm run brand -- unpack <file>`.
 
 ## 4 · Naskah — disetujui sebelum suara dibuat
 
@@ -187,7 +189,9 @@ Semua perintah dari `<workspace>/Engine/`.
    seed tetap, cache per hash teks.
    - Durasi (`ffprobe Projects/<nama>/voice.wav`) meleset > ±15% → ubah narasi `.md` + `.txt`, ulangi. Jangan memperlambat suara.
    - Peringatan "berbeda dengan voice profil" → kembalikan ke voice profil, kecuali pengguna memutuskan lain.
-   - Salah baca → `config.json` → `pronounce` (atau di profil brand); ejaan ASR → `asrAlias`; `--force` hanya bila perlu.
+   - Salah baca → `config.json` → `pronounce` (atau di profil brand); ejaan ASR → `asrAlias` (hanya bila sinkron memakai whisper); `--force` hanya bila perlu.
+   - Sinkron kata otomatis dari timestamps ElevenLabs (`timing.json` → `"sync"`). QA kejelasan kata: whisper bila
+     terpasang; tanpa whisper tawarkan `npm run qa -- <nama> --asr=eleven` (kuota Speech to Text) atau dengarkan sendiri.
    - Pemakaian pertama voice+model membuat jangkar suara (`Engine/voices/elevenlabs/anchor/`) untuk QA.
 2. **Visual** dari `Engine/work/<nama>/timing.json` (satu entri storyboard per scene suara). Isi `"brand"` dari brief.
    - **A · Pop**: struktur skill (hook ≤ 1 dtk, 2-3 masalah berkicker, jeda tenang cream, reveal flash + sunburst, cara
