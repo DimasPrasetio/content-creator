@@ -1,0 +1,69 @@
+{
+  "provider": "elevenlabs",
+  "elevenlabs": {
+    "voice": "George",
+    "voices": {
+      "Sarah": "EXAVITQu4vr4xnSDxMaL",
+      "Jessica": "cgSgspJ2msm6clMCkdW9",
+      "Laura": "FGY2WhTYpPnrIDTdsKH5",
+      "Matilda": "XrExE9yKIg1WjnnlVkGX",
+      "Liam": "TX3LPaxmHKxFdv7VOQHJ",
+      "Will": "bIHbv24MWmeRgasZH58o",
+      "Chris": "iP95p4xoKVk53GoZ742B",
+      "Brian": "nPczCjzI2devNBz1zQrb",
+      "George": "JBFqnCBsd6RMkjVDRZzb"
+    },
+    "model": "eleven_v4",
+    "languageCode": "id",
+    "outputFormat": "mp3_44100_128",
+    "stability": 0.7,
+    "similarityBoost": 0.5,
+    "speed": 1,
+    "pronounce": true,
+    "_catatan": "Bawaan plugin: voice premade (bisa di paket free). Voice & daftar voice milik workspace ditulis di Engine/config.local.json (digabung di atas file ini; `npm run voices -- --add` menulis ke sana).",
+    "seed": 4242
+  },
+  "ttsUrl": "http://127.0.0.1:3900",
+  "language": "id",
+  "speed": 1,
+  "narrator": {
+    "ref": "voices/narator-ekspresif.wav",
+    "refText": "voices/narator-ekspresif.txt",
+    "seed": 4
+  },
+  "tts": {
+    "num_step": 32,
+    "class_temperature": 0.8,
+    "position_temperature": 8,
+    "effect_preset": "raw",
+    "takes": 2
+  },
+  "pronounce": {
+    "AI": "E Ai"
+  },
+  "asrAlias": {},
+  "styles": {
+    "normal": {
+      "lufs": -16
+    },
+    "pelan": {
+      "lufs": -19
+    }
+  },
+  "maxBlockSeconds": 18,
+  "blockGapSeconds": 0.3,
+  "styleGapSeconds": 0.7,
+  "leadSeconds": 0.12,
+  "tailSeconds": 1,
+  "sound": {
+    "sfxKit": "synth",
+    "_catatan": "sfxKit: synth (sintetis, gratis) | eleven (public/sfx/eleven/, buat dengan npm run sfxkit -- --yes, memakai kredit)"
+  },
+  "drive": {
+    "remote": "gdrive",
+    "rootFolderId": "",
+    "rootName": "",
+    "_catatan": "Isi di config.local.json: rootFolderId folder Google Drive tujuan + remote rclone. Kosong = unggah Drive nonaktif."
+  },
+  "_catatan": "Bawaan plugin content-creator. Jangan ubah di workspace: timpa nilai di Engine/config.local.json (dalam .gitignore, tidak ditimpa update plugin)."
+}

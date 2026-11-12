@@ -1,0 +1,5 @@
+node_modules
+.venv
+work
+.DS_Store
+config.local.json

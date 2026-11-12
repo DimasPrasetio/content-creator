@@ -1,0 +1,40 @@
+{
+  "name": "video-claude-engine",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "voice": "node scripts/voice.mjs",
+    "render": "node scripts/render.mjs",
+    "check": "node scripts/check.mjs",
+    "typecheck": "tsc --noEmit",
+    "qa": "node scripts/qa.mjs",
+    "sound": ".venv/bin/python scripts/sound.py",
+    "mg4": "node scripts/mg4.mjs",
+    "voices": "node scripts/voices.mjs",
+    "html": "node scripts/html.mjs",
+    "posting": "node scripts/posting.mjs",
+    "sfxkit": "node scripts/eleven_audio.mjs sfx",
+    "music": "node scripts/eleven_audio.mjs music",
+    "export": "node scripts/export.mjs",
+    "selftest": "node scripts/selftest.mjs",
+    "drive": "node scripts/drive.mjs"
+  },
+  "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.77.0",
+    "@remotion/bundler": "4.0.540",
+    "@remotion/cli": "4.0.540",
+    "@remotion/google-fonts": "4.0.540",
+    "@remotion/media-utils": "4.0.540",
+    "@remotion/renderer": "4.0.540",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "remotion": "4.0.540",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "typescript": "5.9.3"
+  }
+}

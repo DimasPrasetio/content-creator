@@ -1,0 +1,8 @@
+.env.local
+.DS_Store
+Engine/node_modules
+Engine/.venv
+Engine/work
+Engine/public/audio
+Engine/.deps-*
+Result/

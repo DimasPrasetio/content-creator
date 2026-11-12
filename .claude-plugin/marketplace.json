@@ -1,0 +1,15 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "content-creator",
+  "description": "Marketplace plugin content-creator: agent pembuat video pendek otomatis.",
+  "owner": { "name": "Dimas Prasetio", "url": "https://github.com/DimasPrasetio" },
+  "plugins": [
+    {
+      "name": "content-creator",
+      "description": "Agent pembuat video pendek otomatis (Reels/TikTok): grill-me, ElevenLabs, motion graphics, QA, posting, Google Drive.",
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/DimasPrasetio/content-creator"
+    }
+  ]
+}
