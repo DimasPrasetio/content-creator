@@ -1,6 +1,7 @@
 {
   "sync": "auto",
   "qa": { "asr": "auto" },
+  "encode": { "crf": 23, "maxrate": "8M", "preset": "slow", "audioBitrate": "192k" },
   "provider": "elevenlabs",
   "elevenlabs": {
     "voice": "George",

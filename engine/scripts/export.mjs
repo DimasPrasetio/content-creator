@@ -12,7 +12,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, ROOT, findLogo, parseScript, readJson, resolveName, run } from "./lib.mjs";
+import { ENGINE, P, ROOT, encodeFor, findLogo, parseScript, readJson, resolveName, run, x264Args } from "./lib.mjs";
 import { readFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
@@ -28,7 +28,7 @@ for (const k of ["logoLeft", "logoRight"]) if (brand[k]) brand[k] = findLogo(bra
 const hasBrand = !!(brand.left || brand.right || brand.logoLeft || brand.logoRight);
 const png = path.join(paths.work, "brand.png");
 if (hasBrand) execFileSync(PY, [path.join(ENGINE, "scripts", "brand_png.py"), JSON.stringify(brand), png]);
-const enc = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-r", "30", "-c:a", "copy", "-movflags", "+faststart"];
+const enc = x264Args(encodeFor(name), { audio: "copy" });
 
 const layout = readJson(path.join(paths.preview, "layout.json"), null);
 const bands = (layout?.scenes ?? []).map((s) => s.band).filter(Boolean);

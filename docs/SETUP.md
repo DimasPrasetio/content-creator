@@ -159,3 +159,4 @@ Tanpa itu, jalur A (Pop) dan C (HTML) tetap berjalan, dan `npm run check` menand
 | `Tidak ada sumber waktu kata` | audio lama tanpa timestamps & tanpa key/whisper: `npm run voice -- <nama> --force`, atau setup `--with-whisper` |
 | Drive `tidak bisa diakses` | akun Google belum punya akses Editor ke folder, atau token kedaluwarsa: `rclone config reconnect gdrive:` |
 | Unggah Drive sangat lambat | kecepatan upload koneksi Anda; video ±100 MB di 1 Mbps butuh ±15 menit (VPS jauh lebih cepat) |
+| File video terlalu besar (ratusan MB) | render sebelum v0.2.1: `npm run compress -- <nama>` (atau `--target=50MB`); setelan di `config.local.json` → `encode` |

@@ -20,7 +20,8 @@
     "export": "node scripts/export.mjs",
     "selftest": "node scripts/selftest.mjs",
     "drive": "node scripts/drive.mjs",
-    "brand": "node scripts/brand.mjs"
+    "brand": "node scripts/brand.mjs",
+    "compress": "node scripts/compress.mjs"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.77.0",

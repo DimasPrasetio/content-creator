@@ -20,6 +20,8 @@ Docs and prompts are in Indonesian.*
 - **QA otomatis**: format, loudness, konsistensi suara, kejelasan, sinkron, dan **cek tata letak** (teks terpotong, keluar
   bingkai, menabrak brand pojok, tertutup UI Reels).
 - **Paket posting**: subtitle SRT/VTT, thumbnail, caption + hashtag; ekspor 4:5 / 1:1 / 16:9.
+- **Ukuran file wajar**: encode *capped CRF* (±30-60 MB per menit untuk video bergrain, jauh lebih kecil untuk video
+  bersih); `npm run compress` untuk mengecilkan hasil lama atau mencapai ukuran target.
 - **Hasil per brand**: `Result/<brand>/<nama>/` dan, setelah disetujui, salinan ke Google Drive (rclone).
 
 ## Kebutuhan

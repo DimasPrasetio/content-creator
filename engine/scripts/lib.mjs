@@ -267,6 +267,37 @@ export const archiveResult = (name) => {
 };
 
 /**
+ * Setelan encode video final (capped CRF): kualitas dijaga CRF, bitrate dibatasi maxrate supaya efek grain/noise
+ * tidak membuat file membengkak (TikTok/Reels mengompres ulang; > ±8 Mbps tidak menambah ketajaman di aplikasi).
+ * Urutan: bawaan < config.json "encode" < profil brand "encode" < storyboard "encode".
+ */
+export const ENCODE_DEFAULT = { crf: 23, maxrate: "8M", bufsize: null, preset: "slow", audioBitrate: "192k" };
+export const encodeFor = (name) => {
+  const p = P(name);
+  const meta = existsSync(p.script) ? parseScript(readFileSync(p.script, "utf8")).meta : {};
+  const prof = brandProfile(meta.profile);
+  const board = readJson(p.storyboard, {});
+  const e = { ...ENCODE_DEFAULT, ...(config().encode ?? {}), ...(prof?.encode ?? {}), ...(board.encode ?? {}) };
+  // bufsize bawaan = 2x maxrate (mis. 8M -> 16M)
+  if (e.maxrate && !e.bufsize) e.bufsize = String(e.maxrate).replace(/^([\d.]+)/, (m) => String(parseFloat(m) * 2));
+  return e;
+};
+/** Argumen ffmpeg (libx264) untuk setelan encode: yuv420p rentang standar (tv), 30 fps, faststart. */
+export const x264Args = (e, { audio = "aac" } = {}) => [
+  "-c:v", "libx264", "-preset", String(e.preset), "-crf", String(e.crf),
+  ...(e.maxrate ? ["-maxrate", String(e.maxrate), "-bufsize", String(e.bufsize ?? e.maxrate)] : []),
+  // -color_range tv juga mengonversi sumber rentang penuh (screenshot JPEG/PNG) ke rentang standar video
+  "-pix_fmt", "yuv420p", "-color_range", "tv", "-r", "30",
+  ...(audio === "copy" ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", String(e.audioBitrate)]),
+  "-movflags", "+faststart",
+];
+/** Angka bitrate "8M" / "800k" -> bit per detik. */
+export const bps = (v) => {
+  const m = String(v).match(/^([\d.]+)\s*([kKmM]?)/);
+  return m ? parseFloat(m[1]) * ({ k: 1e3, m: 1e6 }[m[2].toLowerCase()] ?? 1) : NaN;
+};
+
+/**
  * Lokasi skill motion-graphics-v4 (milik Anthropic, tidak dibundel plugin publik). Dicari di: $MG4_SKILL,
  * <workspace>/.claude/skills/, ~/.claude/skills/, skill tersinkron akun (~/.claude/skills/synced/...),
  * dan skill mode agent Claude desktop. null = jalur B (mg4) tidak tersedia di komputer ini.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.1
+- **Ukuran file wajar**: semua jalur (Pop, mg4, HTML, ekspor, subtitle ditanam) memakai encode *capped CRF* dari satu
+  setelan `encode` (bawaan CRF 23, maks 8 Mbps, preset slow; bisa per brand/storyboard). Video bergrain 1 menit turun
+  dari ±125-450 MB menjadi ±30-60 MB tanpa beda yang terlihat.
+- Jalur HTML dikompres final sekali saja (perantara kualitas tinggi), tidak lagi dua kali CRF 18.
+- Hasil selalu yuv420p rentang standar (tv); sebelumnya video HTML bisa keluar rentang penuh (yuvj420p).
+- `npm run compress -- <nama> [--target=MB] [--all] [--file=]`: kecilkan hasil lama atau capai ukuran target (two-pass).
+- QA [1] memeriksa bitrate video terhadap batas `maxrate`.
+
 ## 0.2.0
 - **Setup memasang semua komponen pendukung otomatis**: Node.js 22, ffmpeg (libx264), uv + Python 3.12, rclone, paket npm &
   Python, Chromium (Playwright + Remotion), library sistem Chromium di Linux (root/sudo). Lewat Homebrew

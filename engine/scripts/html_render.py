@@ -92,7 +92,8 @@ def main():
             cmd = ["ffmpeg", "-v", "error", "-y", "-f", "image2pipe", "-framerate", str(a.fps), "-i", "-"]
             if a.audio:
                 cmd += ["-i", a.audio, "-map", "0:v", "-map", "1:a", "-c:a", "aac", "-b:a", "192k", "-shortest"]
-            cmd += ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-r", str(a.fps), "-movflags", "+faststart", a.out]
+            # perantara kualitas tinggi (dikompres final sekali oleh html.mjs); JPEG rentang penuh -> rentang video standar
+            cmd += ["-c:v", "libx264", "-preset", "veryfast", "-crf", "12", "-pix_fmt", "yuv420p", "-color_range", "tv", "-r", str(a.fps), "-movflags", "+faststart", a.out]
             ff = subprocess.Popen(cmd, stdin=subprocess.PIPE)
             for k in range(n):
                 seek(k / a.fps)

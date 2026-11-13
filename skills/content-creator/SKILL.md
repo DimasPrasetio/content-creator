@@ -234,6 +234,9 @@ Semua perintah dari `<workspace>/Engine/`.
 7. **Format lain** (bila diminta di cabang 10): `npm run export -- <nama> --format=4x5,16x9[,1x1]`. Mode `auto`
    memotong hanya bila semua teks (dari `layout.json`) muat; kalau tidak, video utuh dikecilkan dengan sisi blur.
    Video mendatar dari luar yang perlu dijadikan Reels → skill `reel-export`.
+   **Ukuran file**: hasil otomatis dienkode *capped CRF* (`encode` di config/profil/storyboard, bawaan CRF 23 maks 8 Mbps).
+   QA [1] gagal bila bitrate melewati batas → `npm run compress -- <nama>`. Pengguna minta file lebih kecil / ukuran
+   tertentu (mis. batas unggah) → `npm run compress -- <nama> --target=<MB>` atau `"encode": {"crf": 26, "maxrate": "6M"}`.
 8. **Audio ElevenLabs (opsional, memakai kredit; minta izin + sebut perkiraan)**: musik per video
    `npm run music -- <nama> --prompt="instrumental, <suasana>, <tempo>" --yes` lalu `npm run sound` lagi; kit SFX natural
    sekali pakai `npm run sfxkit -- --yes` + `config.json` → `"sound": {"sfxKit": "eleven"}`.

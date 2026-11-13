@@ -32,6 +32,7 @@ npm run brand -- unpack <file>.brand.tar.gz           # pasang paket dari anggot
   "visual": { "jalur": "Pop | mg4 | html", "style": "gaya mg4 atau skill html (mis. launch-video) | null", "palette": { "accent": "#FFD21F" } },
   "pronounce": { "istilah": "cara baca" },
   "asrAlias": { "ejaan-salah-asr": "Ejaan Benar" },
+  "encode": { "crf": 23, "maxrate": "8M" },
   "catatan": ["selera yang disetujui / ditolak, beserta tanggal"]
 }
 ```

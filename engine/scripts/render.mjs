@@ -6,7 +6,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { bundle } from "@remotion/bundler";
 import { ensureBrowser, renderMedia, renderStill, selectComposition } from "@remotion/renderer";
-import { DIRS, ENGINE, P, archiveResult, draftTiming, findLogo, parseScript, readJson, resolveName, run, writeLayout } from "./lib.mjs";
+import { DIRS, ENGINE, P, archiveResult, draftTiming, encodeFor, findLogo, parseScript, readJson, resolveName, run, writeLayout } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -92,15 +92,18 @@ if (preview) {
   archiveResult(name);
   const outputLocation = paths.result;
   let last = -1;
+  const e = encodeFor(name); // capped CRF (lib.mjs ENCODE_DEFAULT / config "encode")
   await renderMedia({
     composition,
     serveUrl,
     inputProps,
     codec: "h264",
-    crf: 18,
+    crf: e.crf,
+    x264Preset: e.preset,
+    ...(e.maxrate ? { encodingMaxRate: String(e.maxrate), encodingBufferSize: String(e.bufsize) } : {}),
     pixelFormat: "yuv420p",
     audioCodec: "aac",
-    audioBitrate: "192k",
+    audioBitrate: String(e.audioBitrate),
     outputLocation,
     onProgress: ({ progress }) => {
       const pct = Math.floor(progress * 10) * 10;

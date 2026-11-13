@@ -5,7 +5,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, alignTokens, config, normTokens, resolveName, run, whisperReady } from "./lib.mjs";
+import { ENGINE, P, alignTokens, bps, config, encodeFor, normTokens, resolveName, run, whisperReady } from "./lib.mjs";
 
 const name = resolveName(process.argv.slice(2).find((a) => !a.startsWith("--")));
 const cfg = config();
@@ -38,6 +38,12 @@ check(v?.codec_name === "h264" && v?.r_frame_rate === "30/1", `video ${v?.codec_
 check(a?.codec_name === "aac", `audio ${a?.codec_name}`);
 const dur = parseFloat(probe.format.duration);
 check(Math.abs(dur - timing.totalFrames / fps) < 0.2, `durasi ${dur.toFixed(2)} dtk sesuai timing`);
+// ukuran file: bitrate video dibatasi setelan encode (capped CRF); di atasnya hanya memperberat unggahan & Drive
+const enc = encodeFor(name);
+const vRate = parseFloat(JSON.parse(run("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=bit_rate", "-of", "json", mp4])).streams[0]?.bit_rate ?? probe.format.bit_rate);
+const capRate = enc.maxrate ? bps(enc.maxrate) * 1.15 : 12e6;
+const sizeMb = statSync(mp4).size / 1048576;
+check(vRate <= capRate, `ukuran ${sizeMb.toFixed(1)} MB, video ${(vRate / 1e6).toFixed(1)} Mbps (maks ${(capRate / 1e6).toFixed(1)})${vRate > capRate ? ` -> npm run compress -- ${name}` : ""}`);
 
 console.log("\n[2] Loudness (standar Reels/TikTok sekitar -14 s.d. -16 LUFS, puncak < -1 dBTP)");
 const ebur = execFileSync("sh", ["-c", `ffmpeg -hide_banner -i "${mp4}" -vn -af ebur128=peak=true -f null - 2>&1 | tail -14`], {

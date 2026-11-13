@@ -11,7 +11,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, ROOT, readJson, resolveName, run } from "./lib.mjs";
+import { ENGINE, P, ROOT, encodeFor, readJson, resolveName, run, x264Args } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -114,7 +114,7 @@ if (args.includes("--burn")) {
   });
   const sub = paths.result.replace(/\.mp4$/, ".sub.mp4");
   run("ffmpeg", ["-v", "error", "-y", "-i", paths.result, ...inputs, "-filter_complex", chain.join(";"), "-map", "[v]", "-map", "0:a",
-    "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", sub]);
+    ...x264Args(encodeFor(name), { audio: "copy" }), sub]);
   ok(`subtitle ditanam (y ${y}) -> ${path.relative(ROOT, sub)}`);
 }
 

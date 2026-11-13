@@ -13,7 +13,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, ROOT, archiveResult, draftTiming, findLogo, parseScript, readJson, resolveName, run, writeLayout } from "./lib.mjs";
+import { ENGINE, P, ROOT, archiveResult, draftTiming, encodeFor, findLogo, parseScript, readJson, resolveName, run, writeLayout, x264Args } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -85,7 +85,8 @@ if (preview) {
   const raw = path.join(paths.work, "html-raw.mp4");
   console.log(`Render HTML ${T.total} dtk @ ${fps} fps, audio ${path.basename(audio)} ...`);
   const { errors } = py(["--fps", String(fps), "--duration", String(T.total), "--out", raw, "--audio", audio]);
-  const enc = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-r", "30", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"];
+  // html-raw.mp4 = perantara kualitas tinggi; kompresi final (capped CRF) hanya sekali di sini
+  const enc = x264Args(encodeFor(name));
   mkdirSync(path.dirname(paths.result), { recursive: true });
   archiveResult(name);
   if (overlay) run("ffmpeg", ["-v", "error", "-y", "-i", raw, "-i", brandPng, "-filter_complex", "[0:v][1:v]overlay=0:0[v]", "-map", "[v]", "-map", "0:a", ...enc, paths.result]);

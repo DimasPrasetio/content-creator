@@ -12,7 +12,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, ROOT, archiveResult, brandProfile, draftTiming, findLogo, mg4Skill, parseScript, readJson, resolveName, run } from "./lib.mjs";
+import { ENGINE, P, ROOT, archiveResult, brandProfile, draftTiming, encodeFor, findLogo, mg4Skill, parseScript, readJson, resolveName, run, x264Args } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -178,7 +178,7 @@ archiveResult(name);
 const final = paths.result;
 mkdirSync(paths.resultDir, { recursive: true });
 const hasBrand = !!(brand.left || brand.right || brand.logoLeft || brand.logoRight);
-const enc = ["-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-r", "30", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart"];
+const enc = x264Args(encodeFor(name));
 if (hasBrand) {
   const png = path.join(dir, "brand.png");
   execFileSync(PY, [path.join(ENGINE, "scripts", "brand_png.py"), JSON.stringify(brand), png]);

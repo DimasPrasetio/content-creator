@@ -23,6 +23,7 @@ Jalankan dari folder `Engine/`.
 | `npm run qa -- <nama>` | QA otomatis: format, loudness, konsistensi suara, ekspresi & kejelasan, pelafalan istilah, sinkron, tata letak visual [8]. Wajib lolos sebelum diserahkan |
 | `npm run posting -- <nama>` | Paket siap posting: `thumbnail.jpg` + `caption.txt` (dari `Projects/<nama>/posting/caption.md` yang divalidasi: hook ≤ 125 huruf, ≤ 2200 huruf, 3-10 hashtag) ke `Result/<brand>/<nama>/`; subtitle SRT/VTT + cover-grid 4:5 ke `Projects/<nama>/posting/`. `--burn [--y=1300]` subtitle ditanam → `<nama>.sub.mp4` |
 | `npm run export -- <nama>` | Format lain: `--format=4x5,1x1,16x9`, `--mode=auto\|crop\|fit` (auto memotong hanya bila semua teks dari `layout.json` muat; kalau tidak, video utuh dikecilkan dengan sisi blur) |
+| `npm run compress -- <nama>` | Kompres ulang hasil yang sudah jadi (mis. render lama CRF 18 yang membengkak): capped CRF sesuai setelan `encode`, atau `--target=50MB` (two-pass, ukuran pas). `--crf= --maxrate=` timpa sekali jalan, `--all` ikut varian `.4x5/.16x9/.sub`, `--file=<mp4>` untuk file mana pun. Versi lama ke `versions/`; hasil yang tidak lebih kecil diabaikan |
 | `npm run music -- <nama> --prompt="..." --yes` | Musik instrumental ElevenLabs sepanjang voice over → `work/<nama>/music.wav`, dipakai `npm run sound` (memakai kredit) |
 | `npm run sfxkit -- --yes` | Kit SFX natural ElevenLabs → `public/sfx/eleven/`; aktif dengan `config.json` → `"sound": {"sfxKit": "eleven"}` (memakai kredit) |
 | `npm run drive -- <nama>` | Unggah hasil yang **disetujui** ke Google Drive `<folder tujuan>/<brand>/<nama>/` lewat rclone (remote `gdrive`, root = `config.local.json` → `drive.rootFolderId`); file sama dilewati, yang berubah ditimpa, isi dicek md5, link dicatat di `Projects/<nama>/drive.json`. `--manifest` = cadangan lewat konektor (maks 10 MB per file). Persiapan sekali: `brew install rclone` + `rclone config create gdrive drive scope=drive root_folder_id=<id>` (login Google di browser) |
@@ -62,6 +63,20 @@ uv pip install --python .venv/bin/python --no-deps resemblyzer
 
 Whisper opsional: `bin/setup.sh --with-whisper` memasang faster-whisper + model `deepdml/faster-whisper-large-v3-turbo-ct2`
 (±1,8 GB) untuk QA kejelasan kata gratis, sinkron offline, dan VoiceStudio.
+
+## Ukuran file (encode)
+
+Semua jalur (Pop, mg4, HTML, ekspor, subtitle ditanam) mengenkode hasil akhir **sekali** dengan *capped CRF*:
+kualitas dijaga CRF, bitrate dibatasi `maxrate`, sehingga efek grain/noise tidak membuat file membengkak. TikTok/Reels
+mengompres ulang setiap unggahan, jadi bitrate di atas ±8 Mbps tidak menambah ketajaman di aplikasi.
+
+```json
+"encode": { "crf": 23, "maxrate": "8M", "preset": "slow", "audioBitrate": "192k" }
+```
+Bawaan di `config.json`; bisa ditimpa di `config.local.json`, profil brand (`"encode"`), atau storyboard (`"encode"`).
+Perkiraan: video bergrain ±30-60 MB/menit, video bersih beberapa MB/menit. Lebih kecil lagi: `crf` 26 + `maxrate` 6M
+(grain jadi lebih halus, teks tetap tajam). QA [1] menandai video yang melewati `maxrate`; perbaiki dengan `npm run compress`.
+Hasil selalu H.264 yuv420p rentang standar (tv), 30 fps, AAC.
 
 ## Cara suara dibuat
 
