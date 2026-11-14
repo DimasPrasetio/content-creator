@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1
+- **Timing tepat secara konteks, bukan tepat buta**: kit HTML kini memakai *jangkar scene* (`start(s)`, `at(s, f)`: objek
+  utama hadir sejak scene dimulai), antisipasi `cue()` 0,12 dtk sebelum kata (`timing.lead`), dan crossfade sungguhan antar
+  scene (`timing.crossfade`, scene lama tetap tampil sampai scene baru masuk). README kit aturan 1 ditulis ulang.
+- `scripts/visual_gaps.py` + tahap "Cek layar kosong" di `npm run produce`: mengukur rentang layar kosong (≥ 0,4 dtk) dan
+  separuh zona kosong (≥ 1 dtk) dari video jadi. Contoh: video edukasi 46 dtk turun dari 4,9 dtk kosong + 8,5 dtk separuh
+  kosong menjadi 0 + 0.
+
 ## 0.3.0
 - **Produksi jalur C ±4x lebih cepat, kualitas sama**: `npm run html` merender paralel (4 browser) + rasterisasi GPU
   (video 50 dtk: 117 → ±22 dtk; SSIM 0,999 terhadap render lama), otomatis kembali ke 1 worker SwiftShader bila gagal.

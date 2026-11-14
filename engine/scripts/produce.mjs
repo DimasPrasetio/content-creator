@@ -124,6 +124,16 @@ await step("render", "Render video", () => {
   const r = sh("npm", ["run", "html", "--", name, ...renderOpts], (l) => /Selesai|worker|error di halaman|^\s+cue/i.test(l));
   if (!r.ok) die("Render gagal", r.out);
 });
+await step("render", "Cek layar kosong", () => {
+  const r = sh(PY, [path.join(ENGINE, "scripts", "visual_gaps.py"), paths.result, "--json"]);
+  if (!r.ok) return console.log("    (cek layar kosong gagal dijalankan)");
+  const g = JSON.parse(r.out.trim().split("\n").at(-1));
+  const fmt = (xs) => xs.map(([a, b]) => `${a}-${b}`).join(", ");
+  console.log(`    kosong ${g.empty_seconds} dtk (${(g.empty_ratio * 100).toFixed(0)}%)${g.gaps.length ? ` di ${fmt(g.gaps)}` : ""}`);
+  if (g.half_empty.length) console.log(`    separuh kosong >= 1 dtk di ${fmt(g.half_empty)}`);
+  if (g.gaps.length || g.half_empty.length)
+    console.log("    ! PERBAIKI: beri jangkar scene (objek utama sejak awal scene) di rentang itu, lalu --from=preview (README kit, aturan 1)");
+});
 await step("qa", "QA + paket posting (paralel)", async () => {
   const hasCaption = existsSync(path.join(paths.dir, "posting", "caption.md"));
   const [qa, post] = await Promise.all([

@@ -6,6 +6,7 @@
   },
   "fonts": { "head": "Poppins", "body": "Inter", "mono": "Menlo, monospace" },
   "stroke": 5,
+  "timing": { "lead": 0.12, "crossfade": 0.25 },
   "progress": "accent2",
   "label": { "text": "accent2" },
   "glow": ["accent", "accent2"],

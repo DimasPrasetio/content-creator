@@ -32,6 +32,7 @@ const fillEl = document.getElementById("fill"), dotEl = document.getElementById(
 const same = (a, b) => (a && b ? a[0] === b[0] : a === b);
 
 // ---------- seek: semua keadaan dihitung dari waktu saja ----------
+const XF = THEME_.timing?.crossfade ?? 0.25;
 function dimFactor(it, t) {
   let f = 1;
   for (const [at, to] of it.dims || []) f = lerp(f, to, eo(clamp((t - at) / 0.4)));
@@ -114,12 +115,13 @@ window.seek = function (t) {
   // adegan aktif
   let si = SC.findIndex((s) => t >= s.start && t < s.end);
   if (si < 0) si = t < SC[0].start ? 0 : SC.length - 1;
+  // crossfade sungguhan: scene lama tetap tampil sampai scene baru masuk (tumpang XF dtk) -> tidak ada frame kosong di sambungan
   const sceneOp = (i) => {
-    const s = SC[i];
-    if (!(t >= s.start - 0.01 && t < s.end + 0.01)) return 0;
+    const s = SC[i], last = i === SC.length - 1;
+    if (!(t >= s.start - 0.01 && t < (last ? s.end + 0.01 : s.end + XF))) return 0;
     let o = 1;
-    if (i > 0) o *= eo(clamp((t - s.start) / 0.25));
-    if (i < SC.length - 1) o *= clamp((s.end - t) / 0.22);
+    if (i > 0) o *= eo(clamp((t - s.start) / XF));
+    if (!last) o *= 1 - eo(clamp((t - s.end) / XF));
     return o;
   };
   for (const q of qItems) {
@@ -129,13 +131,7 @@ window.seek = function (t) {
     q.el.style.clipPath = `inset(-30px ${(1 - k) * 100}% -30px -30px)`;
   }
   groups.forEach((g, i) => {
-    const s = SC[i];
-    let o = 0;
-    if (t >= s.start - 0.01 && t < s.end + 0.01) {
-      o = 1;
-      if (i > 0) o *= eo(clamp((t - s.start) / 0.25));
-      if (i < SC.length - 1) o *= clamp((s.end - t) / 0.22);
-    }
+    const o = sceneOp(i);
     g.style.display = o > 0.001 ? "" : "none";
     g.style.opacity = String(o);
   });

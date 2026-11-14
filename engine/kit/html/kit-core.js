@@ -30,10 +30,15 @@ const eio = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
 const back = (p) => { const c = 1.5; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
 const lerp = (a, b, k) => a + (b - a) * k;
 const norm = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+// antisipasi: elemen muncul LEAD detik sebelum katanya (mata menangkap visual sedikit lebih dulu dari telinga = terasa pas)
+const LEAD = THEME_.timing?.lead ?? 0.12;
+// jangkar scene: objek utama hadir sejak scene dimulai (bukan menunggu kata); at(s, f) = titik f (0-1) di sepanjang scene
+const start = (si, d = 0.05) => SC[si].start + d;
+const at = (si, f) => SC[si].start + (SC[si].end - SC[si].start) * f;
 function cue(si, word, n = 0) {
   let k = 0;
   for (const w of SC[si].words) {
-    if (norm(w.w) === norm(word) || norm(w.w).startsWith(norm(word))) { if (k === n) return w.s; k++; }
+    if (norm(w.w) === norm(word) || norm(w.w).startsWith(norm(word))) { if (k === n) return Math.max(SC[si].start, w.s - LEAD); k++; }
   }
   if (!(window.__CUE_MISS__ ||= new Set()).has(si + word)) { window.__CUE_MISS__.add(si + word); console.error(`cue tidak ditemukan: scene ${si + 1} "${word}"${n ? " ke-" + (n + 1) : ""}`); }
   return SC[si].start + 0.2;

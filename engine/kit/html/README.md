@@ -13,8 +13,18 @@ Halaman: `index.html` → `theme.js` → `kit-core.js` → `scenes.js` → `kit-
 Anton, Fira Sans). Render paralel 4 browser + GPU (`npm run html`), stills/preview SwiftShader.
 
 ## Aturan timing & kejelasan (wajib — inilah yang membuat visual "jelas dan tepat")
-1. **Muncul tepat saat katanya diucapkan.** Setiap elemen `t0 = cue(s, "kata")`. `SC[s].start` hanya untuk konteks yang
-   *sudah terlihat* di scene sebelumnya (dilanjutkan). Elemen yang dipicu kata terakhir kalimat dimajukan ke kata sebelumnya.
+1. **Tepat secara konteks, bukan tepat buta.** Timing mengikuti *makna kalimat*, bukan hanya kata pemicu:
+   - **Jangkar scene:** objek utama yang menggambarkan isi kalimat hadir sejak scene dimulai (`start(s)`, ≤ 0,2 dtk),
+     dibangun bertahap selama kalimat berjalan. Kata kunci hanya menambah *detail/penekanan* (label, ✓, warna, sorotan).
+     Jangan biarkan layar menunggu kata yang baru diucapkan di detik ke-1,5.
+   - **Antisipasi:** `cue()` sudah memajukan elemen `timing.lead` (bawaan 0,12 dtk) sebelum katanya; elemen yang dipicu
+     kata terakhir kalimat dimajukan ke kata sebelumnya.
+   - **Proporsi:** zona visual terisi seimbang (atas & bawah) sepanjang scene; bila separuh zona kosong > 1 dtk, isi dengan
+     bagian objek berikutnya lebih awal atau perbesar objek utama.
+   - **Sambungan:** scene berganti dengan crossfade (`timing.crossfade`, bawaan 0,25 dtk): scene lama tetap tampil sampai
+     scene baru masuk.
+   - **Cek otomatis:** `npm run produce` menjalankan `scripts/visual_gaps.py` setelah render: rentang **kosong ≥ 0,4 dtk**
+     dan **separuh kosong ≥ 1 dtk** wajib 0 sebelum diserahkan (perbaiki → `--from=preview`).
 2. **Satu fokus per scene.** Satu objek utama besar (±40–60% lebar layar) + maksimal 2–3 pendukung. Lebih dari itu → pecah scene.
 3. **Layar = ucapan.** Teks di zona visual adalah kata yang diucapkan (atau angkanya), bukan kalimat baru. Kata kunci ≥ 44 px
    (`head`/`big`), label ≥ 28 px (`small`). Hindari teks abu kecil sebagai informasi utama.
@@ -41,7 +51,7 @@ Zona visual = SVG 1080×1000 (y 0 = layar y 250; konten penting y ≤ 950). `cue
 
 ## Dasar
 `D(tag, attrs, t0, dur, {fill, dims, dash})` garis tergambar · `A(el, t0, "fade"|"pop", o)` · `TX(x, y, teks, attrs, t0, kind, o)` ·
-`el(tag, attrs)` · `rr(x,y,w,h,r)` · `col(nama|hex)` · `tint(warna, alpha)` · `o.dims: [[detik, opasitas]]`.
+`el(tag, attrs)` · `rr(x,y,w,h,r)` · `start(s, d)` awal scene · `at(s, f)` titik f (0-1) sepanjang scene · `col(nama|hex)` · `tint(warna, alpha)` · `o.dims: [[detik, opasitas]]`.
 Gerak khusus `items.push({el, kind, ...})`: `bar` (w, t0, t1) · `grow` (r0, r1) · `spin` (cx, cy, rate) · `move` (path) ·
 `blink` · `domino` · `countup` (to, suffix, t0, t1) · `type` (t0, t1) · `count` (from) · `timer` (len).
 Jangan pakai `blink` pada elemen ber-atribut `opacity` (ditimpa jadi penuh) — pakai `alarm()`.
@@ -61,7 +71,7 @@ Jangan pakai `blink` pada elemen ber-atribut `opacity` (ditimpa jadi penuh) — 
 | `closing(s)` | penutup dari `THEME.closing` |
 
 ## Tema (`Brands/<slug>/theme.json`, digabung dengan `theme.default.json`)
-`colors` (bg, grid, panel, track, text, dim, accent, accent2, info, ok, warn, bad, extra) · `fonts` (head, body, mono) · `stroke` ·
+`timing` {lead, crossfade} · `colors` (bg, grid, panel, track, text, dim, accent, accent2, info, ok, warn, bad, extra) · `fonts` (head, body, mono) · `stroke` ·
 `progress` · `label.text` · `glow` · `highlight` {bg, fg} · `subtitle` {said, unsaid, key} · `watermark` {parts: [[teks, warna]], opacity}
 (null = tanpa) · `mark` · `cta.label` · `closing` {wordmark, descriptor, lines: [[kata, kata disorot, cue]]} (null = tanpa) ·
 `storyboard` {skill, brandOverlay, music, closingSfx}. Nilai warna boleh nama warna tema atau hex.

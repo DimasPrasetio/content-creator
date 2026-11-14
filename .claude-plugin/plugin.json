@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "content-creator",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Agent pembuat video pendek otomatis (Reels/TikTok 1080x1920): wawancara grill-me, naskah, voice over ElevenLabs yang konsisten, visual sinkron (Pop cinematic, motion-graphics-v4, HTML motion-graphics-skills), SFX, render, QA, paket posting, dan unggah Google Drive.",
   "author": { "name": "Dimas Prasetio", "url": "https://github.com/DimasPrasetio" },
   "homepage": "https://github.com/DimasPrasetio/content-creator",
