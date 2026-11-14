@@ -5,6 +5,7 @@
 //   (tanpa opsi)  render video: Projects/<nama>/html/index.html + suara/mix -> Result/<nama>.mp4 (brand pojok ditempel)
 //   --preview     1 PNG per scene (di akhir scene) -> Projects/<nama>/preview/
 //   --draft       pakai timing PERKIRAAN dari naskah (tanpa suara, tanpa kredit): contoh frame gaya -> preview/draft/
+//   --workers=4   render video paralel (bawaan 4 browser) · --no-gpu  rasterisasi perangkat lunak (frame persis versi lama)
 // Storyboard: Projects/<nama>/storyboard.json {"composition":"html","skill":"launch-video","brand":{...},
 //             "brandOverlay": true, "scenes":[{"music":"full","sfx":[...]}]}   (sfx/music dipakai `npm run sound`)
 // Kontrak halaman: window.seek(seconds) menggambar frame tepat (fungsi murni dari waktu), menunggu seek bila URL ?render.
@@ -84,7 +85,8 @@ if (preview) {
   const audio = existsSync(paths.mix) && statSync(paths.mix).mtimeMs >= statSync(paths.voice).mtimeMs ? paths.mix : paths.voice;
   const raw = path.join(paths.work, "html-raw.mp4");
   console.log(`Render HTML ${T.total} dtk @ ${fps} fps, audio ${path.basename(audio)} ...`);
-  const { errors } = py(["--fps", String(fps), "--duration", String(T.total), "--out", raw, "--audio", audio]);
+  const workers = args.find((a) => a.startsWith("--workers="))?.split("=")[1] ?? "4";
+  const { errors } = py(["--fps", String(fps), "--duration", String(T.total), "--out", raw, "--audio", audio, "--workers", workers, ...(args.includes("--no-gpu") ? ["--no-gpu"] : [])]);
   // html-raw.mp4 = perantara kualitas tinggi; kompresi final (capped CRF) hanya sekali di sini
   const enc = x264Args(encodeFor(name));
   mkdirSync(path.dirname(paths.result), { recursive: true });

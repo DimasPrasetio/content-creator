@@ -14,7 +14,9 @@ yang dibayangkan pengguna**. Aturan `CLAUDE.md` di workspace berlaku penuh. Baha
 Prinsip:
 1. **Samakan persepsi → buktikan dengan contoh → baru produksi.** Pengguna memilih gaya dari gambar berisi
    kontennya sendiri, dan memilih suara dari audio yang didengarnya, bukan dari deskripsi.
-2. **Kredit ElevenLabs baru dipakai setelah naskah, gaya, dan voice disetujui.**
+2. **Bertanya hanya di penyamaan persepsi.** Topik, hook, CTA, brand pojok, gaya, voice, musik, dan perkiraan kredit
+   disepakati di awal (tahap 1-3). Setelah itu naskah → voice → visual → SFX → render → QA → posting berjalan **otomatis
+   tanpa izin atau pertanyaan tambahan**; satu-satunya titik tanya berikutnya adalah **sebelum unggah Google Drive**.
 3. **Satu brand = satu suara.** Voice, model, pengaturan, dan seed yang sama di semua video brand itu.
 
 ## Peta folder (semua path relatif ke root project)
@@ -50,11 +52,13 @@ Tentukan diam-diam setelah tahap 0, lalu sebutkan ke pengguna dalam satu kalimat
   pengguna berkata "langsung"/"cepat". Alurnya:
   1. Satu `AskUserQuestion` berisi ≤ 3 pertanyaan ringan & independen: topik/pesan + pilihan 2-3 hook, CTA (bila
      berbeda dari biasanya), dan **brand pojok** (wajib, rekomendasi dari profil). Fakta lain diambil dari profil.
-  2. Gaya, palet, voice, musik dari profil (tanpa contoh frame/audisi). Tulis naskah + satu contoh frame gaya profil.
-  3. **Satu persetujuan**: naskah (+ contoh frame). Lalu produksi otomatis seperti biasa.
+  2. Gaya, palet, voice, musik dari profil (tanpa contoh frame/audisi). Tulis naskah, bangun halaman, periksa sendiri
+     contoh frame draf, lalu produksi otomatis sampai paket posting (tanpa menunggu persetujuan naskah).
+  3. Laporan akhir berisi tabel storyboard naskah + board frame + hasil QA; tanyakan hanya: simpan ke Google Drive?
 - **Lengkap**: selain itu (brand baru, gaya/suara baru, video pertama setelah perubahan besar). Jalankan tahap 1-4 penuh.
 
-Persetujuan naskah sebelum kredit ElevenLabs dipakai berlaku di **kedua** mode.
+Di **kedua** mode: setelah persepsi disepakati (ringkasan grill-me menyebut perkiraan kredit), tidak ada pertanyaan atau
+izin lagi sampai video jadi, kecuali terhambat (kuota habis, voice ditolak, render gagal berulang). Tanya lagi hanya untuk Drive.
 
 ## 1 · Penyamaan persepsi (grill-me) — wajib, selalu pertama
 
@@ -166,7 +170,7 @@ hanya bila pengguna sendiri memilihnya.
 `npm run brand -- new <slug> --voice=<Nama>` (format di `Brands/README.md`) setelah pengguna setuju. Anggota tim memakai
 profil yang sama lewat `npm run brand -- pack <slug>` → kirim → `npm run brand -- unpack <file>`.
 
-## 4 · Naskah — disetujui sebelum suara dibuat
+## 4 · Naskah — ditulis setelah persepsi disepakati (tanpa menunggu persetujuan)
 
 1. `Projects/<nama>/script.md` sesuai aturan `CLAUDE.md` (hook kuat, kalimat pendek, satu scene satu ide, catatan `>`,
    `> jeda: 0.3-0.7` setelah punchline). Frontmatter: `judul`, `language: id`, `voice:`, opsional `profile:`.
@@ -176,12 +180,21 @@ profil yang sama lewat `npm run brand -- pack <slug>` → kirim → `npm run bra
    `[curious]`, `[sighs]`, `[laughs]`, `[dramatic pause]`). Hindari banyak `[whispers]`/`[shouting]` (mengubah warna
    suara). Eleven v4 tidak memakai speed/style: tempo dan emosi lewat tanda baca, `...`, dan kata (Nah, Eh, beneran!).
 3. Tunjukkan: tabel scene (no · narasi · visual), perkiraan durasi (kata ÷ 2,5), karakter `.txt` vs sisa kuota.
-   Contoh frame gaya (tahap 2b) dibuat dari naskah draf ini. Minta persetujuan naskah + gaya + voice.
+   Periksa sendiri contoh frame draf (`npm run produce -- <nama> --draft` → `preview/draft/board.png`) sebelum voice:
+   timing, keterbacaan, satu fokus per scene. Tabel ini masuk laporan akhir; jangan berhenti menunggu persetujuan.
 4. `Projects/<nama>/brief.md`: tujuan · penonton · pesan · hook · CTA · durasi · rasa visual → jalur/skill/gaya/palet +
    path contoh frame yang disetujui · rasa suara → voice/model/profil · brand · fakta & sumber · batasan · asumsi ·
-   kutipan persetujuan pengguna.
+   kutipan kesepakatan persepsi pengguna.
 
-## 5 · Produksi otomatis (setelah semua disetujui; bertanya lagi hanya bila terhambat)
+## 5 · Produksi otomatis (tanpa pertanyaan; berhenti hanya bila terhambat)
+
+**Jalur C standar (semua brand):** `npm run new -- <nama>` (kit HTML + tema `Brands/<slug>/theme.json` + kerangka
+`scenes.js`/storyboard dari naskah) → tulis **hanya** `html/scenes.js` mengikuti aturan timing & kejelasan di
+`Engine/kit/html/README.md` (setiap elemen muncul tepat pada katanya, satu fokus per scene, subtitle karaoke) + isi `sfx`
+storyboard + `posting/caption.md` → `npm run produce -- <nama> --draft` (periksa board) → `npm run produce -- <nama>`
+(voice → cek cue → sound → preview + board → render paralel GPU → QA ‖ posting dalam satu perintah). Brand tanpa
+`theme.json` → buat dari `brand.md`/`MOTION.md` dulu (format di README kit). Langkah di bawah adalah rincian yang
+dijalankan `produce`; pakai satu per satu hanya untuk revisi atau jalur A/B.
 
 Semua perintah dari `<workspace>/Engine/`.
 
@@ -237,7 +250,7 @@ Semua perintah dari `<workspace>/Engine/`.
    **Ukuran file**: hasil otomatis dienkode *capped CRF* (`encode` di config/profil/storyboard, bawaan CRF 23 maks 8 Mbps).
    QA [1] gagal bila bitrate melewati batas → `npm run compress -- <nama>`. Pengguna minta file lebih kecil / ukuran
    tertentu (mis. batas unggah) → `npm run compress -- <nama> --target=<MB>` atau `"encode": {"crf": 26, "maxrate": "6M"}`.
-8. **Audio ElevenLabs (opsional, memakai kredit; minta izin + sebut perkiraan)**: musik per video
+8. **Audio ElevenLabs (opsional, memakai kredit; diputuskan di penyamaan persepsi cabang 10, sebut perkiraan di ringkasan)**: musik per video
    `npm run music -- <nama> --prompt="instrumental, <suasana>, <tempo>" --yes` lalu `npm run sound` lagi; kit SFX natural
    sekali pakai `npm run sfxkit -- --yes` + `config.json` → `"sound": {"sfxKit": "eleven"}`.
 
@@ -266,7 +279,8 @@ Sebutkan biaya kredit sebelum mengerjakan revisi yang membuat suara ulang. Setel
 1. Cocokkan hasil dengan `Projects/<nama>/brief.md` per butir. Laporkan folder `Result/<brand>/<nama>/` (video + format lain, thumbnail, caption),
    durasi, ringkasan scene, hasil QA, isi `posting/caption.md`, sisa kuota, asumsi, dan teks/label yang kamu karang
    sendiri. Kirim video + thumbnail (SendUserFile). Tanyakan revisi dalam satu putaran (bagian "Revisi").
-2. **Simpan ke Google Drive begitu pengguna menyetujui video final** (mis. "sudah oke", "setuju", "pakai versi ini"):
+2. **Simpan ke Google Drive setelah pengguna menjawab "ya" pada satu pertanyaan penutup** ("Simpan ke Google Drive?";
+   jawaban seperti "sudah oke", "setuju", "simpan" juga dihitung):
    `npm run drive -- <nama>` → folder Drive tujuan (`Engine/config.local.json` → `drive`; belum diatur → lewati langkah ini dan
    beri tahu pengguna cara mengaturnya di `/content-creator:setup`) di `<brand>/<nama>/`, isi sama
    dengan `Result/<brand>/<nama>/` (video, `thumbnail.jpg`, `caption.txt`, format lain bila ada). Tidak perlu bertanya
@@ -294,7 +308,7 @@ file asli, suara di atas musik, 3 detik pertama harus menghentikan jempol. Penye
 lokasi file (peta folder di atas), ekspor `npm run html`, brand pojok, dan voice over ElevenLabs dari pipeline ini.
 
 ## Larangan
-- Tidak menulis naskah sebelum persepsi disepakati; tidak membuat suara sebelum naskah, gaya, dan voice disetujui.
+- Tidak menulis naskah sebelum persepsi disepakati; setelah disepakati, tidak meminta izin atau persetujuan lagi (kecuali Drive).
 - Tidak membuka, menampilkan, atau menyalin API key (hanya di `.env.local`, dibaca otomatis).
 - Tidak mengganti voice di tengah video atau antar-video satu brand tanpa persetujuan pengguna.
 - Tidak mengubah naskah setelah voice over dibuat tanpa menjalankan `voice` lagi.

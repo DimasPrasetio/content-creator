@@ -1,0 +1,32 @@
+/* Kit HTML standar content-creator · tata letak 1080x1920 (warna & font dari tema lewat CSS variable, diisi kit-core.js) */
+@font-face { font-family: "Poppins"; src: url(/fonts/Poppins-SemiBold.ttf); font-weight: 600; }
+@font-face { font-family: "Poppins"; src: url(/fonts/Poppins-ExtraBold.ttf); font-weight: 800; }
+@font-face { font-family: "Poppins"; src: url(/fonts/Poppins-Black.ttf); font-weight: 900; }
+@font-face { font-family: "Inter"; src: url(/fonts/inter-latin-wght-normal.woff2) format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Anton"; src: url(/fonts/Anton-Regular.ttf); }
+@font-face { font-family: "Fira Sans"; src: url(/fonts/FiraSans-Bold.ttf); font-weight: 700; }
+@font-face { font-family: "Fira Sans"; src: url(/fonts/FiraSans-Black.ttf); font-weight: 900; }
+html, body { margin: 0; padding: 0; background: var(--bg); }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); font-family: var(--font-body), sans-serif; }
+#grid { position: absolute; inset: 0;
+  background-image: linear-gradient(var(--grid) 2px, transparent 2px), linear-gradient(90deg, var(--grid) 2px, transparent 2px);
+  background-size: 90px 90px; background-position: 0 0; }
+#glow { position: absolute; left: 90px; top: 300px; width: 900px; height: 900px; border-radius: 50%;
+  background: radial-gradient(circle, var(--glow1) 0%, var(--glow2) 42%, rgba(0,0,0,0) 70%); }
+#track { position: absolute; left: 60px; top: 76px; width: 960px; height: 8px; border-radius: 4px; background: var(--track); }
+#fill { position: absolute; left: 0; top: 0; height: 8px; border-radius: 4px; background: var(--progress); width: 0; }
+#dot { position: absolute; top: -6px; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%; background: var(--text);
+  box-shadow: 0 0 14px var(--progress); }
+#label { position: absolute; left: 60px; top: 142px; height: 36px; display: flex; align-items: center; gap: 16px;
+  font: 600 27px var(--font-body), sans-serif; letter-spacing: 0.18em; color: var(--label); }
+#label i { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--label); box-shadow: 0 0 12px currentColor; }
+#wm { position: absolute; right: 60px; top: 136px; font: 800 36px var(--font-head), sans-serif; letter-spacing: 0.02em; }
+#zone { position: absolute; left: 0; top: 250px; }
+#subbox { position: absolute; left: 60px; top: 1320px; width: 960px; height: 170px; border-radius: 28px; background: var(--panel);
+  border: 2px solid var(--track); box-sizing: border-box; display: flex; align-items: center; justify-content: center; }
+.chunk { display: none; width: 880px; text-align: center; font: 600 54px/1.24 var(--font-body), sans-serif; color: var(--dim); }
+.chunk span { white-space: nowrap; }
+.q { position: absolute; font: 800 42px/1.2 var(--font-head), sans-serif; }
+.q div { margin: 0 0 10px; }
+.q span { display: inline-block; background: var(--hl-bg); color: var(--hl-fg); padding: 4px 16px 6px; border-radius: 10px;
+  box-shadow: 0 0 22px var(--hl-glow); white-space: nowrap; }

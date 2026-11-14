@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>video</title>
+<link rel="stylesheet" href="kit.css">
+</head>
+<body>
+<div id="stage">
+  <div id="grid"></div>
+  <div id="glow"></div>
+  <div id="track"><div id="fill"></div><div id="dot"></div></div>
+  <div id="label"><i></i><span id="labeltxt"></span></div>
+  <div id="wm" data-probe="brand"></div>
+  <svg id="zone" width="1080" height="1000" viewBox="0 0 1080 1000" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="9" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+  </svg>
+  <div id="qs"></div>
+  <div id="subbox"></div>
+</div>
+<script src="theme.js"></script>
+<script src="kit-core.js"></script>
+<script src="scenes.js"></script>
+<script src="kit-run.js"></script>
+</body>
+</html>

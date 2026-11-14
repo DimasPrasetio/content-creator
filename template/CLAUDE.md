@@ -2,7 +2,8 @@
 
 Workspace ini membuat video motion graphic vertikal (Reels/TikTok, 1080×1920) dari naskah, dengan plugin **content-creator**.
 Mulai video baru dengan `/content-creator <ide video>`; skill itu memuat alur lengkapnya (wawancara grill-me → contoh frame
-gaya + audisi suara → naskah disetujui → voice over ElevenLabs → visual → SFX → preview → render → QA → posting → Drive).
+gaya + audisi suara → lalu otomatis tanpa pertanyaan: naskah → voice over ElevenLabs → visual → SFX → preview → render → QA → posting;
+satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `npm run new` + `npm run produce` (kit `Engine/kit/html/`).
 
 ## Struktur folder
 | Folder | Isi |

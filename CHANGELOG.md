@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0
+- **Produksi jalur C ±4x lebih cepat, kualitas sama**: `npm run html` merender paralel (4 browser) + rasterisasi GPU
+  (video 50 dtk: 117 → ±22 dtk; SSIM 0,999 terhadap render lama), otomatis kembali ke 1 worker SwiftShader bila gagal.
+  `sound.py` memakai rata-rata bergerak O(n) (42 → 5 dtk, mix identik bit demi bit).
+- **Kit HTML standar untuk semua brand** (`engine/kit/html/`): tema per brand `Brands/<slug>/theme.json` (warna, font,
+  watermark, stabilo, subtitle, CTA, penutup), komponen kamus visual (laptop, ponsel, browser, server, database, kalender,
+  pill, bar, panah, ✓/✗, lampu error, CTA, penutup), **subtitle karaoke** (kata menyala tepat saat diucapkan) dan aturan
+  timing & kejelasan. Font Poppins & Inter ikut di `engine/fonts/`; rute `/kit/` di server render.
+- `npm run new` (proyek dari kit + tema) dan `npm run produce` (voice → cek cue → sound → preview + board → render →
+  QA ‖ posting dalam satu perintah; `cover.at: "auto"`; cue yang tidak cocok menghentikan render).
+- Skill: pertanyaan hanya di penyamaan persepsi; setelah itu produksi otomatis tanpa izin, satu pertanyaan penutup untuk
+  unggah Google Drive.
+
 ## 0.2.1
 - **Ukuran file wajar**: semua jalur (Pop, mg4, HTML, ekspor, subtitle ditanam) memakai encode *capped CRF* dari satu
   setelan `encode` (bawaan CRF 23, maks 8 Mbps, preset slow; bisa per brand/storyboard). Video bergrain 1 menit turun

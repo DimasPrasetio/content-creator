@@ -1,0 +1,19 @@
+{
+  "_doc": "Tema bawaan kit HTML. Brand menimpa sebagian lewat Brands/<slug>/theme.json (digabung dalam). Warna boleh kode hex atau nama warna lain di 'colors'.",
+  "colors": {
+    "bg": "#07080F", "grid": "#121522", "panel": "#0A0F16", "track": "#272E41", "text": "#F1F3F7", "dim": "#929AA7",
+    "accent": "#F6D86E", "accent2": "#5DCCAF", "info": "#4FB3D9", "ok": "#7CC46A", "warn": "#F0883E", "bad": "#E5534B", "extra": "#C455C0"
+  },
+  "fonts": { "head": "Poppins", "body": "Inter", "mono": "Menlo, monospace" },
+  "stroke": 5,
+  "progress": "accent2",
+  "label": { "text": "accent2" },
+  "glow": ["accent", "accent2"],
+  "highlight": { "bg": "accent", "fg": "bg" },
+  "subtitle": { "said": "text", "unsaid": "dim", "key": "accent" },
+  "watermark": null,
+  "mark": [["●", "accent"]],
+  "cta": { "label": "LINK DI BIO" },
+  "closing": null,
+  "storyboard": { "skill": "vox-explainer", "brandOverlay": false, "music": { "first": "pad", "middle": "build", "last": "full" }, "closingSfx": { "cue": null, "type": "ding" } }
+}

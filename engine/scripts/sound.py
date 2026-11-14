@@ -150,9 +150,20 @@ def shaker():
     return hp(noise(0.06), 6000) * env(int(0.06 * SR), 0.004, 0.02)
 
 
+def box_same(x, k):
+    """Sama dengan np.convolve(x, np.ones(k) / k, mode="same"), tetapi O(n) lewat jumlah kumulatif
+    (kernel 0,5 dtk = 24.000 sampel: ±40 dtk -> ±0,01 dtk per video; selisih float < 1e-9)."""
+    x = np.asarray(x, dtype=float)
+    n = len(x)
+    c = np.concatenate([[0.0], np.cumsum(x)])
+    i = np.arange(n)
+    a = np.clip(i - ((k - 1) - (k - 1) // 2), 0, n)
+    b = np.clip(i + (k - 1) // 2 + 1, 0, n)
+    return (c[b] - c[a]) / k
+
+
 def smooth(mask, sec=0.5):
-    k = int(sec * SR)
-    return np.convolve(mask.astype(float), np.ones(k) / k, mode="same")
+    return box_same(mask, int(sec * SR))
 
 
 def cinematic_bed(mode, total):
@@ -347,7 +358,7 @@ def load_sfx(kind):
 
 def active_rms(x, thr):
     win = int(0.05 * SR)
-    r = np.sqrt(np.convolve(x**2, np.ones(win) / win, mode="same"))
+    r = np.sqrt(np.maximum(box_same(x**2, win), 0))
     on = r > thr
     return float(np.sqrt(np.mean(x[on] ** 2))) if on.any() else 0.0
 
@@ -416,7 +427,7 @@ def main(name):
         m = np.tile(m, int(np.ceil(total / len(m))))[:total]
         lvl = np.choose(mode, [0.0, 0.6, 1.0, 0.35]).astype(float)
         k = int(0.4 * SR)
-        lvl = np.convolve(lvl, np.ones(k) / k, mode="same")
+        lvl = box_same(lvl, k)
         music = m / (np.max(np.abs(m)) + 1e-9) * lvl
         print("Musik: track ElevenLabs (work/<nama>/music.wav)")
     else:
@@ -449,9 +460,9 @@ def main(name):
 
     # --- ducking: musik mengecil saat narasi terdengar ---
     win = int(0.05 * SR)
-    rms = np.sqrt(np.convolve(vo**2, np.ones(win) / win, mode="same"))
+    rms = np.sqrt(np.maximum(box_same(vo**2, win), 0))
     active = (rms > 0.02).astype(float)
-    smooth = np.convolve(active, np.ones(int(0.25 * SR)) / int(0.25 * SR), mode="same")
+    smooth = box_same(active, int(0.25 * SR))
     duck = 1 - 0.55 * np.clip(smooth, 0, 1)
     # ekor: musik memudar 1,2 dtk terakhir
     fade = np.ones(total)
