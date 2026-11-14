@@ -218,6 +218,10 @@ function ctaBio(si, lines, o = {}) {
   question(si, lines.map(([txt, a, b], k) => [txt, cue(si, a) - (k ? 0 : 0.05), cue(si, b) + 0.35]),
     { left: 0, top: 250 + (o.top ?? 120), width: 1080, align: "center", size: o.size || 72 });
   const lin = cue(si, o.cue || "link");
+  // jangkar: kerangka chip & panah samar sejak awal scene (separuh bawah tidak menunggu kata "link"), menyala saat katanya
+  A(el("path", { d: rr(290, 580, 500, 130, 65), fill: "none", stroke: C.dim, "stroke-width": 4, "stroke-dasharray": "14 12" }), start(si, 0.3), "fade", { dims: [[lin, 0]] });
+  TX(615, 665, o.label || THEME_.cta?.label || "LINK DI BIO", { "font-family": F.head, "font-weight": 800, "font-size": 50, fill: C.dim }, start(si, 0.4), "fade", { dims: [[lin, 0]] });
+  A(el("path", { d: "M540,760 V880 M510,850 L540,882 L570,850", fill: "none", stroke: C.dim, "stroke-width": 5, "stroke-linecap": "round", "stroke-linejoin": "round" }), start(si, 0.5), "fade", { dims: [[lin, 0]] });
   A(el("path", { d: rr(290, 580, 500, 130, 65), fill: tint(C.accent, 0.15), stroke: C.accent, "stroke-width": 5, filter: "url(#glow)" }), lin - 0.1, "pop");
   D("path", { d: "M330,645 a28,28 0 0,1 28,-28 h40 M410,645 a28,28 0 0,1 -28,28 h-40", stroke: C.accent, "stroke-width": 6 }, lin, 0.3);
   TX(615, 665, o.label || THEME_.cta?.label || "LINK DI BIO", { "font-family": F.head, "font-weight": 800, "font-size": 50, fill: C.accent }, lin + 0.05, "pop");

@@ -129,9 +129,10 @@ const words = timing.scenes.flatMap((s) => s.words ?? []);
 const guessed = words.filter((w) => w.guessed).length;
 check(words.length > 0, `${words.length} kata punya waktu`);
 check(guessed / words.length <= 0.1, `${guessed} kata ditebak (${Math.round((guessed / words.length) * 100)}%, maks 10%)`);
+// kata di awal yang waktunya ditebak (mis. "AI" dibaca "Ei Ai") menggeser batas: +15 frame (±0,5 dtk) per kata tebakan di depannya
 const late = timing.scenes.filter((s) => {
-  const first = (s.words ?? []).find((w) => !w.guessed);
-  return !first || first.f < 0 || first.f > 12;
+  const ws = s.words ?? [], i = ws.findIndex((w) => !w.guessed), first = ws[i];
+  return !first || first.f < 0 || first.f > 12 + 15 * i;
 });
 check(
   !late.length,

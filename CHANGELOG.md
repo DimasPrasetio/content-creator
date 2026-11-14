@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2
+- Kit: `ctaBio()` memberi jangkar (kerangka chip & panah samar sejak awal scene), sehingga scene CTA tidak separuh kosong
+  sampai kata "link".
+- QA [7]: kata awal yang waktunya ditebak (mis. "AI" dibaca "Ei Ai") menggeser batas kata pertama +15 frame per kata;
+  menghilangkan positif palsu "kata pertama tidak dalam 0-12 frame".
+
 ## 0.3.1
 - **Timing tepat secara konteks, bukan tepat buta**: kit HTML kini memakai *jangkar scene* (`start(s)`, `at(s, f)`: objek
   utama hadir sejak scene dimulai), antisipasi `cue()` 0,12 dtk sebelum kata (`timing.lead`), dan crossfade sungguhan antar
