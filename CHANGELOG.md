@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.4.2
+- **Thumbnail khusus, bukan frame video**: `npm run thumbnail` (otomatis lewat `posting` bila
+  `Projects/<nama>/posting/thumbnail.json` ada) merender 1-4 varian sampul dari tema brand (`kit/thumb/thumb.html`):
+  kicker, headline besar dengan kata stabilo, sub, stiker (question/alert/cross/check/arrow), potongan frame video atau
+  gambar aset. Layout `atas` (teks atas + kartu visual) dan `tengah` (frame penuh digelapkan).
+- Pemicu psikologis per varian (penasaran, takut-rugi/larangan, angka, tantangan, kontras) dengan pagar kejujuran:
+  angka harus diucapkan di video, klaim mutlak (dijamin, gratis, 100%, terbukti, rahasia, ...) harus ada di naskah/brief.
+- Cek keterbacaan: headline ≥ 100 px, teks di pita aman y 300-1500 (grid 3:4 TikTok & 4:5 Instagram), stiker tidak
+  menimpa teks; `posting/thumb-grid.jpg` = simulasi grid profil untuk diperiksa agent.
+- Agent menulis 3 varian, memilih yang terkuat (`pick`), dua lainnya disimpan untuk uji A/B manual.
+
 ## 0.4.1
 - **Zona aman TikTok menjadi standar** (1080×1920, 9:16): semua teks & brand di **x 60–940 · y 220–1440**. Atas 220 px
   tertutup status bar + tab "Mengikuti/Untuk Anda" + ikon cari, kanan 140 px kolom tombol, bawah 480 px nama akun,

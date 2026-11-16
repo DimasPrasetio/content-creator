@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>thumbnail</title>
+<!--
+  Template thumbnail 1080x1920 (dipakai scripts/thumbnail.mjs + thumb_render.py). Data disisipkan sebelum halaman jalan:
+  window.__THUMB__ = { theme, v: {kicker, headline, accent, sub, sticker, layout, upper, font}, visual: "v1.jpg"|null, mark }
+  Halaman menata teks (ukuran otomatis), lalu mengisi window.__REPORT__ (ukuran huruf, jumlah baris, kotak tiap elemen)
+  dan window.__READY__ = true. Tidak ada yang dimuat dari internet.
+-->
+<style>
+@font-face { font-family: "Poppins"; src: url(/fonts/Poppins-SemiBold.ttf); font-weight: 600; }
+@font-face { font-family: "Poppins"; src: url(/fonts/Poppins-ExtraBold.ttf); font-weight: 800; }
+@font-face { font-family: "Poppins"; src: url(/fonts/Poppins-Black.ttf); font-weight: 900; }
+@font-face { font-family: "Inter"; src: url(/fonts/inter-latin-wght-normal.woff2) format("woff2"); font-weight: 100 900; }
+@font-face { font-family: "Anton"; src: url(/fonts/Anton-Regular.ttf); }
+@font-face { font-family: "Fira Sans"; src: url(/fonts/FiraSans-Black.ttf); font-weight: 900; }
+html, body { margin: 0; padding: 0; }
+#stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--bg); font-family: var(--body), sans-serif; }
+#grid { position: absolute; inset: 0; opacity: .9;
+  background-image: linear-gradient(var(--grid) 2px, transparent 2px), linear-gradient(90deg, var(--grid) 2px, transparent 2px);
+  background-size: 90px 90px; background-position: 0 0; }
+#glow { position: absolute; left: 50%; top: 46%; width: 1300px; height: 1300px; transform: translate(-50%, -50%);
+  background: radial-gradient(circle, var(--glow) 0%, transparent 62%); }
+/* visual: potongan frame video */
+#visual { position: absolute; display: none; }
+#visual img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.atas #visual { display: block; left: 70px; width: 940px; top: 930px; height: 744px; border-radius: 36px; overflow: hidden;
+  box-shadow: 0 0 0 4px var(--line), 0 30px 80px rgba(0,0,0,.55); }
+.atas #visual::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(0,0,0,0) 55%, var(--bg) 100%); }
+.tengah #visual { display: block; inset: 0; }
+.tengah #visual img { transform: scale(1.12); filter: saturate(.8) brightness(.32) blur(9px); }
+.tengah #visual::after { content: ""; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 45% at 50% 50%, rgba(0,0,0,.25), rgba(0,0,0,.75)); }
+/* teks */
+#mark { position: absolute; right: 140px; top: 290px; font: 900 46px/1 var(--head); letter-spacing: -1px; white-space: nowrap; }
+#kicker { position: absolute; left: 50%; transform: translateX(-50%); display: inline-flex; align-items: center; gap: 18px;
+  padding: 16px 30px; border-radius: 999px; background: var(--panel); box-shadow: 0 0 0 3px var(--line);
+  font: 800 38px/1 var(--head); letter-spacing: 6px; text-transform: uppercase; color: var(--kicker); white-space: nowrap; }
+#kicker i { width: 20px; height: 20px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 18px var(--accent); }
+#head { position: absolute; left: 70px; width: 940px; text-align: center; font-family: var(--headfont); font-weight: 900;
+  line-height: 1.08; color: var(--text); letter-spacing: -.01em; text-shadow: 0 8px 30px rgba(0,0,0,.6); }
+#head .w { display: inline-block; white-space: nowrap; margin: 0 .09em; }
+#head .acc { background: var(--hl-bg); color: var(--hl-fg); padding: .02em .16em .06em; border-radius: .14em; transform: rotate(-2deg);
+  box-shadow: 0 0 40px var(--hl-glow), 0 10px 30px rgba(0,0,0,.45); text-shadow: none; }
+#sub { position: absolute; left: 90px; width: 900px; text-align: center; font: 600 48px/1.25 var(--body); color: var(--sub);
+  text-shadow: 0 4px 18px rgba(0,0,0,.7); }
+#sticker { position: absolute; width: 170px; height: 170px; filter: drop-shadow(0 12px 30px rgba(0,0,0,.55)); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="grid"></div>
+  <div id="glow"></div>
+  <div id="visual"><img id="vimg" alt=""></div>
+  <div id="mark"></div>
+  <div id="kicker"><i></i><span id="ktxt"></span></div>
+  <div id="head"></div>
+  <div id="sub"></div>
+  <svg id="sticker" viewBox="0 0 170 170"></svg>
+</div>
+<script>
+(async () => {
+  const T = window.__THUMB__ || {};
+  const th = T.theme || {}, C = th.colors || {}, v = T.v || {};
+  const col = (c) => (C[c] ?? c ?? "#fff");
+  const tint = (c, a) => { const h = col(c).replace("#", ""); if (h.length !== 6) return col(c);
+    const n = parseInt(h, 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+  const root = document.documentElement.style, hl = th.highlight || {};
+  const set = (k, x) => root.setProperty(k, x);
+  set("--bg", col("bg")); set("--grid", col("grid")); set("--panel", col("panel")); set("--text", col("text"));
+  set("--accent", col("accent")); set("--line", tint("accent2", .45)); set("--glow", tint("accent", .16));
+  set("--kicker", col((th.label || {}).text || "accent2")); set("--sub", col("text"));
+  set("--hl-bg", col(hl.bg || "accent")); set("--hl-fg", col(hl.fg || "bg")); set("--hl-glow", tint(hl.bg || "accent", .4));
+  const fonts = th.fonts || {};
+  set("--head", `"${fonts.head || "Poppins"}", sans-serif`); set("--body", `"${fonts.body || "Inter"}", sans-serif`);
+  set("--headfont", `"${v.font || fonts.head || "Poppins"}", sans-serif`);
+  const layout = v.layout === "tengah" || !T.visual ? (T.visual ? "tengah" : "polos") : "atas";
+  document.getElementById("stage").className = layout;
+
+  // brand / mark (bagian berwarna dari tema)
+  const mk = document.getElementById("mark");
+  for (const [t, c] of T.mark || []) { const s = document.createElement("span"); s.textContent = t; s.style.color = col(c); mk.append(s); }
+
+  if (T.visual) { const img = document.getElementById("vimg"); img.src = T.visual; await img.decode().catch(() => {}); }
+
+  // kicker
+  const kk = document.getElementById("kicker");
+  if (v.kicker) document.getElementById("ktxt").textContent = v.kicker; else kk.style.display = "none";
+
+  // headline: kata aksen (stabilo) dicocokkan tanpa tanda baca, tanpa beda huruf besar/kecil
+  const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+  const acc = new Set([].concat(v.accent || []).flatMap((a) => String(a).split(/\s+/)).map(norm).filter(Boolean));
+  const H = document.getElementById("head");
+  const text = v.upper === false ? v.headline : String(v.headline || "").toUpperCase();
+  for (const w of String(text).split(/\s+/).filter(Boolean)) {
+    const s = document.createElement("span"); s.className = "w" + (acc.has(norm(w)) ? " acc" : ""); s.textContent = w; H.append(s); H.append(" ");
+  }
+  const sub = document.getElementById("sub");
+  if (v.sub) sub.textContent = v.sub; else sub.style.display = "none";
+  await document.fonts.ready;
+
+  // tata letak per layout: pita teks wajib di y 300-1500 (aman untuk grid 3:4 TikTok & 4:5 Instagram)
+  const L = { atas: { kickY: 370, top: 470, maxH: 470 }, tengah: { kickY: 560, top: 660, maxH: 560 }, polos: { kickY: 560, top: 660, maxH: 600 } }[layout];
+  kk.style.top = L.kickY + "px";
+  H.style.top = (v.kicker ? L.top : L.top - 80) + "px";
+  const words = [...H.querySelectorAll(".w")];
+  const lines = () => new Set(words.map((w) => Math.round(w.offsetTop))).size;
+  let fs = 220;
+  for (; fs >= 80; fs -= 4) {
+    H.style.fontSize = fs + "px";
+    if (lines() <= 3 && H.offsetHeight <= L.maxH && words.every((w) => w.offsetWidth <= 940)) break;
+  }
+  // teks pendukung tepat di bawah headline; layout tengah: blok kicker+headline+sub dipusatkan di pita aman
+  const place = () => { sub.style.top = H.offsetTop + H.offsetHeight + 34 + "px"; };
+  place();
+  if (layout !== "atas") {
+    const blockTop = v.kicker ? kk.offsetTop : H.offsetTop;
+    const blockBot = v.sub ? sub.offsetTop + sub.offsetHeight : H.offsetTop + H.offsetHeight;
+    const shift = Math.round((300 + 1500) / 2 - (blockTop + blockBot) / 2);
+    kk.style.top = kk.offsetTop + shift + "px"; H.style.top = H.offsetTop + shift + "px"; place();
+  }
+  const vis = document.getElementById("visual");
+  if (layout === "atas") {
+    // visual dimulai tepat di bawah teks (tidak menimpa)
+    const bottom = (v.sub ? sub.offsetTop + sub.offsetHeight : H.offsetTop + H.offsetHeight) + 70;
+    vis.style.top = Math.max(820, bottom) + "px";
+  }
+
+  // stiker di pojok kanan atas headline
+  const ST = {
+    question: `<circle cx="85" cy="85" r="78" fill="${col("bad")}"/><text x="85" y="122" text-anchor="middle" font-family="Poppins" font-weight="900" font-size="112" fill="#fff">?</text>`,
+    alert: `<path d="M85 10 L162 150 H8 Z" fill="${col("warn")}" stroke="#fff" stroke-width="6" stroke-linejoin="round"/><text x="85" y="138" text-anchor="middle" font-family="Poppins" font-weight="900" font-size="100" fill="#111">!</text>`,
+    cross: `<circle cx="85" cy="85" r="78" fill="${col("bad")}"/><path d="M52 52 L118 118 M118 52 L52 118" stroke="#fff" stroke-width="18" stroke-linecap="round"/>`,
+    check: `<circle cx="85" cy="85" r="78" fill="${col("ok")}"/><path d="M45 88 L74 116 L126 56" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
+    arrow: `<path d="M40 20 C 150 30, 150 110, 70 140" fill="none" stroke="${col("accent")}" stroke-width="14" stroke-linecap="round"/><path d="M98 150 L62 144 L80 112" fill="none" stroke="${col("accent")}" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>`,
+  };
+  const st = document.getElementById("sticker");
+  if (v.sticker && ST[v.sticker]) {
+    st.innerHTML = ST[v.sticker];
+    // tidak pernah menimpa headline: layout atas -> pojok kanan atas kotak visual; lainnya -> di atas blok teks
+    if (layout === "atas") { st.style.left = "870px"; st.style.top = vis.offsetTop - 55 + "px"; }
+    else {
+      // di atas blok teks (di bawah logo brand y 290-340); tidak ada ruang -> di bawah blok
+      const top = v.kicker ? kk.offsetTop : H.offsetTop;
+      const bot = v.sub ? sub.offsetTop + sub.offsetHeight : H.offsetTop + H.offsetHeight;
+      st.style.left = "850px";
+      st.style.top = (top - 380 >= 180 ? top - 200 : bot + 30) + "px";
+    }
+    st.style.transform = v.sticker === "arrow" ? "rotate(0deg)" : "rotate(12deg)";
+  } else st.style.display = "none";
+
+  const box = (el) => { if (getComputedStyle(el).display === "none") return null; const r = el.getBoundingClientRect();
+    return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), h: Math.round(r.height) }; };
+  window.__REPORT__ = { layout, fontSize: fs, lines: lines(), head: box(H), kicker: box(kk), sub: box(sub), sticker: box(st), mark: box(mk),
+    words: words.map((w) => box(w)) };
+  window.__READY__ = true;
+})();
+</script>
+</body>
+</html>

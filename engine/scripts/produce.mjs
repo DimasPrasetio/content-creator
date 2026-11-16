@@ -142,7 +142,9 @@ await step("qa", "QA + paket posting (paralel)", async () => {
   ]);
   qa.out.split("\n").filter((l) => /GAGAL|pengecekan (gagal|lolos)|Semua pengecekan/i.test(l)).forEach((l) => console.log(`    QA   ${l.trim()}`));
   if (post) post.out.split("\n").filter((l) => /\bOK\b|GAGAL|Hasil siap/.test(l)).forEach((l) => console.log(`    POST ${l.trim()}`));
-  else console.log("    POST dilewati: tulis Projects/<nama>/posting/caption.md lalu --from=qa");
+  else console.log("    POST dilewati: tulis Projects/<nama>/posting/caption.md (+ thumbnail.json) lalu --from=qa");
+  if (hasCaption && !existsSync(path.join(paths.dir, "posting", "thumbnail.json")))
+    console.log("    !    belum ada posting/thumbnail.json: sampul memakai frame video (tulis varian sampul lalu npm run posting)");
   const v = run("ffprobe", ["-v", "error", "-show_entries", "stream=codec_name,width,height", "-show_entries", "format=duration", "-of", "compact=p=0:nk=1", paths.result]);
   console.log(`    ffprobe ${v.trim().split("\n").join(" | ")}`);
 });

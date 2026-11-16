@@ -98,7 +98,13 @@ npm("render akhir HTML", "html", [NAME]);
 npm("QA (format, loudness, suara, sinkron, tata letak)", "qa", [NAME]);
 mkdirSync(path.join(p.dir, "posting"), { recursive: true });
 writeFileSync(path.join(p.dir, "posting", "caption.md"), "Bikin video pendek itu gampang, kalau alurnya jelas.\n\nNaskah, suara, dan visual dibuat sinkron lalu dicek otomatis.\n\nSimpan video ini!\n\n#contentcreator #videopendek #tips #produktivitas\n");
-npm("paket posting (subtitle, thumbnail, caption)", "posting", [NAME]);
+// sampul khusus: 2 varian (frame video + polos) -> npm run thumbnail lewat posting
+writeFileSync(path.join(p.dir, "posting", "thumbnail.json"), JSON.stringify({ pick: 1, variants: [
+  { trigger: "kontras", kicker: "VIDEO PENDEK", headline: "Ternyata gampang kok", accent: "gampang", sub: "Asal alurnya jelas", sticker: "check", layout: "tengah" },
+  { trigger: "larangan", headline: "Jangan unggah sebelum dicek", accent: "dicek", sticker: "alert", visual: false },
+] }, null, 2));
+npm("paket posting (subtitle, thumbnail khusus, caption)", "posting", [NAME]);
+rows.push({ langkah: "varian thumbnail", hasil: [1, 2].every((i) => existsSync(path.join(p.dir, "posting", `thumb-${i}.jpg`))) && existsSync(path.join(p.dir, "posting", "thumb-grid.jpg")) ? "LULUS" : "GAGAL", detik: 0, catatan: "posting/thumb-1..2.jpg + thumb-grid.jpg" });
 rows.push({ langkah: "isi folder hasil", hasil: ["thumbnail.jpg", "caption.txt", `${NAME}.mp4`].every((f) => existsSync(path.join(p.resultDir, f))) ? "LULUS" : "GAGAL", detik: 0, catatan: "Result/<brand>/<nama>/: video, thumbnail.jpg, caption.txt" });
 npm("ekspor 4:5 + 16:9", "export", [NAME, "--format=4x5,16x9"]);
 // 5) versi: render ulang menyimpan versi lama

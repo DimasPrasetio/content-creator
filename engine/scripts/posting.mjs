@@ -7,7 +7,8 @@
 // Bahan kerja -> Projects/<nama>/posting/:
 //   caption.md (ditulis agent; divalidasi: baris pembuka ≤ 125 huruf, total ≤ 2200, hashtag 3-10, maks 30)
 //   subtitle.srt + .vtt (dari waktu per kata), cover-grid.jpg (potongan 4:5 seperti grid profil Instagram)
-// Thumbnail = frame storyboard "cover": {"at": detik} | --cover= | akhir scene 1.
+// Thumbnail = sampul khusus dari posting/thumbnail.json (npm run thumbnail: varian berpemicu psikologis, tema brand) bila ada;
+//   selain itu (atau --cover=<detik>) frame video: storyboard "cover": {"at": detik} | akhir scene 1.
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -66,12 +67,24 @@ const guessed = timing.scenes.flatMap((s) => s.words ?? []).filter((w) => w.gues
 ok(`subtitle: ${cues.length} potongan dari ${words.length} kata${guessed ? ` (${guessed} kata waktunya ditebak)` : ""} -> posting/subtitle.srt, .vtt`);
 
 // --- cover ---
-const s1 = timing.scenes[0];
-const coverAt = parseFloat(opt("cover") ?? board.cover?.at ?? ((s1.startFrame + s1.durationFrames) / fps - 0.5));
-const cover = paths.thumbnail;
-run("ffmpeg", ["-v", "error", "-y", "-ss", coverAt.toFixed(2), "-i", paths.result, "-frames:v", "1", "-q:v", "2", cover]);
-run("ffmpeg", ["-v", "error", "-y", "-i", cover, "-vf", "crop=1080:1350:0:285", "-q:v", "2", path.join(out, "cover-grid.jpg")]);
-ok(`thumbnail: detik ${coverAt.toFixed(2)} -> ${path.relative(ROOT, cover)} (+ posting/cover-grid.jpg untuk cek grid 4:5)`);
+const thumbSpec = path.join(out, "thumbnail.json");
+if (existsSync(thumbSpec) && !opt("cover")) {
+  // sampul khusus (bukan frame video): varian dari thumbnail.json, dicek panjang teks, kejujuran klaim, keterbacaan grid
+  try {
+    execFileSync(process.execPath, [path.join(ENGINE, "scripts", "thumbnail.mjs"), name], { stdio: "inherit" });
+    ok(`thumbnail khusus -> ${path.relative(ROOT, paths.thumbnail)} (varian di posting/thumb-N.jpg)`);
+  } catch {
+    bad("thumbnail khusus belum lolos cek (lihat pesan di atas); perbaiki posting/thumbnail.json");
+  }
+} else {
+  const s1 = timing.scenes[0];
+  const coverAt = parseFloat(opt("cover") ?? board.cover?.at ?? ((s1.startFrame + s1.durationFrames) / fps - 0.5));
+  const cover = paths.thumbnail;
+  run("ffmpeg", ["-v", "error", "-y", "-ss", coverAt.toFixed(2), "-i", paths.result, "-frames:v", "1", "-q:v", "2", cover]);
+  run("ffmpeg", ["-v", "error", "-y", "-i", cover, "-vf", "crop=1080:1350:0:285", "-q:v", "2", path.join(out, "cover-grid.jpg")]);
+  ok(`thumbnail: detik ${coverAt.toFixed(2)} -> ${path.relative(ROOT, cover)} (+ posting/cover-grid.jpg untuk cek grid 4:5)`);
+  if (!opt("cover")) console.log("  -     sampul = frame video; untuk sampul khusus tulis posting/thumbnail.json (npm run thumbnail)");
+}
 
 // --- caption ---
 const capPath = path.join(out, "caption.md");

@@ -21,7 +21,9 @@ Docs and prompts are in Indonesian.*
   saat katanya diucapkan. Whisper lokal opsional (`--with-whisper`) untuk QA kejelasan kata gratis / offline.
 - **QA otomatis**: format, loudness, konsistensi suara, kejelasan, sinkron, dan **cek tata letak** (teks terpotong, keluar
   bingkai, menabrak brand pojok, tertutup UI Reels).
-- **Paket posting**: subtitle SRT/VTT, thumbnail, caption + hashtag; ekspor 4:5 / 1:1 / 16:9.
+- **Paket posting**: subtitle SRT/VTT, caption + hashtag, ekspor 4:5 / 1:1 / 16:9, dan **thumbnail khusus**: 3 varian
+  sampul berpemicu psikologis (penasaran, angka, larangan, ...) dari tema brand, dicek keterbacaannya di grid profil dan
+  kejujurannya (angka & klaim harus ada di video).
 - **Ukuran file wajar**: encode *capped CRF* (±30-60 MB per menit untuk video bergrain, jauh lebih kecil untuk video
   bersih); `npm run compress` untuk mengecilkan hasil lama atau mencapai ukuran target.
 - **Hasil per brand**: `Result/<brand>/<nama>/` dan, setelah disetujui, salinan ke Google Drive (rclone).

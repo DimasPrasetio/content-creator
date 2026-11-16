@@ -29,7 +29,7 @@ satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `n
 2. Satu voice untuk satu video; brand berulang memakai profil `Brands/<slug>/profile.json` (`profile:` di frontmatter).
 3. Visual lewat salah satu jalur: A Pop (`npm run render`), B motion-graphics-v4 (`npm run mg4`, butuh skill Anthropic
    terpasang), C HTML motion-graphics-skills (`npm run html`). Baca `Brands/<slug>/MOTION.md` sebelum mendesain bila ada.
-4. Wajib preview + cek tata letak + `npm run qa` lolos sebelum diserahkan; `npm run posting` menghasilkan thumbnail + caption.
+4. Wajib preview + cek tata letak + `npm run qa` lolos sebelum diserahkan; `npm run posting` menghasilkan thumbnail (sampul khusus dari `posting/thumbnail.json`, 3 varian berpemicu psikologis yang jujur) + caption.
 5. Setelah pengguna menyetujui video final: `npm run drive -- <nama>` (bila Drive sudah diatur). Jangan unggah yang belum disetujui.
 6. Jangan membuka, menampilkan, atau menyalin API key (`.env.local`).
 

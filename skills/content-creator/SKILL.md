@@ -191,7 +191,7 @@ profil yang sama lewat `npm run brand -- pack <slug>` → kirim → `npm run bra
 **Jalur C standar (semua brand):** `npm run new -- <nama>` (kit HTML + tema `Brands/<slug>/theme.json` + kerangka
 `scenes.js`/storyboard dari naskah) → tulis **hanya** `html/scenes.js` mengikuti aturan timing & kejelasan di
 `Engine/kit/html/README.md` (setiap elemen muncul tepat pada katanya, satu fokus per scene, subtitle karaoke) + isi `sfx`
-storyboard + `posting/caption.md` → `npm run produce -- <nama> --draft` (periksa board) → `npm run produce -- <nama>`
+storyboard + `posting/caption.md` + `posting/thumbnail.json` → `npm run produce -- <nama> --draft` (periksa board) → `npm run produce -- <nama>`
 (voice → cek cue → sound → preview + board → render paralel GPU → QA ‖ posting dalam satu perintah). Brand tanpa
 `theme.json` → buat dari `brand.md`/`MOTION.md` dulu (format di README kit). Langkah di bawah adalah rincian yang
 dijalankan `produce`; pakai satu per satu hanya untuk revisi atau jalur A/B.
@@ -244,9 +244,27 @@ Semua perintah dari `<workspace>/Engine/`.
    Render lama → jalankan di background.
 5. **QA**: `npm run qa -- <nama>` wajib lolos (format, loudness, konsistensi suara vs jangkar, kejelasan, sinkron,
    tata letak [8] — preview harus lebih baru dari storyboard/halaman), plus `ffprobe` (1080x1920, h264, aac, durasi = suara).
-6. **Paket posting** (wajib): `npm run posting -- <nama>` → `Result/<brand>/<nama>/thumbnail.jpg` (atur dengan
-   `"cover": {"at": detik}` di storyboard) + `caption.txt`; bahan kerja di `Projects/<nama>/posting/` (`caption.md`,
-   `subtitle.srt`/`.vtt`, `cover-grid.jpg`).
+6. **Paket posting** (wajib): `npm run posting -- <nama>` → `Result/<brand>/<nama>/thumbnail.jpg` + `caption.txt`;
+   bahan kerja di `Projects/<nama>/posting/` (`caption.md`, `thumbnail.json`, `thumb-N.jpg`, `thumb-pilihan.jpg`,
+   `thumb-grid.jpg`, `subtitle.srt`/`.vtt`, `cover-grid.jpg`).
+   **Thumbnail = sampul khusus, bukan frame video.** Tulis `Projects/<nama>/posting/thumbnail.json` (format di kepala
+   `Engine/scripts/thumbnail.mjs`): **3 varian**, masing-masing satu pemicu psikologis berbeda:
+   | `trigger` | Pola | Contoh |
+   |---|---|---|
+   | `penasaran` | celah informasi: ada jawaban yang belum diketahui | "Penguji pasti tanya ini" |
+   | `takut-rugi` / `larangan` | kerugian bila tidak tahu | "Jangan sidang sebelum tahu ini" |
+   | `angka` | angka spesifik dari naskah | "3 pertanyaan penentu metode" |
+   | `tantangan` | menguji penonton | "Kamu pasti salah di nomor 2" |
+   | `kontras` | anggapan vs kenyataan | "Bukan formalitas. Ini peta." |
+   Aturan: headline 3-5 kata (maks 6), satu kata `accent` (distabilo), `kicker` ≤ 4 kata opsional, `sub` ≤ 9 kata
+   opsional, `sticker` (question/alert/cross/check/arrow) yang sesuai makna. **Curiosity bait yang jujur**: janji sampul
+   harus dijawab video; angka dan klaim mutlak (dijamin, gratis, 100%, terbukti, rahasia, ...) hanya bila ada di
+   naskah/brief (dicek otomatis). `visual.at` = detik frame paling menggambarkan janji (layout `atas` untuk kit HTML;
+   `tengah` = frame penuh digelapkan, teks di tengah). Urutkan varian terbaik pertama (`"pick": 1`); `posting` (lewat
+   `npm run thumbnail`) merender semua varian dari tema brand, mengecek keterbacaan di grid (headline ≥ 100 px, pita
+   aman y 300-1500, stiker tidak menimpa teks), lalu memakai varian terpilih. **Lihat sendiri** `posting/thumb-grid.jpg`
+   (simulasi grid profil) dan ganti `pick` bila varian lain lebih kuat. Dua varian lain tetap di `posting/thumb-N.jpg`
+   untuk uji A/B manual. Sampul dari frame video hanya bila diminta: `npm run posting -- <nama> --cover=<detik>`.
    Tulis `Projects/<nama>/posting/caption.md` sendiri (disalin ke `caption.txt` setelah lolos): baris pertama = hook ≤ 125 huruf, 1-3 kalimat manfaat/konteks, CTA yang sama dengan
    video, 3-10 hashtag relevan (campur umum + niche, bahasa Indonesia), tanpa klaim yang tidak ada di brief. Jalankan
    lagi sampai lolos. Subtitle **ditanam** (`--burn [--y=1300]` → `Result/<brand>/<nama>/<nama>.sub.mp4`) hanya bila disepakati dan

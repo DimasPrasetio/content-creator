@@ -86,7 +86,7 @@ try {
 
 export const readJson = (p, fallback) => (existsSync(p) ? JSON.parse(readFileSync(p, "utf8")) : fallback);
 // Pengaturan = config.json (bawaan plugin) digabung config.local.json (milik workspace, tidak ditimpa update).
-const deepMerge = (a, b) => {
+export const deepMerge = (a, b) => {
   if (!b || typeof b !== "object" || Array.isArray(b)) return b ?? a;
   const out = { ...(a ?? {}) };
   for (const [k, v] of Object.entries(b)) out[k] = v && typeof v === "object" && !Array.isArray(v) ? deepMerge(out[k], v) : v;

@@ -23,7 +23,8 @@
     "brand": "node scripts/brand.mjs",
     "compress": "node scripts/compress.mjs",
     "new": "node scripts/new.mjs",
-    "produce": "node scripts/produce.mjs"
+    "produce": "node scripts/produce.mjs",
+    "thumbnail": "node scripts/thumbnail.mjs"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.77.0",
