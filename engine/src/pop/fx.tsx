@@ -57,9 +57,9 @@ export const Vignette: React.FC = () => (
   <AbsoluteFill style={{ background: "radial-gradient(ellipse 75% 60% at 50% 45%, transparent 55%, rgba(8,6,24,.65) 100%)", pointerEvents: "none" }} />
 );
 
-/** Header brand di pojok atas. */
+/** Header brand di pojok atas, di dalam zona aman TikTok (y >= 226, kanan berakhir di x 940). */
 export const Header: React.FC<{ left?: string; right?: string; dark?: boolean }> = ({ left, right, dark = true }) => (
-  <div data-probe="brand" style={{ position: "absolute", top: 86, left: 80, right: 80, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 5 }}>
+  <div data-probe="brand" style={{ position: "absolute", top: 226, left: 80, right: 140, display: "flex", justifyContent: "space-between", alignItems: "center", zIndex: 5 }}>
     <div style={{ fontFamily: UI, fontWeight: 900, fontSize: 30, letterSpacing: 6, color: dark ? K.CREAM : K.OUT }}>{left}</div>
     <div style={{ fontFamily: DISPLAY, fontSize: 52, color: K.BRAND, textShadow: extrude(4, dark ? K.RED2 : K.OUT) }}>{right}</div>
   </div>

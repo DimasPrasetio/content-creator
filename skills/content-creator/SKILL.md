@@ -225,16 +225,17 @@ Semua perintah dari `<workspace>/Engine/`.
      dari waktu (tanpa `Math.random`, rAF, transisi CSS), menunggu seek bila URL `?render`; **waktu beat diambil dari
      `window.__TIMING__.scenes[i].start/end` dan `words[k].s/e`** (detik, dari voice over) agar animasi tepat saat kata
      diucapkan; tidak memuat apa pun dari internet — pustaka lewat `/vendor/<paket npm>/...` (mis.
-     `/vendor/three/build/three.module.js`), aset di `html/` atau `Projects/<nama>/assets/`; konten penting di
-     y 340-1460. Brand pojok ditempel otomatis; bila halaman menggambar brand sendiri, set `"brandOverlay": false`.
+     `/vendor/three/build/three.module.js`), aset di `html/` atau `Projects/<nama>/assets/`; **semua teks & brand
+     di zona aman TikTok x 60-940 · y 220-1440** (kit standar sudah menatanya). Brand pojok ditempel otomatis; bila halaman menggambar brand sendiri, set `"brandOverlay": false`.
      Ekspor memakai `npm run html` (bukan HyperFrames; jangan memasang paket lain tanpa izin pengguna). Storyboard:
      `{"composition":"html","skill":"<skill>","brand":{...},"scenes":[{"music":"full","sfx":[...]}, ...]}`.
 3. **Sound effect**: `sfx`/`music` per scene → `npm run sound -- <nama>` (SFX -18 dB dari suara, musik di-duck).
    A: setelah preview bersih. B & C: sebelum render akhir karena audio ikut dirender (SFX berubah → `sound` lalu render lagi;
    B cukup `npm run mg4 -- <nama> --only=1`).
 4. **Preview & render** — preview A dan C menjalankan **cek tata letak otomatis** (`preview/layout.json`): teks keluar
-   bingkai, terpotong wadahnya, menabrak brand pojok, tertutup UI bawah Reels (error, wajib 0), serta di luar pita aman
-   y 220-1500 atau saling bertumpuk (peringatan, periksa di gambar). B memakai selfcheck bawaan mg4. Setelah itu tetap
+   bingkai, terpotong wadahnya, menabrak brand pojok, atau di luar **zona aman TikTok x 60-940 · y 220-1440** (tertutup
+   tab atas, kolom tombol kanan, atau caption bawah; termasuk brand pojok) = error, wajib 0; mepet kiri atau saling
+   bertumpuk = peringatan, periksa di gambar. B memakai selfcheck bawaan mg4. Setelah itu tetap
    **lihat sendiri** setiap frame (Read tool): keterbacaan, kecocokan visual dengan kalimat yang diucapkan, kesesuaian
    dengan contoh frame yang disetujui, dan (jalur C) fakta/angka persis seperti di brief.
    - A: `npm run render -- <nama> --preview` → perbaiki → `npm run render -- <nama>`.

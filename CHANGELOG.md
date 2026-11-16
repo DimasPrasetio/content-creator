@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.1
+- **Zona aman TikTok menjadi standar** (1080×1920, 9:16): semua teks & brand di **x 60–940 · y 220–1440**. Atas 220 px
+  tertutup status bar + tab "Mengikuti/Untuk Anda" + ikon cari, kanan 140 px kolom tombol, bawah 480 px nama akun,
+  caption, dan musik.
+- Kit HTML: progress bar y 232, label bab & watermark y 254–296 (watermark berakhir di x 940), subtitle y 1244–1414
+  (lebar 880, 50 px). Zona visual tetap ditulis sebagai SVG 1080×1000 (scenes.js lama tetap jalan) dan ditampilkan
+  diskalakan 0,9 di tengah area aman (layar y 316–1171); stabilo `question()` dan kit kamera ikut skala yang sama.
+  Tema `"layout": "penuh"` mengembalikan tata letak lama.
+- Cek tata letak (`src/probe/measure.js`, jalur A & C): teks atau brand pojok di luar zona aman = **error**
+  (sebelumnya hanya peringatan y < 220 / y > 1500, error baru di y > 1700).
+- Brand pojok `brand_png.py` (jalur B & HTML non-kit) dan header Pop/Video pindah ke y 226–276, sisi kanan berakhir di x 940.
+
 ## 0.4.0
 - **Kit kamera (gaya "produk-kamera")** `engine/kit/html/kit-camera.js`: lapisan DOM "dunia" per scene dengan kamera sendiri
   (`shot(s)`, `S.cam` maju / ikut aksi / mundur / meluncur dengan zoom-out), komponen UI produk (jendela aplikasi, ponsel,

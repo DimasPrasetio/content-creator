@@ -9,6 +9,13 @@ npm run produce -- <nama> --draft  # contoh frame (tanpa kredit) -> preview/draf
 npm run produce -- <nama>          # voice -> cek cue -> sound -> preview -> render paralel -> QA ‖ posting
 npm run new -- <nama> --refresh-kit  # salin ulang kit + tema (setelah kit/tema diubah)
 ```
+## Zona aman TikTok (bawaan)
+Video 9:16 (1080×1920). Semua elemen berada di **x 60–940 · y 220–1440**; di luar itu tertutup UI TikTok/Reels
+(atas 220 px = status bar + tab "Mengikuti/Untuk Anda" + ikon cari; kanan 140 px = kolom tombol; bawah 480 px = nama
+akun, caption, musik). Kit menata: progress bar y 232 · label bab & watermark y 254–296 (watermark berakhir di x 940) ·
+zona visual y 316–1171 · subtitle y 1244–1414 (lebar 880). Cek tata letak menganggap teks di luar zona ini **error**.
+Tema `"layout": "penuh"` mengembalikan tata letak lama (hanya untuk platform tanpa UI yang menimpa video).
+
 Halaman: `index.html` → `theme.js` → `kit-core.js` → `scenes.js` → `kit-run.js`. Font dari `/fonts/` (Engine/fonts: Poppins, Inter,
 Anton, Fira Sans). Render paralel 4 browser + GPU (`npm run html`), stills/preview SwiftShader.
 
@@ -46,7 +53,8 @@ scene(0);
 { const s = 0, sat = cue(s, "satu"); big(300, 380, "1", C.accent, sat, 300); }
 scene(3); closing(3);                                         // penutup dari THEME.closing
 ```
-Zona visual = SVG 1080×1000 (y 0 = layar y 250; konten penting y ≤ 950). `cue(s, "kata", n)` mencocokkan awalan kata
+Zona visual = SVG 1080×1000 (isi x 60–1020, y 0–950), ditampilkan diskalakan 0,9 di area aman (layar x = 14 + 0,9·x,
+y = 316 + 0,9·y). `cue(s, "kata", n)` mencocokkan awalan kata
 (tanpa tanda baca), `n` = kemunculan ke-n.
 
 ## Dasar
@@ -71,7 +79,7 @@ Jangan pakai `blink` pada elemen ber-atribut `opacity` (ditimpa jadi penuh) — 
 | `closing(s)` | penutup dari `THEME.closing` |
 
 ## Tema (`Brands/<slug>/theme.json`, digabung dengan `theme.default.json`)
-`timing` {lead, crossfade} · `colors` (bg, grid, panel, track, text, dim, accent, accent2, info, ok, warn, bad, extra) · `fonts` (head, body, mono) · `stroke` ·
+`layout` ("aman" bawaan = zona aman TikTok, "penuh" = tata letak lama) · `timing` {lead, crossfade} · `colors` (bg, grid, panel, track, text, dim, accent, accent2, info, ok, warn, bad, extra) · `fonts` (head, body, mono) · `stroke` ·
 `progress` · `label.text` · `glow` · `highlight` {bg, fg} · `subtitle` {said, unsaid, key} · `watermark` {parts: [[teks, warna]], opacity}
 (null = tanpa) · `mark` · `cta.label` · `closing` {wordmark, descriptor, lines: [[kata, kata disorot, cue]]} (null = tanpa) ·
 `storyboard` {skill, brandOverlay, music, closingSfx}. Nilai warna boleh nama warna tema atau hex.
@@ -86,7 +94,7 @@ over, subtitle karaoke, dan tema kit. Boleh dicampur dengan scene SVG biasa di v
 scene(7);                                   // tetap dipanggil (indeks scene)
 {
   const s = 7, ung = cue(s, "unggah"), ver = cue(s, "memverifikasi"), sts = cue(s, "statusnya");
-  const S = shot(s);                        // lapisan dunia scene 7 (zona y 190-1310, tepi atas/bawah memudar)
+  const S = shot(s);                        // lapisan dunia scene 7 (lapisan 1080×1120 ikut skala zona, tepi atas/bawah memudar)
   const W = S.window(0, 0, 1000, 660, { title: "WO Console", user: "Rina", nav: ["Beranda", "Pembayaran"], active: 1 });
   const btn = S.button(W.el, 720, 360, 160, "Verifikasi"), ok = S.chip(W.el, 720, 357, "Lunas", "ok");
   S.swap(btn, ok, ver + 0.28); S.stamp(W.el, 500, 386, 136, ver + 0.26);

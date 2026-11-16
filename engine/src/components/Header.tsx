@@ -35,15 +35,15 @@ const Mark: React.FC<{ text?: string; logo?: string; theme: Theme; gold?: boolea
   );
 };
 
-/** Dua penanda brand di pojok atas (di dalam area aman). */
+/** Dua penanda brand di pojok atas (di dalam zona aman TikTok: y >= 220, kanan berakhir di x 940). */
 export const Header: React.FC<{ theme: Theme; brand: Brand }> = ({ theme, brand }) => (
   <div
     data-probe="brand"
     style={{
       position: "absolute",
-      top: 130,
+      top: 232,
       left: 90,
-      right: 90,
+      right: 140,
       display: "flex",
       justifyContent: "space-between",
       alignItems: "flex-start",

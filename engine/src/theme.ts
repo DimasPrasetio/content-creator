@@ -2,8 +2,9 @@ export const W = 1080;
 export const H = 1920;
 export const FPS = 30;
 
-// Area aman Reels/TikTok: bagian bawah (caption, tombol) dan kanan (aksi) tertutup UI.
-export const SAFE = { top: 340, bottom: 460, side: 90 };
+// Zona aman TikTok/Reels (1080x1920): x 60-940 · y 220-1440. Atas tab + ikon cari, kanan kolom tombol, bawah caption.
+// Komposisi lama memakai sisi simetris 140 agar sisi kanan bebas kolom tombol.
+export const SAFE = { top: 340, bottom: 480, side: 140 };
 
 export const C = {
   black: "#0b0907",

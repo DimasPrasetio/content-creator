@@ -12,6 +12,8 @@ const col = (k) => (k && C[k]) || k;   // nama warna tema atau kode hex
 const tint = (hex, a) => { const h = col(hex).replace("#", ""); const n = parseInt(h.length === 3 ? h.replace(/./g, "$&$&") : h, 16); return `rgba(${n >> 16 & 255},${n >> 8 & 255},${n & 255},${a})`; };
 (function applyTheme() {
   const r = document.documentElement.style;
+  // tata letak: bawaan zona aman TikTok (kit.css); tema "layout": "penuh" = tata letak lama tanpa zona aman
+  if (THEME_.layout === "penuh") document.getElementById("stage").classList.add("layout-penuh");
   for (const [k, v] of Object.entries(C)) if (v) r.setProperty(`--${k}`, v);
   r.setProperty("--grid", THEME_.colors.grid); r.setProperty("--font-head", F.head); r.setProperty("--font-body", F.body);
   r.setProperty("--progress", col(THEME_.progress || "accent2")); r.setProperty("--label", col(THEME_.label?.text || "accent2"));
@@ -130,7 +132,8 @@ function cross(cx, cy, r, t0, o = {}) {
 
 
 // ---------- komponen kamus visual (Fondasi Brand 8.2) ----------
-// Semua koordinat di dalam zona visual (SVG 1080x1000, y 0 = layar y 250). t0 = detik muncul (pakai cue()).
+// Semua koordinat di dalam zona visual (SVG 1080x1000; isi di x 60-1020, y 0-950). Zona ditampilkan diskalakan 0,9 di
+// area aman TikTok (layar x = 14 + 0,9·x, y = 316 + 0,9·y; lihat kit.css). t0 = detik muncul (pakai cue()).
 // o: opsi animasi bersama ({ dims: [[detik, opasitas]], attrs: {stroke: ...} }).
 
 // logo/monogram dari tema (THEME.mark: [[teks, warna], ...]); mono() = nama lama
