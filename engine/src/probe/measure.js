@@ -4,7 +4,8 @@
 // memotongnya dengan wadah overflow, lalu memberi:
 //   errors: teks keluar bingkai, terpotong wadahnya, menabrak brand pojok, tertutup UI bawah Reels (y > 1700)
 //   warns : di atas area aman (y < 340), di area bawah (y > 1460), tabrakan antarteks (> 25% luas yang lebih kecil)
-// Elemen brand ditandai data-probe="brand"; elemen dekoratif data-probe="ignore".
+// Elemen brand ditandai data-probe="brand"; elemen dekoratif data-probe="ignore"; lapisan kamera kit (data-probe="camera")
+// sengaja memotong UI di tepi bingkai kamera, jadi teks di dalamnya tidak dilaporkan "terpotong oleh wadahnya".
 export function probeLayout(opts) {
   // batas: brandBand = pita brand pojok; safeTop/safeBottom = pita teks utama (arahan pop-cinematic: y 150-1500,
   // dengan cadangan untuk judul Reels di atas); uiBottom = mulai area caption/tombol Reels
@@ -20,8 +21,10 @@ export function probeLayout(opts) {
   const info = (el) => {
     let op = 1;
     let clip = null;
+    let cam = false;
     for (let e = el; e && e.nodeType === 1; e = e.parentElement) {
       if (e.dataset && e.dataset.probe === "ignore") return null;
+      if (e.dataset && e.dataset.probe === "camera") cam = true;
       const cs = getComputedStyle(e);
       if (cs.display === "none" || cs.visibility === "hidden") return null;
       op *= parseFloat(cs.opacity || "1");
@@ -30,7 +33,7 @@ export function probeLayout(opts) {
         clip = clip ? inter(clip, r) : r;
       }
     }
-    return { op, clip };
+    return { op, clip, cam };
   };
   const brand = [...document.querySelectorAll('[data-probe="brand"]')].flatMap((b) =>
     [...b.querySelectorAll("*")].filter((c) => c.children.length === 0 && (c.textContent.trim() || c.tagName === "IMG")).map((c) => S(c.getBoundingClientRect())),
@@ -53,7 +56,7 @@ export function probeLayout(opts) {
     const box = { x: line.x, r: line.r, y: mid - gh / 2, b: mid + gh / 2 };
     const vis = i.clip ? inter(box, i.clip) : box;
     if (area(vis) < 20) continue;
-    items.push({ t: text.slice(0, 40), el: n.parentElement, box, vis, cut: 1 - area(vis) / area(box) });
+    items.push({ t: text.slice(0, 40), el: n.parentElement, box, vis, cut: 1 - area(vis) / area(box), cam: i.cam });
   }
   const errors = [];
   const warns = [];
@@ -61,7 +64,7 @@ export function probeLayout(opts) {
   for (const it of items) {
     const v = it.vis;
     if (v.x < -2 || v.r > o.width + 2 || v.y < -2 || v.b > o.height + 2) errors.push(`keluar bingkai: ${at(it)}`);
-    else if (it.cut > 0.04) errors.push(`terpotong ${Math.round(it.cut * 100)}% oleh wadahnya: ${at(it)}`);
+    else if (it.cut > 0.04 && !it.cam) errors.push(`terpotong ${Math.round(it.cut * 100)}% oleh wadahnya: ${at(it)}`);
     if (brand.some((b) => area(inter(b, v)) > 4)) errors.push(`menabrak brand pojok: ${at(it)}`);
     else if (!brand.length && v.y < o.brandBand) errors.push(`masuk pita brand pojok (y < ${o.brandBand}): ${at(it)}`);
     else if (v.y < o.safeTop) warns.push(`di atas area aman (y < ${o.safeTop}): ${at(it)}`);

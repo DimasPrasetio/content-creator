@@ -5,7 +5,7 @@
 //   npm run produce -- <nama>              voice -> cek cue -> sound -> preview + board -> render paralel -> QA ‖ posting
 // Opsi: --from=voice|cues|sound|preview|render|qa   mulai dari tahap itu (tahap sebelumnya dianggap sudah)
 //       --stop-after=<tahap>                       berhenti setelah tahap itu
-//       --workers=4 --no-gpu                       diteruskan ke render (npm run html)
+//       --workers=4 --no-gpu --subframes=N         diteruskan ke render (npm run html; N = motion blur, 1 = mati)
 //       --pace=2.0                                 tempo bicara voice (kata/dtk) untuk cek durasi (atau "pace" di Brands/<slug>/profile.json)
 //       --force                                    lanjut walau ada cue animasi yang tidak ditemukan
 // Storyboard "cover": {"at": "auto"} -> thumbnail otomatis di akhir scene 1 (hook).
@@ -24,7 +24,7 @@ const STEPS = ["voice", "cues", "sound", "preview", "render", "qa"];
 const from = STEPS.indexOf(opt("from", "voice"));
 const stopAfter = STEPS.indexOf(opt("stop-after", "qa"));
 if (from < 0 || stopAfter < 0) throw new Error(`Tahap dikenal: ${STEPS.join(", ")}`);
-const renderOpts = argv.filter((a) => a.startsWith("--workers=") || a === "--no-gpu");
+const renderOpts = argv.filter((a) => a.startsWith("--workers=") || a.startsWith("--subframes=") || a === "--no-gpu");
 const times = [];
 const rel = (p) => path.relative(ROOT, p);
 

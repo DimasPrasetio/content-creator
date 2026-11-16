@@ -30,3 +30,10 @@ html, body { margin: 0; padding: 0; background: var(--bg); }
 .q div { margin: 0 0 10px; }
 .q span { display: inline-block; background: var(--hl-bg); color: var(--hl-fg); padding: 4px 16px 6px; border-radius: 10px;
   box-shadow: 0 0 22px var(--hl-glow); white-space: nowrap; }
+/* kit kamera (kit-camera.js): lapisan dunia per scene, terpotong lembut di zona visual y 190-1310 */
+#shots { position: absolute; left: 0; top: 190px; width: 1080px; height: 1120px; pointer-events: none; }
+.shot { position: absolute; inset: 0; overflow: hidden;
+  -webkit-mask-image: linear-gradient(transparent 0, #000 80px, #000 1040px, transparent 1120px);
+  mask-image: linear-gradient(transparent 0, #000 80px, #000 1040px, transparent 1120px); }
+.world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.ui { position: absolute; white-space: nowrap; transform-origin: center; font-family: var(--font-body), sans-serif; }

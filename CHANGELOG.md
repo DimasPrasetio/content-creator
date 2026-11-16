@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.0
+- **Kit kamera (gaya "produk-kamera")** `engine/kit/html/kit-camera.js`: lapisan DOM "dunia" per scene dengan kamera sendiri
+  (`shot(s)`, `S.cam` maju / ikut aksi / mundur / meluncur dengan zoom-out), komponen UI produk (jendela aplikasi, ponsel,
+  kartu, chip, tombol, dokumen, progres, kursor macOS, riak ketuk, cap/segel brand, garis cahaya sinkron, label dunia) dan
+  `statement()` (pernyataan besar + stabilo + kamera maju). Ikut crossfade scene dengan larut-blur; bisa dicampur dengan
+  scene SVG. Teknik dari explainer-default (Barty-Bart/motion-graphics, MIT).
+- **Motion blur adaptif** di `html_render.py` (`--subframes`, storyboard/tema `motionBlur`): rana 180°, 16 sub-frame
+  dirata-rata hanya untuk frame yang bergerak cepat (`window.__motion`); halaman tanpa kit kamera tidak berubah.
+- Tema: blok `ui` (palet layar produk + `stamp` file cap brand, disalin `npm run new` ke `html/stamp.*`) dan `motionBlur`.
+- Cek tata letak: teks di lapisan kamera yang terpotong tepi bingkai kamera tidak dihitung error (disengaja).
+- **Render HTML lebih tahan & merata**: video dibagi potongan 2 dtk yang diambil bergiliran oleh worker yang kosong (adegan
+  berat tidak menumpuk di satu worker). Worker yang gagal tidak lagi menggagalkan render: worker lain menghabiskan antrean,
+  potongan yang belum jadi diulang paralel tanpa GPU, lalu 1 worker; laporan menyebut pengulangan yang terjadi.
+- **Perbaikan**: server lokal renderer kini menerima 128 koneksi antre (bawaan Python 5). Halaman dengan banyak file kadang
+  gagal memuat skrip (`ERR_CONNECTION_RESET`) sehingga `window.seek` tidak pernah ada, render paralel timeout lalu jatuh ke
+  1 worker tanpa GPU (video 71 dtk ber-kit kamera: 509-731 → 78 dtk). Tunggu halaman siap memakai polling timer (bukan rAF).
+
 ## 0.3.2
 - Kit: `ctaBio()` memberi jangkar (kerangka chip & panah samar sejak awal scene), sehingga scene CTA tidak separuh kosong
   sampai kata "link".

@@ -136,6 +136,8 @@ window.seek = function (t) {
     g.style.opacity = String(o);
   });
   for (const it of items) apply(it, t);
+  // kit kamera: lapisan dunia tiap scene ikut crossfade (dengan blur saat masuk/keluar)
+  if (typeof SHOTS !== "undefined") for (const sh of SHOTS) sh.seek(t, sceneOp(sh.si));
   // progress bar
   const k = clamp(t / TOTAL);
   fillEl.style.width = `${k * 960}px`;

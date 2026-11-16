@@ -196,6 +196,12 @@ storyboard + `posting/caption.md` → `npm run produce -- <nama> --draft` (perik
 `theme.json` → buat dari `brand.md`/`MOTION.md` dulu (format di README kit). Langkah di bawah adalah rincian yang
 dijalankan `produce`; pakai satu per satu hanya untuk revisi atau jalur A/B.
 
+**Gaya produk-kamera (jalur C, kit kamera):** untuk iklan/demo produk dan aplikasi (UI sebagai bintang, seperti video
+peluncuran produk): scene memakai `shot(s)` + komponen UI (`S.window`, `S.phone`, `S.card`, `S.chip`, `S.cursor`,
+`S.stamp`, ...) dan `S.cam` (maju → ikut aksi → mundur → meluncur), pernyataan 2-3 kata dengan `statement()`. Rincian di
+`Engine/kit/html/README.md` bagian "Kit kamera". Render otomatis memakai motion blur adaptif (±2-4x waktu render scene
+kamera saja). Tawarkan sebagai kandidat contoh frame bila rasa visualnya "premium, produk, aplikasi, demo fitur".
+
 Semua perintah dari `<workspace>/Engine/`.
 
 1. **Voice over**: `npm run voice -- <nama>` (SDK `@elevenlabs/elevenlabs-js`, key dari `.env.local`). Satu voice,

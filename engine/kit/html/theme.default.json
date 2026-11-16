@@ -16,5 +16,7 @@
   "mark": [["●", "accent"]],
   "cta": { "label": "LINK DI BIO" },
   "closing": null,
+  "ui": { "bg": "#F7F7F8", "card": "#FFFFFF", "text": "#111114", "dim": "#6B6B76", "line": "#E7E7EC", "primary": "#1F2937", "soft": "#EEF0F4", "accent": "accent", "frame": "#1F2937", "stamp": null },
+  "motionBlur": 16,
   "storyboard": { "skill": "vox-explainer", "brandOverlay": false, "music": { "first": "pad", "middle": "build", "last": "full" }, "closingSfx": { "cue": null, "type": "ding" } }
 }

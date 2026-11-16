@@ -14,6 +14,8 @@ Docs and prompts are in Indonesian.*
   - **B · Motion graphics v4**: 5 gaya explainer teks (butuh skill Anthropic `motion-graphics-v4` terpasang terpisah).
   - **C · HTML motion** (15 skill dari [motion-graphics-skills](https://github.com/charlie947/motion-graphics-skills)):
     launch video premium, explainer dokumenter, keynote ala Apple, chart animasi, milestone, efek UI, opener 3D.
+    Plus **kit kamera** (gaya produk-kamera): UI produk dibangun ulang dan difilmkan kamera yang maju, mengikuti aksi,
+    mundur, dan meluncur, dengan motion blur adaptif.
 - **Suara ElevenLabs** lewat SDK resmi, satu voice per video, profil suara per brand, seed tetap, jangkar konsistensi suara.
 - **Sinkron per kata**: waktu tiap kata langsung dari ElevenLabs (timestamps, tanpa biaya tambahan); elemen muncul tepat
   saat katanya diucapkan. Whisper lokal opsional (`--with-whisper`) untuk QA kejelasan kata gratis / offline.

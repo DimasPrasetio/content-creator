@@ -6,6 +6,7 @@
 //   --preview     1 PNG per scene (di akhir scene) -> Projects/<nama>/preview/
 //   --draft       pakai timing PERKIRAAN dari naskah (tanpa suara, tanpa kredit): contoh frame gaya -> preview/draft/
 //   --workers=4   render video paralel (bawaan 4 browser) · --no-gpu  rasterisasi perangkat lunak (frame persis versi lama)
+//   --subframes=N motion blur (bawaan: storyboard "motionBlur", lalu halaman: kit kamera 16, lainnya 1 = mati)
 // Storyboard: Projects/<nama>/storyboard.json {"composition":"html","skill":"launch-video","brand":{...},
 //             "brandOverlay": true, "scenes":[{"music":"full","sfx":[...]}]}   (sfx/music dipakai `npm run sound`)
 // Kontrak halaman: window.seek(seconds) menggambar frame tepat (fungsi murni dari waktu), menunggu seek bila URL ?render.
@@ -86,7 +87,10 @@ if (preview) {
   const raw = path.join(paths.work, "html-raw.mp4");
   console.log(`Render HTML ${T.total} dtk @ ${fps} fps, audio ${path.basename(audio)} ...`);
   const workers = args.find((a) => a.startsWith("--workers="))?.split("=")[1] ?? "4";
-  const { errors } = py(["--fps", String(fps), "--duration", String(T.total), "--out", raw, "--audio", audio, "--workers", workers, ...(args.includes("--no-gpu") ? ["--no-gpu"] : [])]);
+  // motion blur: storyboard "motionBlur" (jumlah sub-frame; 1 = mati) menimpa bawaan halaman (kit kamera 16, lainnya 1)
+  const mb = args.find((a) => a.startsWith("--subframes="))?.split("=")[1] ?? board.motionBlur;
+  const { errors } = py(["--fps", String(fps), "--duration", String(T.total), "--out", raw, "--audio", audio, "--workers", workers,
+    ...(args.includes("--no-gpu") ? ["--no-gpu"] : []), ...(mb != null ? ["--subframes", String(mb)] : [])]);
   // html-raw.mp4 = perantara kualitas tinggi; kompresi final (capped CRF) hanya sekali di sini
   const enc = x264Args(encodeFor(name));
   mkdirSync(path.dirname(paths.result), { recursive: true });

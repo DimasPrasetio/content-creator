@@ -1,7 +1,7 @@
 // Siapkan proyek jalur C (HTML) dari kit standar + tema brand, supaya per video cukup menulis html/scenes.js.
 // Pemakaian: npm run new -- <nama> [--brand=<slug>] [--scenes=N] [--refresh-kit]
 //   - tema: Engine/kit/html/theme.default.json digabung dengan Brands/<slug>/theme.json -> html/theme.js
-//   - kit:  index.html, kit.css, kit-core.js, kit-run.js disalin ke Projects/<nama>/html/ (proyek tetap utuh walau kit berubah)
+//   - kit:  index.html, kit.css, kit-core.js, kit-camera.js, kit-run.js (+ cap brand theme.ui.stamp) disalin ke Projects/<nama>/html/ (proyek tetap utuh walau kit berubah)
 //   - jumlah scene dari script.md (atau --scenes=N); scenes.js & storyboard.json yang sudah ada tidak ditimpa
 //   - --refresh-kit: hanya salin ulang file kit + theme.js (mis. setelah tema brand diubah)
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -28,8 +28,14 @@ const brandTheme = path.join(DIRS.brands, brand, "theme.json");
 if (!existsSync(brandTheme)) console.warn(`  !     ${path.relative(ROOT, brandTheme)} belum ada: pakai tema bawaan (buat dari Engine/kit/html/README.md)`);
 const theme = merge(readJson(path.join(KIT, "theme.default.json")), readJson(brandTheme, {}));
 delete theme._doc;
+// cap/segel brand untuk kit kamera (theme.ui.stamp = path relatif ke Brands/<slug>/) -> html/stamp.<ext>
+if (theme.ui?.stamp) {
+  const src = path.join(DIRS.brands, brand, theme.ui.stamp);
+  if (existsSync(src)) { const dst = `stamp${path.extname(src)}`; copyFileSync(src, path.join(p.html, dst)); theme.ui.stampSrc = dst; }
+  else console.warn(`  !     ui.stamp ${path.relative(ROOT, src)} tidak ada: cap memakai lingkaran ✓ bawaan`);
+}
 writeFileSync(path.join(p.html, "theme.js"), `// tema ${brand} (dibuat npm run new dari ${existsSync(brandTheme) ? `Brands/${brand}/theme.json` : "tema bawaan"})\nconst THEME = ${JSON.stringify(theme, null, 2)};\n`);
-for (const f of ["index.html", "kit.css", "kit-core.js", "kit-run.js"]) copyFileSync(path.join(KIT, f), path.join(p.html, f));
+for (const f of ["index.html", "kit.css", "kit-core.js", "kit-camera.js", "kit-run.js"]) copyFileSync(path.join(KIT, f), path.join(p.html, f));
 console.log(`  OK    kit + tema ${brand} -> ${path.relative(ROOT, p.html)}/`);
 if (argv.includes("--refresh-kit")) process.exit(0);
 
