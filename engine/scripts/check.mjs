@@ -89,6 +89,20 @@ try {
 } catch {
   fail("venv analisis audio belum siap", "lihat Engine/README.md bagian Persiapan");
 }
+// mesin edit footage: deteksi wajah (OpenCV + YuNet), font tulisan tangan, ffmpeg HDR -> SDR
+try {
+  run(path.join(ENGINE, ".venv", "bin", "python"), ["-c", "import cv2; cv2.FaceDetectorYN"]);
+  existsSync(path.join(ENGINE, "models", "face_detection_yunet_2023mar.onnx")) ? ok("deteksi wajah (OpenCV + YuNet) untuk edit footage") : fail("model wajah YuNet tidak ada", "jalankan ulang /content-creator:setup");
+} catch {
+  fail("OpenCV belum terpasang (edit footage)", "jalankan ulang /content-creator:setup");
+}
+existsSync(path.join(ENGINE, "public", "fonts", "Caveat-Variable.ttf")) ? ok("font edit (Poppins, Caveat)") : fail("font edit tidak lengkap", "jalankan ulang /content-creator:setup");
+{
+  let f = "";
+  try { f = run("ffmpeg", ["-hide_banner", "-filters"]); } catch {}
+  const hdr = / zscale /.test(f) ? "zscale" : process.platform === "darwin" && / scale_vt /.test(f) ? "VideoToolbox" : null;
+  hdr ? ok(`ffmpeg HDR -> SDR (${hdr}) untuk footage iPhone`) : console.log("  -    ffmpeg tanpa zscale/scale_vt: footage HDR akan dinormalisasi tanpa tone mapping (warna bisa pucat)");
+}
 const mg4 = mg4Skill();
 if (!mg4) console.log("  -    motion-graphics-v4 (skill Anthropic) tidak terpasang: jalur B nonaktif, jalur A & C tetap bisa");
 else

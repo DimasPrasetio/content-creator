@@ -6,7 +6,7 @@
 //                                   jalur API sungguhan; hanya setelah pengguna setuju
 //   --keep                          proyek uji tidak dihapus (untuk diperiksa)
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DIRS, ENGINE, P, ROOT, mg4Skill, run } from "./lib.mjs";
 
@@ -77,8 +77,8 @@ else rows.push({ langkah: "contoh frame mg4", hasil: "DILEWATI", detik: 0, catat
 mkdirSync(p.html, { recursive: true });
 writeFileSync(
   path.join(p.html, "index.html"),
-  `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#0B1026;font-family:'Arial Black',Arial,sans-serif}
-#t{position:absolute;left:90px;right:90px;top:640px;color:#F4F1E8;font-size:84px;line-height:1.05;text-transform:uppercase}#t span{display:inline-block;margin-right:20px}</style></head>
+  `<!doctype html><html><head><meta charset="utf-8"><style>@font-face{font-family:P;src:url(/fonts/Poppins-Black.ttf)}html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#0B1026;font-family:P,sans-serif}
+#t{position:absolute;left:90px;right:170px;top:640px;color:#F4F1E8;font-size:76px;line-height:1.05;text-transform:uppercase}#t span{display:inline-block;margin-right:20px}</style></head>
 <body><div id="t"></div><script>const T=window.__TIMING__;const el=document.getElementById('t');let cur=-1;
 window.seek=(t)=>{const i=Math.max(0,T.scenes.findIndex(s=>t>=s.start&&t<s.end));const s=T.scenes[i];if(i!==cur){cur=i;el.innerHTML=s.words.slice(0,8).map(w=>'<span>'+w.w+'</span>').join('');}
 [...el.children].forEach((sp,k)=>{const p=Math.min(1,Math.max(0,(t-s.words[k].s+.1)/.25));sp.style.opacity=p;});};window.seek(0);</script></body></html>`,
@@ -119,6 +119,35 @@ if (full) {
   writeFileSync(p.storyboard, JSON.stringify({ composition: "Pop", brand: { left: "SELFTEST", right: "" }, scenes: Array.from({ length: scenesN }, (_, i) => ({ key: `EX${i + 1}`, trans: i ? "slash" : "none" })) }, null, 2));
   npm("preview Pop + cek tata letak", "render", [NAME, "--preview"], { allowFail: true });
 }
+// 6) mesin edit footage (style narration), tanpa kredit: footage sintetis + suara sampel + transkrip sidecar
+const NE = "00000000-02-selftest-edit";
+const pe = P(NE);
+const cleanEdit = () => {
+  for (const d of [pe.dir, pe.work, pe.resultDir]) rmSync(d, { recursive: true, force: true });
+  for (const f of [path.join(ENGINE, "public", "audio", `${NE}.wav`), path.join(ENGINE, "public", "media", "edit", `${NE}.mp4`)]) rmSync(f, { force: true });
+};
+cleanEdit();
+const raw = path.join(ENGINE, "work", "_edit-sample");
+mkdirSync(raw, { recursive: true });
+run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=1080x1920:r=30", "-i", SAMPLE_AUDIO, "-shortest", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", path.join(raw, "footage.mp4")]);
+copyFileSync(SAMPLE_AUDIO.replace(/\.mp3$/, ".align.json"), path.join(raw, "footage.words.json"));
+npm("edit: proyek baru (style narration)", "edit", [NE, "--new", "--style=narration", `--input=${path.join(raw, "footage.mp4")}`, "--force"]);
+npm("edit: normalisasi + analisis konteks", "edit", [NE, "--analyze"]);
+const ej = path.join(pe.dir, "edit.json");
+if (existsSync(ej)) {
+  const plan = JSON.parse(readFileSync(ej, "utf8"));
+  const [a, b, c] = plan.sentences;
+  if (a) Object.assign(a, { intent: "hook", objects: [{ type: "keyword", kicker: "bikin video", keyword: "gampang", at: "gampang" }] });
+  if (b) Object.assign(b, { intent: "langkah", mode: "broll", objects: [{ type: "keyword", kicker: "mulai dari", keyword: "naskah", at: "naskah" },
+    { type: "doc", title: "alur.docx", at: "naskah", rows: [{ label: "Naskah", at: "naskah" }, { label: "Suara", at: "suara" }, { label: "Visual", at: "visual" }] }] });
+  if (c) Object.assign(c, { intent: "hasil", punch: "strong", objects: [{ type: "chips", items: [{ text: "dicek otomatis", icon: "check", at: "dicek" }] }, { type: "card", kicker: "hasil", title: "siap diunggah", at: "diunggah" }] });
+  writeFileSync(ej, JSON.stringify(plan, null, 2));
+}
+npm("edit: potong + grading + grafis + render + QA", "edit", [NE]);
+rows.push({ langkah: "edit: hasil video", hasil: existsSync(pe.result) && /Semua pengecekan lolos/.test(step.last) ? "LULUS" : "GAGAL", detik: 0, catatan: "Result/umum/<nama>/<nama>.mp4 + QA" });
+if (!keep) cleanEdit();
+rmSync(raw, { recursive: true, force: true });
+
 console.table(rows);
 const failed = rows.filter((r) => r.hasil === "GAGAL").length;
 if (keep) console.log(`Proyek uji disimpan: ${path.relative(ROOT, p.dir)}`);

@@ -30,6 +30,9 @@ export const brandOf = (name) => {
     const prof = readFileSync(md, "utf8").match(/^---\n[\s\S]*?^profile:\s*([\w-]+)/m)?.[1];
     if (prof) return prof;
   }
+  // proyek edit footage: profil brand dari edit.json (--brand=<slug>)
+  const ep = readJson(path.join(dir, "edit.json"), null)?.profile;
+  if (ep) return ep;
   const b = readJson(path.join(dir, "storyboard.json"), {}).brand ?? {};
   const texts = [b.left, b.right].filter(Boolean).map((x) => x.toLowerCase());
   if (texts.length && existsSync(DIRS.brands))

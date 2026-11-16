@@ -24,7 +24,8 @@
     "compress": "node scripts/compress.mjs",
     "new": "node scripts/new.mjs",
     "produce": "node scripts/produce.mjs",
-    "thumbnail": "node scripts/thumbnail.mjs"
+    "thumbnail": "node scripts/thumbnail.mjs",
+    "edit": "node scripts/edit.mjs"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.77.0",

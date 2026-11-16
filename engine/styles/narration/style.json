@@ -1,0 +1,261 @@
+{
+  "_doc": "Style bawaan plugin 'narration': talking-head edukatif dipotong rapat + panel motion graphic hijau gelap + subtitle per kata + grading muted cinematic. Workspace boleh menimpa lewat Styles/narration/style.json. Rincian: STYLE.md.",
+  "name": "narration",
+  "kind": "edit",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "safeZone": "tiktok"
+  },
+  "pace": {
+    "targetWordsPerSec": 3.1,
+    "maxGapSec": 0.15,
+    "keepGapSec": [
+      0.04,
+      0.08
+    ],
+    "dropFillers": [
+      "eh",
+      "em",
+      "emm",
+      "anu",
+      "hmm"
+    ],
+    "jumpCutEverySec": [
+      2,
+      5
+    ],
+    "duration": [
+      45,
+      90
+    ]
+  },
+  "aroll": {
+    "framing": "medium-close-up",
+    "punchIn": {
+      "scales": [
+        1.0,
+        1.18,
+        1.28
+      ],
+      "shiftX": [
+        -0.08,
+        0,
+        0.08
+      ],
+      "everyCut": true
+    },
+    "focusBrackets": {
+      "color": "#FFFFFF",
+      "stroke": 4,
+      "onKeywords": true
+    },
+    "floatingObjects": true
+  },
+  "broll": {
+    "share": [
+      0.3,
+      0.4
+    ],
+    "lengthSec": [
+      1.5,
+      6.5
+    ],
+    "background": {
+      "type": "radial",
+      "center": "#0D2E29",
+      "edge": "#0B2320",
+      "dots": {
+        "color": "#FFFFFF",
+        "opacity": 0.05,
+        "spacing": 22
+      }
+    },
+    "pip": {
+      "shape": "circle",
+      "size": 340,
+      "ring": {
+        "color": "#FFFFFF",
+        "width": 6
+      },
+      "position": "top-left"
+    },
+    "objects": [
+      "doc-card",
+      "phone-chat",
+      "prompt-card",
+      "file-bubble",
+      "skill-card",
+      "chip-list"
+    ],
+    "transition": "cut",
+    "closingTransition": {
+      "type": "dim-tint",
+      "dim": 0.5,
+      "tint": "#0B2320"
+    }
+  },
+  "type": {
+    "fonts": {
+      "head": "Poppins",
+      "hand": "Caveat",
+      "body": "Poppins"
+    },
+    "kicker": {
+      "font": "hand",
+      "color": "#FFFFFFD9",
+      "size": 60
+    },
+    "title": {
+      "font": "head",
+      "weight": 700,
+      "color": "#FFFFFF",
+      "size": 66
+    },
+    "keyword": {
+      "font": "head",
+      "weight": 900,
+      "upper": true,
+      "color": "#0A5A58",
+      "box": "#E3E9E9",
+      "size": 110,
+      "radius": 10,
+      "enter": "wipe-blur"
+    },
+    "bigword": {
+      "font": "head",
+      "weight": 900,
+      "upper": true,
+      "color": "#FFFFFF",
+      "size": 180,
+      "enter": "pop"
+    },
+    "chip": {
+      "font": "head",
+      "weight": 600,
+      "color": "#0B2420",
+      "box": "#E3E9E9",
+      "icon": "#097969",
+      "size": 44
+    },
+    "subtitle": {
+      "font": "head",
+      "weight": 700,
+      "color": "#FFFFFF",
+      "shadow": "#000000B3",
+      "active": {
+        "color": "#097969",
+        "stroke": "#FFFFFF"
+      },
+      "size": 60,
+      "wordsPerChunk": [
+        2,
+        5
+      ],
+      "zoneY": [
+        1244,
+        1414
+      ]
+    }
+  },
+  "palette": {
+    "deep": "#0B3D2E",
+    "teal": "#097969",
+    "tealText": "#0A5A58",
+    "card": "#E3E9E9",
+    "white": "#FFFFFF",
+    "bg": "#0D2E29",
+    "bgEdge": "#0B2320"
+  },
+  "grade": {
+    "applyTo": "aroll",
+    "mode": "calibrate",
+    "targets": {
+      "blackLstar": 12,
+      "whiteLstar": 58,
+      "medianLuma": 0.3,
+      "saturationScale": 0.72,
+      "skinChroma": 14.5,
+      "skinHueDeg": 47,
+      "whiteBalance": "neutral",
+      "vignette": 0.15,
+      "lumaP1": 0.075,
+      "lumaP50": 0.3,
+      "lumaP99": 0.64
+    },
+    "startChain": "curves=all='0/0.075 0.20/0.17 0.50/0.40 0.80/0.60 1/0.72',eq=saturation=0.72,vignette=angle=PI/5"
+  },
+  "audio": {
+    "lufs": -15,
+    "lra": [
+      5,
+      7
+    ],
+    "truePeak": -1.5,
+    "music": null,
+    "sfx": {
+      "transitions": false,
+      "objectPop": {
+        "maxDb": -24
+      }
+    },
+    "voice": [
+      "denoise-light",
+      "deess",
+      "warm-eq"
+    ]
+  },
+  "cta": {
+    "early": {
+      "atSec": [
+        4,
+        6
+      ],
+      "text": [
+        "jangan lupa",
+        "FOLLOW",
+        "+ save"
+      ]
+    },
+    "closing": [
+      "tungguin",
+      "konten selanjutnya",
+      "jangan lupa follow"
+    ]
+  },
+  "fixed": [
+    "pace",
+    "broll.share",
+    "broll.lengthSec",
+    "type",
+    "palette",
+    "grade.targets",
+    "audio",
+    "canvas"
+  ],
+  "grammar": {
+    "hook": "aroll+kicker+titleStack+keywordBox+focusBrackets",
+    "cta": "broll:phoneMockup+followSave | closing:phoneWithSpeakerClip",
+    "problem|desire|opinion|emotion": "aroll+punchIn+keywordBox|bigword",
+    "point-at-body|object": "aroll+annotationChips(anchor=detectedLandmark)",
+    "step-marker": "broll+pip+kickerOrdinal",
+    "tool|app|file": "uiCard(doc|chat|file, generic icon) | userScreenshot",
+    "list": "chipStack(per item on word)",
+    "quote|prompt": "promptCard(typewriter)",
+    "dialog|process": "phoneChat(alternating)",
+    "number|data": "countUp|simpleBar (spoken numbers only)",
+    "compare|before-after": "twoCards|dimVsBright",
+    "result|payoff": "aroll+strongPunchIn+resultCard",
+    "teaser|closing": "aroll(dim-tint)+bigword"
+  },
+  "context": {
+    "transcript": "elevenlabs-scribe",
+    "glossary": "Projects/<nama>/glossary.json",
+    "face": "per-frame box+landmarks",
+    "motion": "hand-motion mask",
+    "perClipGrade": true,
+    "retakes": "similar-sentence detection",
+    "plan": "Projects/<nama>/edit.json (per kalimat: maksud, keputusan, visual, kata kunci, alasan)"
+  }
+}

@@ -38,7 +38,9 @@ semua yang belum ada:
 | ffmpeg + libx264 | audio & video | Homebrew · apt · build statis BtbN dari GitHub (Linux), SHA-256 diverifikasi |
 | uv + Python 3.12 | analisis suara, motion graphics | Homebrew · installer resmi astral.sh |
 | rclone | unggah Google Drive | Homebrew · unduhan resmi rclone.org |
-| Paket npm & Python | Remotion, ElevenLabs SDK, Playwright, resemblyzer, dll. | otomatis |
+| Paket npm & Python | Remotion, ElevenLabs SDK, Playwright, resemblyzer, OpenCV (deteksi wajah), dll. | otomatis |
+| Model wajah YuNet, font Poppins & Caveat | edit footage (wajah, tulisan tangan) | dibawa plugin |
+| HDR → SDR (footage iPhone) | edit footage | ffmpeg `zscale` (Linux) · VideoToolbox `scale_vt` (macOS), dicek `npm run check` |
 | Chromium (Playwright + Remotion) | render & cek tata letak | otomatis |
 | Library sistem Chromium (Linux) | menjalankan browser di server | otomatis bila root / sudo tanpa password |
 | *(opsional)* whisper large-v3-turbo (±1,8 GB) | QA kejelasan kata gratis, sinkron offline, VoiceStudio | hanya dengan `--with-whisper` |

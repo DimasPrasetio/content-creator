@@ -1,6 +1,6 @@
 ---
 name: content-creator
-description: Agent generator video pendek otomatis — dari ide sampai MP4 vertikal 1080×1920 siap upload (Reels/TikTok). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", atau meminta dibuatkan video/konten/reels baru.
+description: Agent generator video pendek otomatis — dari ide sampai MP4 vertikal 1080×1920 siap upload (Reels/TikTok). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, rekaman bicara) berbasis style (mis. narration). Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
 argument-hint: "[ide atau topik video]"
 ---
 
@@ -42,6 +42,14 @@ Prinsip:
 - Baca `Brands/_selera.md` dan `Brands/*/profile.json` (+ `brand.md`/`MOTION.md` bila ada). Brand yang sudah punya
   profil → profil itu menjadi rekomendasi utama.
 - Lihat `Projects/` dan `Result/` untuk video sejenis.
+
+## Dua jenis pekerjaan: buat video baru atau EDIT footage
+
+Tentukan di awal (tanyakan bila tidak jelas):
+- **Video baru dari ide** (naskah → suara ElevenLabs → animasi): tahap 1-6 di bawah.
+- **Edit footage yang sudah ada** (pengguna memberi rekaman talking-head / bicara ke kamera, mp4/mov, bisa beberapa
+  file, vertikal atau horizontal, termasuk HDR iPhone): ikuti bagian **"Mode edit footage"** di bawah. Gaya ditentukan
+  **style** (`narration`, atau style lain di `Styles/<slug>/`), bukan brand.
 
 ## Mode: lengkap atau cepat
 
@@ -281,6 +289,29 @@ Semua perintah dari `<workspace>/Engine/`.
 
 Terhambat (kuota habis, voice ditolak paket, render gagal berulang): berhenti, jelaskan akibatnya dalam bahasa awam,
 beri pilihan + rekomendasi. Jangan pindah provider, jalur, atau gaya diam-diam.
+
+## Mode edit footage (berbasis style)
+
+Format rencana, daftar objek, dan aturannya: `Engine/styles/README.md` (baca dulu). Detail gaya: `STYLE.md` style itu.
+
+1. **Grill-me singkat** (satu-satunya sesi tanya): tujuan & penonton, style (bawaan `narration`), CTA, brand pojok
+   (boleh kosong), nama/istilah khusus yang sering salah dengar (→ `glossary`), aset pendukung (tangkapan layar, foto
+   produk → `Projects/<nama>/assets/`). Pengguna memberi video **referensi** gaya baru? Bedah dulu menjadi
+   `Styles/<slug>/` (STYLE.md + style.json, angka terukur termasuk color grading), lalu pakai slug itu.
+2. `npm run edit -- <nama> --new --style=<slug> --input=<file1>[,<file2>]` → `npm run edit -- <nama> --analyze`.
+3. **Pahami konteks** sebelum memutuskan: baca `Projects/<nama>/edit/konteks.md` dan lihat `edit/kontak-srcN.jpg`
+   (Read). Tentukan topik, struktur, entitas; perbaiki salah dengar lewat `glossary` lalu `--analyze` lagi (gratis,
+   transkrip di-cache).
+4. **Isi `edit.json` per kalimat** dari **maksud kalimat** (tabel tata bahasa visual di STYLE.md, objek di README):
+   - `keep: false` untuk ambil ulang, kalimat terpotong, atau yang tidak menambah isi; urutkan ulang bila hook lebih kuat
+     ada di tengah;
+   - `mode`: `aroll` untuk opini/emosi/penekanan, `broll` untuk langkah/proses/alat/kutipan panjang, `dim` untuk penutup;
+     jaga porsi B-roll sesuai style;
+   - objek: teks penekanan = kata yang diucapkan, muncul tepat pada katanya; satu fokus per kalimat; `why` = alasan.
+5. `npm run edit -- <nama> --draft` → perbaiki semua **ERROR** (mis. objek menutup wajah → ganti slot atau jadikan
+   `broll`; kata tidak diucapkan → ganti teks), pertimbangkan peringatan, **lihat sendiri** `preview/board.png`.
+6. `npm run edit -- <nama>` → render + QA (grading dikalibrasi otomatis dan dilaporkan terhadap target). Lalu
+   `posting/caption.md` + `posting/thumbnail.json` → `npm run posting -- <nama>`. Drive hanya setelah disetujui.
 
 ## Revisi setelah serah terima
 

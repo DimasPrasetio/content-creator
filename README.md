@@ -9,6 +9,11 @@ voice-over, word-synced motion graphics, SFX, render, automatic QA, thumbnail + 
 Docs and prompts are in Indonesian.*
 
 ## Fitur
+- **Edit footage yang sudah ada, berbasis style** (bukan brand): rekaman talking-head (vertikal/horizontal, termasuk HDR
+  iPhone) → potong rapat per kata, grading dikalibrasi ke target style, suara dibersihkan, panel motion graphic & objek
+  yang ditempatkan sadar wajah, subtitle per kata. Agent memutuskan isi visual dari konteks tiap kalimat. Style bawaan
+  `narration`; style baru bisa dibedah dari video referensi Anda (`Styles/<slug>/`). Lihat
+  [engine/styles/README.md](engine/styles/README.md).
 - **Tiga jalur visual**, dipilih dari contoh frame naskah Anda:
   - **A · Pop cinematic** (Remotion): poster komik-pop, transisi grafis, grain, scene khusus per video.
   - **B · Motion graphics v4**: 5 gaya explainer teks (butuh skill Anthropic `motion-graphics-v4` terpasang terpisah).
@@ -58,7 +63,7 @@ Buka Claude Code di folder mana pun, lalu:
 Agent menanyakan hal yang perlu (tujuan, penonton, hook, CTA, rasa visual, rasa suara, brand pojok), menunjukkan contoh
 frame + audisi suara, meminta persetujuan naskah sebelum memakai kredit, lalu memproduksi sampai `Result/<brand>/<nama>/`.
 
-Perintah mesin (dari `<workspace>/Engine`): `npm run check`, `voice`, `render`, `mg4`, `html`, `sound`, `qa`, `posting`,
+Perintah mesin (dari `<workspace>/Engine`): `npm run check`, `voice`, `render`, `mg4`, `html`, `edit`, `sound`, `qa`, `posting`, `thumbnail`, `compress`,
 `export`, `drive`, `voices`, `brand`, `selftest`. Rincian: [engine/README.md](engine/README.md).
 
 ## Struktur

@@ -8,7 +8,8 @@ satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `n
 ## Struktur folder
 | Folder | Isi |
 |---|---|
-| `Projects/<nama>/` | satu folder per video: `brief.md`, `script.md`, `script.txt`, `storyboard.json`, `voice.wav`, `preview/`, `html/`, `assets/`, `posting/`, `versions/` |
+| `Projects/<nama>/` | satu folder per video: `brief.md`, `script.md`, `script.txt`, `storyboard.json`, `voice.wav`, `preview/`, `html/`, `assets/`, `posting/`, `versions/`; proyek edit footage: `edit.json`, `edit/konteks.md`, `assets/raw/` |
+| `Styles/<slug>/` | gaya edit footage hasil bedah video referensi pengguna (`STYLE.md`, `style.json`, `reference.mp4`); bawaan plugin di `Engine/styles/` |
 | `Brands/<slug>/` | satu folder per brand: `profile.json`, `brand.md`, `MOTION.md`, `logo/`, `examples/`; `Brands/_selera.md` = riwayat selera |
 | `References/` | contoh gaya (video/gambar) |
 | `Result/<brand>/<nama>/` | hasil jadi saja: `<nama>.mp4`, `thumbnail.jpg`, `caption.txt` (+ format lain) |

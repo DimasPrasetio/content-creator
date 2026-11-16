@@ -18,3 +18,6 @@
 - **Remotion** (render komposisi Video/Pop) memakai [Remotion License](https://www.remotion.dev/license): gratis untuk individu
   dan perusahaan kecil; organisasi yang lebih besar wajib membeli lisensi perusahaan. Pastikan Anda memenuhi ketentuannya.
 - **ElevenLabs**, **Google Drive**, **TikTok**: pemakaian layanan mengikuti ketentuan masing-masing penyedia dan akun Anda.
+| YuNet face detector (`face_detection_yunet_2023mar.onnx`), OpenCV Zoo, https://github.com/opencv/opencv_zoo | `engine/models/` (+ `LICENSE-yunet.txt`) | MIT |
+| OpenCV (`opencv-python-headless`), dipasang setup ke venv | `Engine/.venv` | Apache-2.0 |
+| Font Caveat, Google Fonts (Impallari Type) | `engine/fonts/Caveat-Variable.ttf`, `engine/public/fonts/` (+ `OFL-Caveat.txt`) | SIL OFL 1.1 |

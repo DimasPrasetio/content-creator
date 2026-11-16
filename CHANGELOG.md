@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0
+- **Mesin edit footage berbasis style** (`npm run edit`): footage talking-head yang sudah ada → video 1080×1920 sesuai
+  style. Normalisasi (30 fps tetap, HDR → SDR lewat zscale / VideoToolbox, potong 9:16 mengikuti wajah untuk footage
+  horizontal), transkrip per kata (Scribe atau sidecar `.words.json`), analisis wajah & titik mulut/mata (OpenCV YuNet),
+  gerak tangan, cahaya, kulit, noise → `edit/konteks.md` untuk agent.
+- Rencana `edit.json` per kalimat (maksud, buang/A-roll/B-roll/dim, objek, alasan) dengan glosarium salah dengar;
+  potong per kata (jeda & kata pengisi dibuang, ambil ulang & kalimat terpotong ditandai), punch-in bertumpu di wajah.
+- **Grading terkalibrasi**: tiap sumber diukur ulang sampai luma p1/p50/p99 dan chroma kulit mencapai target style
+  (maks 4 putaran); suara dibersihkan sesuai noise, de-ess, kompresi, loudness linear ke target style.
+- Komposisi Remotion `Edit`: kata kunci kotak + kicker tulisan tangan (Caveat), kata besar, chip, anotasi berpanah ke
+  wajah, bingkai fokus, kartu dokumen, chat HP, prompt diketik, berkas, kartu hasil, HP CTA berisi klip, gambar aset,
+  panel B-roll dengan PiP wajah, subtitle karaoke; penempatan sadar wajah & zona subtitle.
+- Cek: teks layar = ucapan, kata pemicu, objek menutup wajah / zona subtitle, porsi & panjang B-roll, layar diam, tempo,
+  grading, tata letak, QA. Style bawaan `narration` (`Engine/styles/`), style workspace `Styles/<slug>/`.
+- Setup memasang OpenCV; plugin membawa model YuNet (MIT) dan font Caveat (OFL); `npm run check` memeriksa wajah, font,
+  dan kemampuan HDR ffmpeg. Selftest menguji mesin edit tanpa kredit.
+
 ## 0.4.2
 - **Thumbnail khusus, bukan frame video**: `npm run thumbnail` (otomatis lewat `posting` bila
   `Projects/<nama>/posting/thumbnail.json` ada) merender 1-4 varian sampul dari tema brand (`kit/thumb/thumb.html`):

@@ -5,7 +5,7 @@
 #
 # Yang dipasang otomatis bila belum ada (tanpa langkah manual):
 #   Node.js 22, ffmpeg (libx264), uv + Python 3.12, rclone, dependensi npm & Python, Chromium (Playwright + Remotion),
-#   library sistem Chromium (Linux). Sinkron kata memakai timestamps ElevenLabs, jadi model transkripsi tidak wajib.
+#   library sistem Chromium (Linux), OpenCV (deteksi wajah untuk edit footage). Sinkron kata memakai timestamps ElevenLabs, jadi model transkripsi tidak wajib.
 # --with-whisper: tambahan opsional faster-whisper + model large-v3-turbo (±1,8 GB) untuk QA kejelasan kata gratis,
 #   sinkron offline, dan VoiceStudio. Sekali dipasang, setup berikutnya ikut memperbaruinya.
 # Cara memasang: Homebrew (macOS, bila ada) · apt (Linux, bila root / sudo tanpa password) · selain itu unduhan resmi
@@ -124,9 +124,9 @@ fi
 has rclone && ok "rclone $(rclone version | sed -n 1p | cut -d' ' -f2)"
 
 say "2/8 Workspace: $WS"
-mkdir -p "$WS"/{Projects,Brands,References,Result}
+mkdir -p "$WS"/{Projects,Brands,References,Result,Styles}
 copy_once() { [ -e "$WS/$1" ] || { mkdir -p "$(dirname "$WS/$1")"; cp "$PLUGIN_ROOT/template/$1" "$WS/$1"; ok "dibuat $1"; }; }
-for f in CLAUDE.md .gitignore Projects/README.md Brands/README.md Brands/_selera.md References/README.md Result/README.md; do copy_once "$f"; done
+for f in CLAUDE.md .gitignore Projects/README.md Brands/README.md Brands/_selera.md References/README.md Result/README.md Styles/README.md; do copy_once "$f"; done
 
 say "3/8 Mesin -> $WS/Engine (data workspace tidak disentuh)"
 node "$PLUGIN_ROOT/bin/sync-engine.mjs" "$PLUGIN_ROOT/engine" "$WS/Engine"
@@ -143,15 +143,16 @@ say "5/8 Python 3.12 + paket analisis audio, motion graphics, HTML"
 HF_HUB="${HF_HUB_CACHE:-${HF_HOME:-$HOME/.cache/huggingface}/hub}"
 [ -d "$HF_HUB/models--deepdml--faster-whisper-large-v3-turbo-ct2/snapshots" ] && WITH_WHISPER=1
 WH_PKG=""; [ "$WITH_WHISPER" = 1 ] && WH_PKG="faster-whisper==1.2.1"
-PYREQ="v3|$WH_PKG numpy soundfile scipy librosa webrtcvad-wheels setuptools<81 playwright pillow|resemblyzer"
+PYREQ="v4|$WH_PKG numpy soundfile scipy librosa webrtcvad-wheels setuptools<81 playwright pillow opencv-python-headless|resemblyzer"
 if [ -x .venv/bin/python ] && [ "$(cat .deps-py 2>/dev/null)" = "$PYREQ" ]; then ok "sudah terpasang"; else
   [ -x .venv/bin/python ] || uv venv .venv --python 3.12 --python-preference only-managed -q
   # Linux tanpa GPU: PyTorch versi CPU (±200 MB, bukan CUDA ±2,5 GB)
   if [ "$OS" = Linux ]; then uv pip install -q --python .venv/bin/python torch --index-url https://download.pytorch.org/whl/cpu; else uv pip install -q --python .venv/bin/python torch; fi
   # webrtcvad-wheels = webrtcvad siap pakai (tanpa compiler); resemblyzer dipasang tanpa menarik webrtcvad versi source
-  uv pip install -q --python .venv/bin/python $WH_PKG numpy soundfile scipy librosa webrtcvad-wheels "setuptools<81" playwright pillow
+  # opencv-python-headless: deteksi wajah (model YuNet dibawa plugin, engine/models/) untuk mesin edit footage
+  uv pip install -q --python .venv/bin/python $WH_PKG numpy soundfile scipy librosa webrtcvad-wheels "setuptools<81" playwright pillow opencv-python-headless
   uv pip install -q --python .venv/bin/python --no-deps resemblyzer
-  .venv/bin/python -c "import resemblyzer, scipy, soundfile, PIL, playwright${WH_PKG:+, faster_whisper}" && echo "$PYREQ" > .deps-py && ok "terpasang${WH_PKG:+ (+ faster-whisper)}"
+  .venv/bin/python -c "import resemblyzer, scipy, soundfile, PIL, playwright, cv2${WH_PKG:+, faster_whisper}; cv2.FaceDetectorYN" && echo "$PYREQ" > .deps-py && ok "terpasang${WH_PKG:+ (+ faster-whisper)}"
 fi
 
 say "6/8 Browser render (Chromium Playwright + Chrome Headless Remotion)"
