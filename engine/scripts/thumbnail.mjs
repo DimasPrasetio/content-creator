@@ -13,6 +13,8 @@
 //   visual  : { "at": detik, "crop": [x, y, w, h] } dari video hasil | { "image": "assets/x.png" } | false (polos)
 //             bawaan: frame cover/akhir hook; potongan = zona visual kit (y 316-1171) bila proyek memakai kit HTML
 //   font    : opsional, mis. "Anton" (bawaan = font judul tema)
+// Kanvas 16:9 (storyboard/edit.json "format"): sampul YouTube 1280x720 (teks kiri, visual kanan; pita y 110-640, pojok kanan
+//   bawah bebas untuk label durasi; huruf headline >= 56 px), tanpa simulasi grid.
 // Keluaran: Result/<brand>/<nama>/thumbnail.jpg (varian terpilih) · Projects/<nama>/posting/thumb-N.jpg (semua varian) ·
 //   posting/thumb-pilihan.jpg (papan perbandingan) · posting/thumb-grid.jpg (simulasi grid profil 3:4) · cover-grid.jpg
 // Cek (GAGAL = exit 1): panjang teks, angka & klaim mutlak harus ada di naskah/brief (curiosity bait yang jujur, bukan
@@ -20,7 +22,7 @@
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DIRS, ENGINE, P, ROOT, brandOf, brandStyle, deepMerge, kitTheme, loadStyle, parseScript, readJson, resolveName, run } from "./lib.mjs";
+import { DIRS, ENGINE, P, ROOT, brandOf, brandStyle, canvasOf, deepMerge, kitTheme, loadStyle, parseScript, readJson, resolveName, run } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -95,6 +97,9 @@ rmSync(work, { recursive: true, force: true });
 mkdirSync(work, { recursive: true });
 copyFileSync(path.join(ENGINE, "kit", "thumb", "thumb.html"), path.join(work, "thumb.html"));
 const isKit = existsSync(path.join(paths.html, "kit-core.js"));
+const CV = canvasOf(name), YT = CV.format === "16:9";
+// potongan visual bawaan: zona visual kit per format, selain itu frame utuh
+const KIT_CROP = { "9:16": [0, 316, 1080, 855], "16:9": [96, 186, 1728, 672], "4:5": [54, 186, 972, 900], "1:1": [54, 182, 972, 672] };
 const s1 = timing?.scenes?.[1];
 const defaultAt = typeof board.cover?.at === "number" ? board.cover.at : s1 ? s1.startFrame / timing.fps - 0.45 : 1;
 const specs = variants.map((v, i) => {
@@ -108,24 +113,25 @@ const specs = variants.map((v, i) => {
       run("ffmpeg", ["-v", "error", "-y", "-i", src, "-q:v", "2", out]);
     } else {
       if (!existsSync(paths.result)) throw new Error(`Video belum ada (visual diambil dari video): ${path.relative(ROOT, paths.result)}`);
-      const [x, y, w, h] = vis.crop ?? (isKit ? [0, 316, 1080, 855] : [0, 0, 1080, 1920]);
+      const [x, y, w, h] = vis.crop ?? (isKit ? KIT_CROP[CV.format] : [0, 0, CV.w, CV.h]);
       run("ffmpeg", ["-v", "error", "-y", "-ss", Number(vis.at ?? defaultAt).toFixed(2), "-i", paths.result, "-frames:v", "1", "-vf", `crop=${w}:${h}:${x}:${y}`, "-q:v", "2", out]);
     }
     visual = path.basename(out);
   }
   const layout = v.layout ?? (visual && !isKit && !v.visual?.crop ? "tengah" : "atas");
-  return { theme, mark, visual, v: { ...v, layout } };
+  return { theme, mark, visual, v: { ...v, layout }, ...(YT ? { yt: true } : {}) };
 });
 writeFileSync(path.join(work, "specs.json"), JSON.stringify(specs));
 
 // --- 4. render + cek tata letak ---
 const reports = JSON.parse(execFileSync(PY, [path.join(ENGINE, "scripts", "thumb_render.py"), "--root", work, "--specs", path.join(work, "specs.json"), "--out-dir", work], { encoding: "utf8", maxBuffer: 16e6 }));
-const inBand = (b) => !b || (b.x >= 60 && b.x + b.w <= 1020 && b.y >= 300 && b.y + b.h <= 1500);
+const BAND = YT ? { x0: 40, x1: 1240, y0: 40, y1: 680, fs: 56, txt: "x 40-1240, y 40-680" } : { x0: 60, x1: 1020, y0: 300, y1: 1500, fs: 100, txt: "x 60-1020, y 300-1500" };
+const inBand = (b) => !b || (b.x >= BAND.x0 && b.x + b.w <= BAND.x1 && b.y >= BAND.y0 && b.y + b.h <= BAND.y1 && !(YT && b.x + b.w > 1110 && b.y + b.h > 630));
 reports.forEach((r, i) => {
   const tag = `varian ${i + 1}`;
   if (r.errors.length) bad(`${tag}: error halaman: ${r.errors[0]}`);
-  if (r.fontSize < 100) bad(`${tag}: headline hanya ${r.fontSize} px (min 100 agar terbaca di grid); persingkat headline`);
-  for (const k of ["head", "kicker", "sub"]) if (!inBand(r[k])) bad(`${tag}: ${k} keluar pita aman (x 60-1020, y 300-1500): ${JSON.stringify(r[k])}`);
+  if (r.fontSize < BAND.fs) bad(`${tag}: headline hanya ${r.fontSize} px (min ${BAND.fs} agar terbaca ${YT ? "di daftar video YouTube" : "di grid"}); persingkat headline`);
+  for (const k of ["head", "kicker", "sub"]) if (!inBand(r[k])) bad(`${tag}: ${k} keluar pita aman (${BAND.txt}${YT ? ", pojok kanan bawah untuk durasi" : ""}): ${JSON.stringify(r[k])}`);
   const hit = (a, b) => a && b && a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const sb = r.sticker && { x: r.sticker.x + 15, y: r.sticker.y + 15, w: r.sticker.w - 30, h: r.sticker.h - 30 };
   if ([...r.words, r.kicker, r.sub, r.mark].some((b) => hit(sb, b))) bad(`${tag}: stiker menimpa teks; ganti layout/stiker atau persingkat teks`);
@@ -142,13 +148,19 @@ const pick = parseInt(opt("pick") ?? spec.pick ?? 1);
 if (!(pick >= 1 && pick <= jpgs.length)) throw new Error(`pick ${pick} di luar 1-${jpgs.length}`);
 execFileSync(PY, [path.join(ENGINE, "scripts", "board_png.py"), path.join(work, "pilihan.png"), ...jpgs.map((f, i) => `${i + 1 === pick ? "DIPAKAI" : variants[i].trigger ?? "varian"}=${f}`)]);
 run("ffmpeg", ["-v", "error", "-y", "-i", path.join(work, "pilihan.png"), "-q:v", "3", path.join(postDir, "thumb-pilihan.jpg")]);
-// simulasi grid profil TikTok (3:4, potong tengah) ukuran ubin ±360 px
-const tiles = jpgs.flatMap((f) => ["-i", f]);
+// simulasi grid profil TikTok (3:4, potong tengah) ukuran ubin ±360 px; YouTube: tidak perlu
+const tiles = YT ? [] : jpgs.flatMap((f) => ["-i", f]);
 const fc = jpgs.map((_, i) => `[${i}:v]crop=1080:1440:0:240,scale=360:480,pad=366:480:0:0:color=black[t${i}]`).join(";") + `;${jpgs.map((_, i) => `[t${i}]`).join("")}hstack=inputs=${jpgs.length}[g]`;
-run("ffmpeg", ["-v", "error", "-y", ...tiles, "-filter_complex", jpgs.length > 1 ? fc : fc.replace(/;\[t0\]hstack=inputs=1\[g\]$/, "").replace("[t0]", "[g]"), "-map", "[g]", "-q:v", "3", path.join(postDir, "thumb-grid.jpg")]);
+if (!YT) run("ffmpeg", ["-v", "error", "-y", ...tiles, "-filter_complex", jpgs.length > 1 ? fc : fc.replace(/;\[t0\]hstack=inputs=1\[g\]$/, "").replace("[t0]", "[g]"), "-map", "[g]", "-q:v", "3", path.join(postDir, "thumb-grid.jpg")]);
 mkdirSync(paths.resultDir, { recursive: true });
 copyFileSync(jpgs[pick - 1], paths.thumbnail);
-run("ffmpeg", ["-v", "error", "-y", "-i", paths.thumbnail, "-vf", "crop=1080:1350:0:285", "-q:v", "2", path.join(postDir, "cover-grid.jpg")]);
-console.log(`Thumbnail: varian ${pick} -> ${path.relative(ROOT, paths.thumbnail)}; semua varian di posting/thumb-N.jpg, papan posting/thumb-pilihan.jpg, grid posting/thumb-grid.jpg`);
+// feed 4:5 / 1:1: desain sampul tetap 1080x1920, lalu dipotong seukuran video (pita teks ikut masuk)
+if (CV.format === "4:5" || CV.format === "1:1") {
+  const r = reports[pick - 1], top = Math.min(...[r.kicker, r.head].filter(Boolean).map((b) => b.y));
+  const y = CV.format === "4:5" ? 285 : Math.max(0, Math.min(1920 - 1080, top - 90));
+  run("ffmpeg", ["-v", "error", "-y", "-i", jpgs[pick - 1], "-vf", `crop=1080:${CV.h}:0:${y}`, "-q:v", "2", paths.thumbnail]);
+}
+if (CV.format === "9:16") run("ffmpeg", ["-v", "error", "-y", "-i", paths.thumbnail, "-vf", "crop=1080:1350:0:285", "-q:v", "2", path.join(postDir, "cover-grid.jpg")]);
+console.log(`Thumbnail: varian ${pick} -> ${path.relative(ROOT, paths.thumbnail)}; semua varian di posting/thumb-N.jpg, papan posting/thumb-pilihan.jpg${YT ? " (1280x720 YouTube)" : ", grid posting/thumb-grid.jpg"}`);
 console.log(fails ? `${fails} pengecekan thumbnail gagal.` : "Thumbnail lolos cek.");
 process.exit(fails ? 1 : 0);

@@ -1,6 +1,6 @@
 """Deteksi momen "layar kosong" di zona visual sebuah video (tanpa objek visual berarti).
 
-Pemakaian: python visual_gaps.py <video.mp4> [--y0 250 --y1 1250] [--fps 10] [--min 0.4] [--json]
+Pemakaian: python visual_gaps.py <video.mp4> [--y0 250 --y1 1250] [--x0 0 --x1 1080] [--fps 10] [--min 0.4] [--json]
 - Zona visual (bawaan y 250-1250 pada 1080x1920, di atas kotak subtitle) diperkecil 4x, tiap frame dihitung "tinta":
   piksel yang bedanya > ambang dari warna latar (median frame; grid tipis & glow latar tidak terhitung).
 - Frame dengan tinta < --ink (bawaan 0,25% zona) = kosong. Rentang kosong >= --min detik dilaporkan.
@@ -21,14 +21,16 @@ def main():
     ap.add_argument("video")
     ap.add_argument("--y0", type=int, default=250)
     ap.add_argument("--y1", type=int, default=1250)
+    ap.add_argument("--x0", type=int, default=0)
+    ap.add_argument("--x1", type=int, default=1080)
     ap.add_argument("--fps", type=int, default=10)
     ap.add_argument("--min", type=float, default=0.4)
     ap.add_argument("--ink", type=float, default=0.0025)
     ap.add_argument("--half", type=float, default=1.0)
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args()
-    w, h = 270, (a.y1 - a.y0) // 4
-    cmd = ["ffmpeg", "-v", "error", "-i", a.video, "-vf", f"fps={a.fps},crop=1080:{a.y1 - a.y0}:0:{a.y0},scale={w}:{h}:flags=area,format=gray",
+    w, h = (a.x1 - a.x0) // 4, (a.y1 - a.y0) // 4
+    cmd = ["ffmpeg", "-v", "error", "-i", a.video, "-vf", f"fps={a.fps},crop={a.x1 - a.x0}:{a.y1 - a.y0}:{a.x0}:{a.y0},scale={w}:{h}:flags=area,format=gray",
            "-f", "rawvideo", "-"]
     raw = subprocess.run(cmd, capture_output=True, check=True).stdout
     fr = np.frombuffer(raw, np.uint8).reshape(-1, h, w).astype(np.int16)

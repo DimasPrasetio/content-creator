@@ -1,6 +1,9 @@
-// Versi format lain dari Result/<nama>.mp4 (9:16) untuk feed dan YouTube.
+// Versi format lain dari Result/<nama>.mp4 untuk feed, YouTube, dan Reels/TikTok.
 //
-// Pemakaian: npm run export -- <nama> [--format=4x5,1x1,16x9] [--mode=auto|crop|fit]
+// Pemakaian: npm run export -- <nama> [--format=4x5,1x1,16x9,9x16] [--mode=auto|crop|fit]
+// Video yang dibuat langsung dalam format lain (storyboard/edit.json "format", v0.8) memakai mode fit ke format tujuan
+//   (bawaan --format: 9x16), mis. video YouTube 16:9 -> 9x16 1080x1920 utuh di tengah dengan latar blur.
+//   Untuk potongan pendek bertumpu wajah dari video panjang: rencanakan sebagai proyek edit 9:16 terpisah.
 //   4x5  1080x1350 -> Result/<nama>.4x5.mp4  (feed Instagram/Facebook/LinkedIn)
 //   1x1  1080x1080 -> Result/<nama>.1x1.mp4
 //   16x9 1920x1080 -> Result/<nama>.16x9.mp4 (YouTube): video 9:16 utuh di tengah, kiri-kanan versi blur
@@ -12,7 +15,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, ROOT, encodeFor, findLogo, parseScript, readJson, resolveName, run, x264Args } from "./lib.mjs";
+import { ENGINE, FORMATS, P, ROOT, canvasOf, encodeFor, findLogo, parseScript, readJson, resolveName, run, x264Args } from "./lib.mjs";
 import { readFileSync } from "node:fs";
 
 const args = process.argv.slice(2);
@@ -33,8 +36,21 @@ const enc = x264Args(encodeFor(name), { audio: "copy" });
 const layout = readJson(path.join(paths.preview, "layout.json"), null);
 const bands = (layout?.scenes ?? []).map((s) => s.band).filter(Boolean);
 const textBand = bands.length ? [Math.min(...bands.map((b) => b[0])), Math.max(...bands.map((b) => b[1]))] : null;
+// latar = video sama diperbesar menutupi bingkai lalu diblur; depan = video utuh muat di bingkai, di tengah
 const fit = (W, H) =>
-  `[0:v]scale=${W}:-2,crop=${W}:${H},boxblur=40:2,eq=brightness=-0.12[bg];[0:v]scale=-2:${H}[fg];[bg][fg]overlay=(W-w)/2:0[v]`;
+  `[0:v]scale=${W}:${H}:force_original_aspect_ratio=increase,crop=${W}:${H},boxblur=40:2,eq=brightness=-0.12[bg];[0:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,setsar=1[fg];[bg][fg]overlay=(W-w)/2:(H-h)/2[v]`;
+const SRC = canvasOf(name);
+if (SRC.format !== "9:16") {
+  for (const f of (opt("format") ?? "9x16").split(",")) {
+    const T = FORMATS[f.replace("x", ":")];
+    if (!T) { console.warn(`! format "${f}" tidak dikenal (9x16, 4x5, 1x1, 16x9)`); continue; }
+    if (T.format === SRC.format) { console.log(`${f}: dilewati (video sudah ${SRC.format})`); continue; }
+    const out = paths.result.replace(/\.mp4$/, `.${f}.mp4`);
+    run("ffmpeg", ["-v", "error", "-y", "-i", paths.result, "-filter_complex", fit(T.w, T.h), "-map", "[v]", "-map", "0:a", ...enc, out]);
+    console.log(`${f}: ${path.relative(ROOT, out)} (${T.w}x${T.h}, video ${SRC.format} utuh di tengah, latar blur)`);
+  }
+  process.exit(0);
+}
 
 for (const f of (opt("format") ?? "4x5,16x9").split(",")) {
   const out = paths.result.replace(/\.mp4$/, `.${f}.mp4`);
@@ -65,6 +81,7 @@ for (const f of (opt("format") ?? "4x5,16x9").split(",")) {
     run("ffmpeg", ["-v", "error", "-y", "-i", paths.result, "-filter_complex", fit(1920, 1080), "-map", "[v]", "-map", "0:a", ...enc, out]);
     how = "video utuh di tengah, sisi blur";
   } else {
+    if (f === "9x16") { console.log("9x16: dilewati (video sudah 9:16)"); continue; }
     console.warn(`! format "${f}" tidak dikenal (4x5, 1x1, 16x9)`);
     continue;
   }

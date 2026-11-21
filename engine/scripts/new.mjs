@@ -1,5 +1,8 @@
 // Siapkan proyek jalur C (HTML) dari kit standar + STYLE (rasa) + identitas brand, supaya per video cukup menulis html/scenes.js.
-// Pemakaian: npm run new -- <nama> [--style=<slug>] [--warna=brand|style] [--brand=<slug>] [--scenes=N] [--refresh-kit]
+// Pemakaian: npm run new -- <nama> [--style=<slug>] [--warna=brand|style] [--brand=<slug>] [--format=9:16|16:9|4:5|1:1]
+//                            [--bab=tanpa|label|kartu] [--scenes=N] [--refresh-kit]
+//   - format: kanvas asli (bawaan 9:16; 16:9 = YouTube/landscape, 4:5 & 1:1 = feed), dicatat di storyboard "format"
+//   - bab: tampilan bab dari "> bab: <judul>" di naskah (tanpa = tidak tampil; label = label atas; kartu = label + kartu judul)
 //   - style: --style, lalu "style" di storyboard.json, lalu style bawaan brand (profile.json "style"); daftar: npm run style -- list
 //   - tema:  kit bawaan < style.theme < identitas brand (watermark, mark, CTA, penutup, ui) < warna brand (bila warna = brand)
 //            tanpa style: kit bawaan < Brands/<slug>/theme.json (perilaku lama)
@@ -8,7 +11,7 @@
 //   - --refresh-kit: hanya salin ulang file kit + theme.js (mis. setelah tema brand/style diubah)
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DIRS, ENGINE, NAME_RE, P, ROOT, brandOf, brandStyle, kitTheme, loadStyle, parseScript, readJson } from "./lib.mjs";
+import { DIRS, ENGINE, NAME_RE, P, ROOT, brandOf, brandStyle, kitTheme, loadStyle, normFormat, parseScript, readJson } from "./lib.mjs";
 
 const argv = process.argv.slice(2);
 const opt = (k, d) => { const a = argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.split("=")[1] : d; };
@@ -39,9 +42,14 @@ if (theme.ui?.stamp) {
 writeFileSync(path.join(p.html, "theme.js"), `// tema ${style ? `style ${style} · brand ${brand} · warna ${warna}` : brand} (dibuat npm run new dari ${sumber.join(" < ")})\nconst THEME = ${JSON.stringify(theme, null, 2)};\n`);
 for (const f of ["index.html", "kit.css", "kit-core.js", "kit-camera.js", "kit-run.js"]) copyFileSync(path.join(KIT, f), path.join(p.html, f));
 console.log(`  OK    kit + ${style ? `style ${style} (warna ${warna}) + brand ${brand}` : `tema ${brand}`} -> ${path.relative(ROOT, p.html)}/`);
-// catat style di storyboard yang sudah ada (thumbnail & refresh memakai tema yang sama)
-if (sbOld && style && (sbOld.style !== style || sbOld.warna !== warna))
-  writeFileSync(p.storyboard, JSON.stringify({ ...sbOld, style, warna }, null, 2) + "\n");
+// format & bab (v0.8)
+const format = normFormat(opt("format") ?? sbOld?.format ?? "9:16");
+const bab = opt("bab") ?? sbOld?.bab ?? "tanpa";
+if (!["tanpa", "label", "kartu"].includes(bab)) throw new Error(`--bab=${bab} tidak dikenal (tanpa | label | kartu)`);
+// catat style/format/bab di storyboard yang sudah ada (thumbnail & refresh memakai tema yang sama)
+if (sbOld && ((style && (sbOld.style !== style || sbOld.warna !== warna)) || (sbOld.format ?? "9:16") !== format || (sbOld.bab ?? "tanpa") !== bab))
+  writeFileSync(p.storyboard, JSON.stringify({ ...sbOld, ...(style ? { style, warna } : {}), format, bab }, null, 2) + "\n");
+if (format !== "9:16") console.log(`  OK    kanvas ${format}${bab !== "tanpa" ? ` · bab: ${bab}` : ""}`);
 if (argv.includes("--refresh-kit")) process.exit(0);
 
 // 2) jumlah scene
@@ -57,9 +65,10 @@ if (!existsSync(sj)) {
     const txt = scenes[i]?.text ? `\n// "${scenes[i].text.replace(/\s+/g, " ")}"` : "";
     return `// ============ ${i + 1} ============${txt}\nscene(${i});\n{\n  const s = ${i};\n}\n`;
   }).join("\n");
-  const L = Array.from({ length: n }, (_, i) => (closing && i === n - 1 ? "null" : "B1")).join(", ");
+  const hasBab = bab !== "tanpa" && scenes.some((x) => x.chapter);
+  const L = hasBab ? "" : Array.from({ length: n }, (_, i) => (closing && i === n - 1 ? "null" : "B1")).join(", ");
   writeFileSync(sj, `// ${name} · scene khusus video ini. Komponen & aturan timing: Engine/kit/html/README.md
-// Label bab per scene: [teks, warna titik] (null = tanpa label).
+// Label bab per scene: [teks, warna titik] (null = tanpa label).${hasBab ? " Kosong = judul bab dari naskah (\"> bab: ...\")." : ""}
 const B1 = ["NAMA BAB", C.accent2], K = ["KESIMPULAN", C.accent];
 const LABEL = [${L}];
 // const KEY = { 0: ["kata"] };  // kata kunci subtitle (warna subtitle.key tema)
@@ -73,7 +82,7 @@ if (!existsSync(p.storyboard)) {
   const S = theme.storyboard || {}, m = S.music || {};
   const brandBox = theme.watermark?.parts ? { left: "", right: theme.watermark.parts.map(([t]) => t).join("") } : { left: "", right: "" };
   const sb = {
-    composition: "html", skill: S.skill || "vox-explainer", ...(style ? { style, warna } : {}), brandOverlay: S.brandOverlay ?? false, brand: brandBox, cover: { at: "auto" },
+    composition: "html", skill: S.skill || "vox-explainer", ...(style ? { style, warna } : {}), ...(format !== "9:16" ? { format } : {}), ...(bab !== "tanpa" ? { bab } : {}), brandOverlay: S.brandOverlay ?? false, brand: brandBox, cover: { at: "auto" },
     scenes: Array.from({ length: n }, (_, i) => ({
       music: i === 0 ? m.first ?? "pad" : i >= n - 3 ? m.last ?? "full" : m.middle ?? "build",
       sfx: closing && i === n - 1 && S.closingSfx?.cue ? [{ cue: S.closingSfx.cue, type: S.closingSfx.type }] : [],

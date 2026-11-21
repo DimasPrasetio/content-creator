@@ -1,10 +1,10 @@
 # content-creator
 
-Plugin Claude Code untuk membuat **video pendek vertikal (Reels/TikTok, 1080×1920) dari ide sampai MP4 siap upload**:
+Plugin Claude Code untuk membuat **video dari ide sampai MP4 siap upload**: Reels/TikTok 9:16, feed 4:5/1:1, dan YouTube 16:9 pendek maupun panjang (2-20 menit):
 wawancara penyamaan persepsi → contoh frame gaya dari naskah Anda sendiri → audisi suara → naskah disetujui → voice over
 ElevenLabs yang konsisten → visual sinkron per kata → sound effect → render → QA otomatis → thumbnail + caption → Google Drive.
 
-*A Claude Code plugin that turns an idea into a finished vertical short video (TikTok/Reels): interview, script, ElevenLabs
+*A Claude Code plugin that turns an idea into a finished video (9:16 TikTok/Reels, 4:5, 1:1, or 16:9 YouTube up to ~20 min): interview, script, ElevenLabs
 voice-over, word-synced motion graphics, SFX, render, automatic QA, thumbnail + caption, and Google Drive upload.
 Docs and prompts are in Indonesian.*
 
@@ -31,7 +31,9 @@ Docs and prompts are in Indonesian.*
   saat katanya diucapkan. Whisper lokal opsional (`--with-whisper`) untuk QA kejelasan kata gratis / offline.
 - **QA otomatis**: format, loudness, konsistensi suara, kejelasan, sinkron, dan **cek tata letak** (teks terpotong, keluar
   bingkai, menabrak brand pojok, tertutup UI Reels).
-- **Paket posting**: subtitle SRT/VTT, caption + hashtag, ekspor 4:5 / 1:1 / 16:9, dan **thumbnail khusus**: 3 varian
+- **Kanvas asli 9:16, 16:9, 4:5, 1:1** untuk jalur HTML dan edit footage (zona aman per format), **bab opsional** per
+  video (tanpa / label / kartu), thumbnail YouTube 1280×720 dan deskripsi dengan timestamp bab otomatis.
+- **Paket posting**: subtitle SRT/VTT, caption + hashtag, ekspor 4:5 / 1:1 / 16:9 / 9:16, dan **thumbnail khusus**: 3 varian
   sampul berpemicu psikologis (penasaran, angka, larangan, ...) dari tema brand, dicek keterbacaannya di grid profil dan
   kejujurannya (angka & klaim harus ada di video).
 - **Ukuran file wajar**: encode *capped CRF* (±30-60 MB per menit untuk video bergrain, jauh lebih kecil untuk video

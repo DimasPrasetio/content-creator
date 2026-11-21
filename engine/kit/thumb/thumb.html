@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <title>thumbnail</title>
 <!--
-  Template thumbnail 1080x1920 (dipakai scripts/thumbnail.mjs + thumb_render.py). Data disisipkan sebelum halaman jalan:
+  Template thumbnail 1080x1920, atau YouTube 1280x720 bila __THUMB__.yt (dipakai scripts/thumbnail.mjs + thumb_render.py). Data disisipkan sebelum halaman jalan:
   window.__THUMB__ = { theme, v: {kicker, headline, accent, sub, sticker, layout, upper, font}, visual: "v1.jpg"|null, mark }
   Halaman menata teks (ukuran otomatis), lalu mengisi window.__REPORT__ (ukuran huruf, jumlah baris, kotak tiap elemen)
   dan window.__READY__ = true. Tidak ada yang dimuat dari internet.
@@ -47,6 +47,21 @@ html, body { margin: 0; padding: 0; }
 #sub { position: absolute; left: 90px; width: 900px; text-align: center; font: 600 48px/1.25 var(--body); color: var(--sub);
   text-shadow: 0 4px 18px rgba(0,0,0,.7); }
 #sticker { position: absolute; width: 170px; height: 170px; filter: drop-shadow(0 12px 30px rgba(0,0,0,.55)); }
+/* YouTube 1280x720: teks rata kiri di setengah kiri, potongan visual di panel kanan (atas) atau penuh digelapkan (tengah) */
+#stage.yt { width: 1280px; height: 720px; }
+.yt #grid { background-size: 64px 64px; }
+.yt #glow { left: 30%; top: 50%; width: 900px; height: 900px; }
+.yt.atas #visual { left: 676px; top: 60px; width: 544px; height: 600px; border-radius: 28px; }
+.yt.atas #visual::after { background: linear-gradient(90deg, rgba(0,0,0,.25) 0%, rgba(0,0,0,0) 30%); }
+.yt #mark { right: auto; left: 60px; top: 46px; font-size: 32px; }
+.yt #kicker { left: 60px; transform: none; padding: 10px 20px; gap: 12px; font-size: 24px; letter-spacing: 4px; box-shadow: 0 0 0 2px var(--line); }
+.yt #kicker i { width: 14px; height: 14px; }
+.yt #head { left: 60px; width: 580px; text-align: left; }
+.yt #head .w { margin: 0 .16em 0 0; }
+.yt #sub { left: 60px; width: 580px; text-align: left; font-size: 30px; }
+.yt.tengah #head, .yt.polos #head { width: 1040px; }
+.yt.tengah #sub, .yt.polos #sub { width: 1000px; }
+.yt #sticker { width: 120px; height: 120px; }
 </style>
 </head>
 <body>
@@ -77,12 +92,13 @@ html, body { margin: 0; padding: 0; }
   set("--head", `"${fonts.head || "Poppins"}", sans-serif`); set("--body", `"${fonts.body || "Inter"}", sans-serif`);
   set("--headfont", `"${v.font || fonts.head || "Poppins"}", sans-serif`);
   const layout = v.layout === "tengah" || !T.visual ? (T.visual ? "tengah" : "polos") : "atas";
-  document.getElementById("stage").className = layout;
+  const YT = !!T.yt;
+  document.getElementById("stage").className = (YT ? "yt " : "") + layout;
 
   // brand / mark (bagian berwarna dari tema)
   const mk = document.getElementById("mark");
   for (const [t, c] of T.mark || []) { const s = document.createElement("span"); s.textContent = t; s.style.color = col(c); mk.append(s); }
-  if (th.watermark?.size) mk.style.fontSize = Math.round(46 * th.watermark.size / 36) + "px"; // ikut skala watermark video (bawaan 36)
+  if (th.watermark?.size) mk.style.fontSize = Math.round((YT ? 32 : 46) * th.watermark.size / 36) + "px"; // ikut skala watermark video (bawaan 36)
 
   if (T.visual) { const img = document.getElementById("vimg"); img.src = T.visual; await img.decode().catch(() => {}); }
 
@@ -103,27 +119,35 @@ html, body { margin: 0; padding: 0; }
   await document.fonts.ready;
 
   // tata letak per layout: pita teks wajib di y 300-1500 (aman untuk grid 3:4 TikTok & 4:5 Instagram)
-  const L = { atas: { kickY: 370, top: 470, maxH: 470 }, tengah: { kickY: 560, top: 660, maxH: 560 }, polos: { kickY: 560, top: 660, maxH: 600 } }[layout];
+  // YouTube: pita teks y 110-640 (pojok kanan bawah = durasi video, dihindari)
+  const L = YT ? { kickY: 120, top: 180, maxH: 400, maxW: layout === "atas" ? 580 : 1040, fs0: 150, fsMin: 56 }
+    : { atas: { kickY: 370, top: 470, maxH: 470 }, tengah: { kickY: 560, top: 660, maxH: 560 }, polos: { kickY: 560, top: 660, maxH: 600 } }[layout];
   kk.style.top = L.kickY + "px";
-  H.style.top = (v.kicker ? L.top : L.top - 80) + "px";
+  H.style.top = (v.kicker ? L.top : L.top - (YT ? 60 : 80)) + "px";
   const words = [...H.querySelectorAll(".w")];
   const lines = () => new Set(words.map((w) => Math.round(w.offsetTop))).size;
-  let fs = 220;
-  for (; fs >= 80; fs -= 4) {
+  let fs = L.fs0 ?? 220;
+  for (; fs >= (L.fsMin ?? 80); fs -= 4) {
     H.style.fontSize = fs + "px";
-    if (lines() <= 3 && H.offsetHeight <= L.maxH && words.every((w) => w.offsetWidth <= 940)) break;
+    if (lines() <= 3 && H.offsetHeight <= L.maxH && words.every((w) => w.offsetWidth <= (L.maxW ?? 940))) break;
   }
   // teks pendukung tepat di bawah headline; layout tengah: blok kicker+headline+sub dipusatkan di pita aman
-  const place = () => { sub.style.top = H.offsetTop + H.offsetHeight + 34 + "px"; };
+  const place = () => { sub.style.top = H.offsetTop + H.offsetHeight + (YT ? 22 : 34) + "px"; };
   place();
-  if (layout !== "atas") {
+  if (YT) {
+    // blok teks dipusatkan vertikal di pita 110-640
+    const blockTop = v.kicker ? kk.offsetTop : H.offsetTop;
+    const blockBot = v.sub ? sub.offsetTop + sub.offsetHeight : H.offsetTop + H.offsetHeight;
+    const shift = Math.max(110 - blockTop, Math.round((110 + 640) / 2 - (blockTop + blockBot) / 2));
+    kk.style.top = kk.offsetTop + shift + "px"; H.style.top = H.offsetTop + shift + "px"; place();
+  } else if (layout !== "atas") {
     const blockTop = v.kicker ? kk.offsetTop : H.offsetTop;
     const blockBot = v.sub ? sub.offsetTop + sub.offsetHeight : H.offsetTop + H.offsetHeight;
     const shift = Math.round((300 + 1500) / 2 - (blockTop + blockBot) / 2);
     kk.style.top = kk.offsetTop + shift + "px"; H.style.top = H.offsetTop + shift + "px"; place();
   }
   const vis = document.getElementById("visual");
-  if (layout === "atas") {
+  if (layout === "atas" && !YT) {
     // visual dimulai tepat di bawah teks (tidak menimpa)
     const bottom = (v.sub ? sub.offsetTop + sub.offsetHeight : H.offsetTop + H.offsetHeight) + 70;
     vis.style.top = Math.max(820, bottom) + "px";
@@ -141,7 +165,8 @@ html, body { margin: 0; padding: 0; }
   if (v.sticker && ST[v.sticker]) {
     st.innerHTML = ST[v.sticker];
     // tidak pernah menimpa headline: layout atas -> pojok kanan atas kotak visual; lainnya -> di atas blok teks
-    if (layout === "atas") { st.style.left = "870px"; st.style.top = vis.offsetTop - 55 + "px"; }
+    if (YT) { st.style.left = (layout === "atas" ? 1130 : 1110) + "px"; st.style.top = "40px"; }
+    else if (layout === "atas") { st.style.left = "870px"; st.style.top = vis.offsetTop - 55 + "px"; }
     else {
       // di atas blok teks (di bawah logo brand y 290-340); tidak ada ruang -> di bawah blok
       const top = v.kicker ? kk.offsetTop : H.offsetTop;

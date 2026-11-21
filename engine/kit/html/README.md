@@ -1,11 +1,12 @@
 # Kit HTML standar (jalur C) — semua brand
 
-Kit ini membuat video explainer "papan tulis" 1080×1920 yang sinkron kata per kata dengan voice over. Tampilan diatur
+Kit ini membuat video explainer "papan tulis" (bawaan 1080×1920; juga 16:9, 4:5, 1:1) yang sinkron kata per kata dengan voice over. Tampilan diatur
 **style** (rasa: `Styles/<slug>/style.json` → `theme`) + **identitas brand** (`Brands/<slug>/theme.json`); per video cukup
 menulis `html/scenes.js`.
 
 ```
-npm run new -- <nama> [--style=<style>] [--warna=brand|style]   # folder + kit + theme.js + kerangka scenes.js & storyboard.json
+npm run new -- <nama> [--style=<style>] [--warna=brand|style] [--format=16:9|4:5|1:1] [--bab=label|kartu]
+                                   # folder + kit + theme.js + kerangka scenes.js & storyboard.json
 npm run produce -- <nama> --draft  # contoh frame (tanpa kredit) -> preview/draft/board.png
 npm run produce -- <nama>          # voice -> cek cue -> sound -> preview -> render paralel -> QA ‖ posting
 npm run new -- <nama> --refresh-kit  # salin ulang kit + tema (setelah kit/tema diubah)
@@ -16,6 +17,22 @@ Video 9:16 (1080×1920). Semua elemen berada di **x 60–940 · y 220–1440**; 
 akun, caption, musik). Kit menata: progress bar y 232 · label bab & watermark y 254–296 (watermark berakhir di x 940) ·
 zona visual y 316–1171 · subtitle y 1244–1414 (lebar 880). Cek tata letak menganggap teks di luar zona ini **error**.
 Tema `"layout": "penuh"` mengembalikan tata letak lama (hanya untuk platform tanpa UI yang menimpa video).
+
+## Kanvas lain (v0.8): 16:9, 4:5, 1:1
+`npm run new -- <nama> --format=16:9` mencatat `"format"` di storyboard; render, preview, cek tata letak, QA, posting,
+dan ekspor membaca ukurannya (`window.__CANVAS__ = {format, w, h}`). `kit-core.js` menata ulang panggung lewat
+`KIT_GEO[format]` (zona visual, lapisan kamera, progress bar, label, watermark, subtitle; 9:16 tidak berubah sama sekali).
+Zona visual tetap tinggi 1000 dengan **lebar `ZONE.w`** (16:9 ±2618, 4:5 ±1130, 1:1 ±1473) dan viewBox
+`ZONE.x0 … ZONE.x1`, sehingga scene lama yang memakai x 60–1020 tetap tampil di tengah. Scene baru boleh memakai lebar
+penuh: `ZONE.x0`, `ZONE.x1`, `ZONE.w`, `ZONE.cx` (= 540). 16:9 enak untuk dua kolom (mis. diagram kiri, angka kanan).
+Zona aman per format (cek tata letak): 16:9 x 96–1824 · y 54–1026; 4:5 x 54–1026 · y 54–1296; 1:1 x 54–1026 · y 54–1026.
+
+## Bab (opsional, per video)
+Naskah: baris `> bab: Judul Bab` di scene pertama tiap bab → `scenes[i].chapter` di timing. Cara tampil = `"bab"` di
+storyboard (`--bab=`): `tanpa` (bawaan, tidak tampil) · `label` (judul bab mengisi label scene yang kosong + tanda bab di
+progress bar; kerangka `scenes.js` memakai `LABEL = []`) · `kartu` (seperti label, plus kartu "BAB N · Judul" ±1,5 dtk
+di awal tiap bab kecuali bab pertama; preview menyimpan `preview/bab-NN.png`). Bab 16:9 yang memenuhi syarat YouTube
+(≥ 3, mulai 0:00, tiap bab ≥ 10 dtk) otomatis jadi timestamp di deskripsi (`npm run posting`).
 
 Halaman: `index.html` → `theme.js` → `kit-core.js` → `scenes.js` → `kit-run.js`. Font dari `/fonts/` (Engine/fonts: Poppins, Inter,
 Anton, Fira Sans). Render paralel 4 browser + GPU (`npm run html`), stills/preview SwiftShader.

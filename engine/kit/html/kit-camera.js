@@ -15,7 +15,7 @@ const UI = (() => {
   u.accentSoft = u.accentSoft || tint(u.accent, 0.16);
   return u;
 })();
-const CAM_X = 540, CAM_Y = 580;   // pusat kamera di lapisan shot (lapisan mulai layar y 190 -> pusat layar y 770)
+const CAM_X = (KIT_GEO?.shots.w ?? 1080) / 2, CAM_Y = 580;   // pusat kamera di lapisan shot (lapisan mulai layar y 190 -> pusat layar y 770)
 const seg = (t, a, b) => clamp((t - a) / (b - a || 1e-6));
 const rp = (n) => "Rp" + Math.round(n).toLocaleString("id-ID");
 const TONE = { ok: ["ok", "okSoft"], warn: ["warn", "warnSoft"], bad: ["bad", "badSoft"], accent: ["accent", "accentSoft"], soft: ["primary", "soft"] };

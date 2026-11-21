@@ -8,7 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DIRS, ENGINE, P, ROOT, kitTheme, mg4Skill, resolveStyle, run } from "./lib.mjs";
+import { DIRS, ENGINE, P, ROOT, kitTheme, mg4Skill, resolveStyle, run, youtubeChapters } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const full = args.includes("--full");
@@ -186,6 +186,77 @@ rmSync(raw, { recursive: true, force: true });
   rows.push({ langkah: "style: hasil simpan tanpa identitas brand", hasil: saved.theme?.fonts?.head === "Uji Head" && !("watermark" in (saved.theme ?? {})) && saved.title === "Uji Simpan" ? "LULUS" : "GAGAL", detik: 0, catatan: "Styles/<slug>/style.json" });
   npm("style: catat selera (nama tampilan)", "style", ["selera", "Uji Simpan", "contoh catatan selera"]);
   if (!keep) cleanStyle();
+}
+
+// 8) kanvas lain + bab (v0.8): HTML 16:9 dengan bab kartu (voice -> preview -> render -> QA -> posting YouTube -> ekspor 9:16),
+//    contoh 4:5 & 1:1, edit footage 16:9 dari footage mendatar, dan syarat bab YouTube
+{
+  const NF = "00000000-08-selftest-format", pf = P(NF);
+  const NE2 = "00000000-09-selftest-edit169", pe2 = P(NE2);
+  const cleanF = () => {
+    for (const d of [pf.dir, pf.work, pf.resultDir, pe2.dir, pe2.work, pe2.resultDir]) rmSync(d, { recursive: true, force: true });
+    for (const n of [NF, NE2]) for (const x of [".wav", ".mix.wav"]) rmSync(path.join(ENGINE, "public", "audio", `${n}${x}`), { force: true });
+    const md = path.join(ENGINE, "public", "media", "edit");
+    if (existsSync(md)) for (const f of readdirSync(md)) if (f.startsWith(NE2)) rmSync(path.join(md, f), { force: true });
+  };
+  cleanF();
+  const layoutRow = (label) => {
+    const l = step.last.split("\n").findLast((x) => /Cek tata letak/.test(x)) ?? "";
+    rows.push({ langkah: label, hasil: /Cek tata letak: 0 error/.test(l) ? "LULUS" : "GAGAL", detik: 0, catatan: l.trim().slice(0, 90) });
+  };
+  const probe = (f) => (existsSync(f) ? run("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "csv=p=0", f]).trim().match(/^\d+,\d+/)?.[0] ?? "?" : "-");
+  mkdirSync(pf.work, { recursive: true });
+  mkdirSync(pf.dir, { recursive: true });
+  writeFileSync(pf.script, readFileSync(SAMPLE_MD, "utf8").replace(/^(## (\d))$/gm, (m, h, n) => `${h}\n> bab: Bagian ${n}`));
+  copyFileSync(SAMPLE_AUDIO, path.join(pf.work, "src.mp3"));
+  copyFileSync(SAMPLE_AUDIO.replace(/\.mp3$/, ".align.json"), path.join(pf.work, "src.align.json"));
+  npm("format: proyek HTML 16:9 + bab kartu", "new", [NF, "--format=16:9", "--bab=kartu"]);
+  writeFileSync(path.join(pf.html, "scenes.js"), `const LABEL = [];
+${lines.map((l, i) => `scene(${i});\n{ const s = ${i}; big(540, 420, "${l.key.toUpperCase()}", C.accent, cue(s, "${l.key}"), 150); }`).join("\n")}
+`);
+  npm("format: voice (audio contoh)", "voice", [NF, `--audio=${path.join(pf.work, "src.mp3")}`]);
+  npm("format: sound", "sound", [NF]);
+  npm("format: preview 16:9 + cek tata letak", "html", [NF, "--preview"]);
+  layoutRow("format: tata letak 16:9 tanpa error");
+  rows.push({ langkah: "format: kartu bab di preview", hasil: existsSync(path.join(pf.preview, "bab-02.png")) ? "LULUS" : "GAGAL", detik: 0, catatan: "preview/bab-NN.png" });
+  npm("format: render 16:9", "html", [NF]);
+  rows.push({ langkah: "format: video 1920x1080", hasil: probe(pf.result) === "1920,1080" ? "LULUS" : "GAGAL", detik: 0, catatan: probe(pf.result) });
+  npm("format: QA 16:9", "qa", [NF]);
+  mkdirSync(path.join(pf.dir, "posting"), { recursive: true });
+  writeFileSync(path.join(pf.dir, "posting", "caption.md"), "Bikin video itu gampang, kalau alurnya jelas.\n\nNaskah, suara, dan visual dibuat sinkron.\n\nTonton sampai habis!\n\n#contentcreator #youtube #tips\n");
+  writeFileSync(path.join(pf.dir, "posting", "thumbnail.json"), JSON.stringify({ pick: 1, variants: [{ trigger: "kontras", kicker: "VIDEO PANJANG", headline: "Ternyata gampang kok", accent: "gampang", sticker: "check" }, { trigger: "larangan", headline: "Jangan unggah sebelum dicek", accent: "dicek", visual: false }] }));
+  npm("format: posting YouTube (thumbnail 1280x720, deskripsi)", "posting", [NF]);
+  rows.push({ langkah: "format: thumbnail YouTube", hasil: probe(path.join(pf.resultDir, "thumbnail.jpg")) === "1280,720" ? "LULUS" : "GAGAL", detik: 0, catatan: probe(path.join(pf.resultDir, "thumbnail.jpg")) });
+  npm("format: ekspor 16:9 -> 9:16", "export", [NF, "--format=9x16"]);
+  rows.push({ langkah: "format: ekspor 9x16", hasil: probe(pf.result.replace(/\.mp4$/, ".9x16.mp4")) === "1080,1920" ? "LULUS" : "GAGAL", detik: 0, catatan: "<nama>.9x16.mp4" });
+  for (const f of ["4:5", "1:1"]) {
+    npm(`format: ganti kanvas ke ${f}`, "new", [NF, `--format=${f}`]);
+    npm(`format: preview ${f}`, "html", [NF, "--preview"]);
+    layoutRow(`format: tata letak ${f} tanpa error`);
+  }
+  const yc = youtubeChapters([{ start: 0, title: "a" }, { start: 42, title: "b" }, { start: 130, title: "c" }], 300), bad = youtubeChapters([{ start: 0, title: "a" }, { start: 5, title: "b" }, { start: 30, title: "c" }], 60);
+  rows.push({ langkah: "format: syarat bab YouTube", hasil: yc.ok && !bad.ok ? "LULUS" : "GAGAL", detik: 0, catatan: bad.alasan.slice(0, 90) });
+  // edit footage 16:9 dari footage mendatar (tanpa wajah: potong di tengah), bab label
+  const raw2 = path.join(ENGINE, "work", "_edit-sample-169");
+  mkdirSync(raw2, { recursive: true });
+  run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=1920x1080:r=30", "-i", SAMPLE_AUDIO, "-shortest", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", path.join(raw2, "footage.mp4")]);
+  copyFileSync(SAMPLE_AUDIO.replace(/\.mp3$/, ".align.json"), path.join(raw2, "footage.words.json"));
+  npm("edit 16:9: proyek baru", "edit", [NE2, "--new", "--style=ngobrol", "--format=16:9", `--input=${path.join(raw2, "footage.mp4")}`, "--force"]);
+  npm("edit 16:9: analisis", "edit", [NE2, "--analyze"]);
+  const ej2 = path.join(pe2.dir, "edit.json");
+  if (existsSync(ej2)) {
+    const plan = JSON.parse(readFileSync(ej2, "utf8"));
+    plan.bab = "label";
+    const [a, b, c] = plan.sentences;
+    if (a) Object.assign(a, { chapter: "Pembuka", objects: [{ type: "keyword", kicker: "bikin video", keyword: "gampang", at: "gampang" }] });
+    if (b) Object.assign(b, { chapter: "Alur", mode: "broll", objects: [{ type: "doc", title: "alur.docx", at: "naskah", rows: [{ label: "Naskah", at: "naskah" }, { label: "Suara", at: "suara" }] }] });
+    if (c) Object.assign(c, { objects: [{ type: "chips", items: [{ text: "dicek otomatis", icon: "check", at: "dicek" }] }] });
+    writeFileSync(ej2, JSON.stringify(plan, null, 2));
+  }
+  npm("edit 16:9: render + QA", "edit", [NE2]);
+  rows.push({ langkah: "edit 16:9: video 1920x1080 + QA", hasil: probe(pe2.result) === "1920,1080" && /Semua pengecekan lolos/.test(step.last) ? "LULUS" : "GAGAL", detik: 0, catatan: probe(pe2.result) });
+  rmSync(raw2, { recursive: true, force: true });
+  if (!keep) cleanF();
 }
 
 console.table(rows);

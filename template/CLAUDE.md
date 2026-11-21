@@ -1,6 +1,6 @@
 # Panduan untuk Claude (workspace content-creator)
 
-Workspace ini membuat video vertikal (Reels/TikTok, 1080×1920) dengan plugin **content-creator**: video animasi dari naskah
+Workspace ini membuat video (Reels/TikTok 9:16, feed 4:5/1:1, YouTube 16:9 pendek atau panjang) dengan plugin **content-creator**: video animasi dari naskah
 dan edit footage milik pengguna. **Style = rasa** (`Styles/`, dipakai brand mana pun), **brand = identitas + suara** (`Brands/`).
 Mulai video baru dengan `/content-creator <ide video>`; skill itu memuat alur lengkapnya (wawancara grill-me → contoh frame
 gaya + audisi suara → lalu otomatis tanpa pertanyaan: naskah → voice over ElevenLabs → visual → SFX → preview → render → QA → posting;
@@ -23,7 +23,9 @@ satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `n
 ## Aturan naskah (wajib)
 - Hook kuat di 3 detik pertama, gaya bicara santai, kalimat pendek, ditulis seperti orang bicara.
 - Koma = jeda singkat, titik = jeda panjang. `> jeda: 0.3-0.7` setelah punchline.
-- Satu scene per heading `## `; baris `>` = catatan visual (tidak dibacakan). Target 20-45 detik, 5-9 scene (±2,5 kata/dtk).
+- Satu scene per heading `## `; baris `>` = catatan visual (tidak dibacakan). Target 20-45 detik, 5-9 scene (±2,5 kata/dtk),
+  kecuali pengguna meminta durasi lain (video panjang 2-20 menit: banyak scene, tetap satu ide per scene).
+- Bab hanya bila disepakati per video: `> bab: Judul` di scene pertama tiap bab (tampil `label` atau `kartu`, `npm run new -- <nama> --bab=...`).
 
 ## Aturan produksi
 0. **Selalu tanya brand pojok atas** (kiri/kanan, boleh kosong) untuk setiap video; jangan memakai ulang tanpa bertanya.
@@ -32,6 +34,7 @@ satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `n
 3. Visual lewat salah satu jalur: A Pop (`npm run render`), B motion-graphics-v4 (`npm run mg4`, butuh skill Anthropic
    terpasang), C HTML motion-graphics-skills (`npm run new -- <nama> --style=<style>` + `npm run produce`). Baca `STYLE.md`
    style itu dan `Brands/<slug>/MOTION.md` (bila ada) sebelum mendesain. Selera visual dicatat per style (`npm run style -- selera`).
+   Kanvas ditanya per video: jalur C dan edit footage langsung dalam 9:16, 16:9, 4:5, atau 1:1 (`--format=`); jalur A/B 9:16 + `npm run export`.
 4. Wajib preview + cek tata letak + `npm run qa` lolos sebelum diserahkan; `npm run posting` menghasilkan thumbnail (sampul khusus dari `posting/thumbnail.json`, 3 varian berpemicu psikologis yang jujur) + caption.
 5. Setelah pengguna menyetujui video final: `npm run drive -- <nama>` (bila Drive sudah diatur). Jangan unggah yang belum disetujui.
 6. Jangan membuka, menampilkan, atau menyalin API key (`.env.local`).

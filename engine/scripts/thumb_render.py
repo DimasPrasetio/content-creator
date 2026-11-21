@@ -1,4 +1,4 @@
-"""Render varian thumbnail (kit/thumb/thumb.html) menjadi PNG 1080x1920 + laporan tata letak.
+"""Render varian thumbnail (kit/thumb/thumb.html) menjadi PNG 1080x1920 (YouTube: 1280x720 bila spec "yt") + laporan tata letak.
 
 Pemakaian (dipanggil scripts/thumbnail.mjs):
   python thumb_render.py --root <folder berisi thumb.html + gambar> --specs <specs.json> --out-dir <folder>
@@ -32,7 +32,8 @@ def main():
     with sync_playwright() as p:
         b = p.chromium.launch(args=["--no-sandbox", *SOFT_GL])
         for i, spec in enumerate(specs):
-            page = b.new_page(viewport={"width": W, "height": H}, device_scale_factor=1)
+            vw, vh = (1280, 720) if spec.get("yt") else (W, H)
+            page = b.new_page(viewport={"width": vw, "height": vh}, device_scale_factor=1)
             errors = []
             page.on("pageerror", lambda e: errors.append(str(e)))
             page.add_init_script(f"window.__THUMB__ = {json.dumps(spec)};")

@@ -1,9 +1,9 @@
 // Komposisi "Edit": footage hasil potong (A-roll) + grafis style (narration) + subtitle karaoke.
 // Semua waktu sudah diselesaikan scripts/edit.mjs ke frame; komponen di sini hanya menggambar sebagai fungsi frame.
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AbsoluteFill, Audio, OffthreadVideo, Sequence, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { LayoutProbe } from "../probe/LayoutProbe";
-import type { EditProps, EObj, Face } from "./types";
+import type { EditCanvas, EditProps, EObj, Face } from "./types";
 
 // ---------------------------------------------------------------- font lokal (tanpa internet)
 const FONTS: [string, string, string][] = [
@@ -39,7 +39,8 @@ const pop = (frame: number, at: number, fps: number) => spring({ frame: frame - 
 const vis = (frame: number, at: number, until: number) => frame >= at && frame < until;
 const fadeOut = (frame: number, until: number) => interpolate(frame, [until - 5, until], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
-type Ctx = { p: EditProps["edit"]["style"]["palette"]; frame: number; fps: number; video: string; faceAt: (f: number) => Face | null };
+type Ctx = { p: EditProps["edit"]["style"]["palette"]; frame: number; fps: number; video: string; faceAt: (f: number) => Face | null; cv: EditCanvas };
+const CV916: EditCanvas = { format: "9:16", w: 1080, h: 1920, ui: "TikTok/Reels", subY: 1244, safe: { l: 60, r: 940, t: 220, b: 1440 }, brand: { top: 226, left: 64, right: 140, h: 50, font: 24 } };
 
 // ---------------------------------------------------------------- ikon kecil
 const Icon: React.FC<{ kind?: string; size?: number; c: Ctx }> = ({ kind, size = 56, c }) => {
@@ -106,9 +107,10 @@ const Annotate: React.FC<{ o: EObj; c: Ctx }> = ({ o, c }) => (
       if (!f) return null;
       const [x, y, w, h, mx, my, ex, ey] = f;
       const tgt = it.target === "mouth" ? [mx, my] : it.target === "eyes" ? [ex, ey] : it.target === "head" ? [x + w / 2, y] : it.target === "top" ? [x + w * 0.2, y - h * 0.6] : [x + w * 0.95, y + h * 0.55];
-      const left = it.side ? it.side === "left" : tgt[0] > 540;
-      const cx = Math.min(900, Math.max(80, left ? tgt[0] - 330 : tgt[0] + 60));
-      const cy = Math.min(1180, Math.max(260, tgt[1] - 30 + (it.dy ?? 0)));
+      const left = it.side ? it.side === "left" : tgt[0] > c.cv.w / 2;
+      const nine = c.cv.format === "9:16", sf = c.cv.safe;
+      const cx = Math.min(nine ? 900 : sf.r - 40, Math.max(nine ? 80 : sf.l + 20, left ? tgt[0] - 330 : tgt[0] + 60));
+      const cy = Math.min(nine ? 1180 : (c.cv.subY ?? sf.b) - 70, Math.max(nine ? 260 : sf.t + 40, tgt[1] - 30 + (it.dy ?? 0)));
       const a = pop(c.frame, it.at, c.fps);
       const arrow = left ? (tgt[1] > cy + 40 ? "↘" : tgt[1] < cy - 40 ? "↗" : "→") : tgt[1] > cy + 40 ? "↙" : tgt[1] < cy - 40 ? "↖" : "←";
       return <div key={i} style={{ position: "absolute", left: cx, top: cy, opacity: a * fadeOut(c.frame, o.until), transform: `scale(${0.7 + 0.3 * a})` }}><Chip text={it.text} c={c} size={40} arrow={arrow} /></div>;
@@ -260,11 +262,11 @@ const ResultCard: React.FC<{ o: EObj; c: Ctx; box: Box }> = ({ o, c, box }) => (
 /** Video pembicara di dalam bingkai (lingkaran PiP / layar HP), wajah di tengah. */
 const Speaker: React.FC<{ c: Ctx; w: number; h: number; round?: boolean; faceFrac?: number }> = ({ c, w, h, round, faceFrac = 0.55 }) => {
   const f = c.faceAt(c.frame) ?? [380, 420, 320, 420, 540, 760, 540, 560];
-  const s = Math.max(w / 1080, (faceFrac * h) / f[3]);
+  const s = Math.max(w / c.cv.w, (faceFrac * h) / f[3]);
   const fx = f[0] + f[2] / 2, fy = f[1] + f[3] / 2;
   return (
     <div data-probe="ignore" style={{ position: "relative", width: w, height: h, overflow: "hidden", borderRadius: round ? "50%" : 0 }}>
-      <OffthreadVideo src={staticFile(c.video)} muted style={{ position: "absolute", width: 1080, height: 1920, left: w / 2 - fx * s, top: h / 2 - fy * s, transform: `scale(${s})`, transformOrigin: "0 0" }} />
+      <OffthreadVideo src={staticFile(c.video)} muted style={{ position: "absolute", width: c.cv.w, height: c.cv.h, left: w / 2 - fx * s, top: h / 2 - fy * s, transform: `scale(${s})`, transformOrigin: "0 0" }} />
     </div>
   );
 };
@@ -299,13 +301,13 @@ const ClipCard: React.FC<{ o: EObj; c: Ctx; box: Box }> = ({ o, c, box }) => (
   </Card>
 );
 
-// klip penuh (fit: full, bawaan): cutaway 1080x1920 di atas A-roll / panel B-roll, di bawah PiP, objek, dan subtitle
+// klip penuh (fit: full, bawaan): cutaway seukuran kanvas di atas A-roll / panel B-roll, di bawah PiP, objek, dan subtitle
 const ClipFull: React.FC<{ o: EObj; c: Ctx }> = ({ o, c }) => {
   const op = interpolate(c.frame, [o.at, o.at + 6, o.until - 6, o.until], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
     <AbsoluteFill data-probe="ignore" style={{ opacity: op }}>
       <Sequence from={o.at} durationInFrames={Math.max(1, o.until - o.at)} layout="none">
-        <OffthreadVideo src={staticFile(o.src ?? "")} muted style={{ width: 1080, height: 1920, objectFit: "cover" }} />
+        <OffthreadVideo src={staticFile(o.src ?? "")} muted style={{ width: c.cv.w, height: c.cv.h, objectFit: "cover" }} />
       </Sequence>
       <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(0,0,0,.28) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 58%, rgba(0,0,0,.55) 82%)" }} />
     </AbsoluteFill>
@@ -314,9 +316,10 @@ const ClipFull: React.FC<{ o: EObj; c: Ctx }> = ({ o, c }) => {
 
 // ---------------------------------------------------------------- tata letak slot (zona aman TikTok: x 60-940, y 220-1440)
 type Box = { x: number; y: number; w: number; h?: number; center?: boolean; right?: boolean };
-const slotBox = (o: EObj, broll: boolean, hasPip: boolean): Box => {
+const slotBox = (o: EObj, broll: boolean, hasPip: boolean, cv: EditCanvas = CV916): Box => {
   const big = ["doc", "chat", "phone", "image", "clip"].includes(o.type);
   if (o.box) return o.box;
+  if (cv.format !== "9:16") return slotBoxWide(o, broll, hasPip, cv, big);
   const slot = o.slot ?? (o.type === "keyword" || o.type === "big" ? "top" : broll ? "center" : "side");
   if (broll) {
     if (slot === "top") return hasPip ? { x: 420, y: 262, w: 520 } : { x: 80, y: 300, w: 860, center: true };
@@ -342,15 +345,49 @@ const slotBox = (o: EObj, broll: boolean, hasPip: boolean): Box => {
   return { x: right ? 940 - w : 66, y: Math.min(1100, Math.max(760, fy)), w, right };
 };
 
+// kanvas lain (16:9, 4:5, 1:1): zona aman format itu, subtitle di cv.subY; lanskap = objek di sisi yang berlawanan dengan wajah
+const slotBoxWide = (o: EObj, broll: boolean, hasPip: boolean, cv: EditCanvas, big: boolean): Box => {
+  const { l, r, t } = cv.safe, W = r - l, land = cv.w > cv.h, subY = cv.subY ?? cv.safe.b - 160;
+  const slot = o.slot ?? (o.type === "keyword" || o.type === "big" ? "top" : broll ? "center" : "side");
+  const tall = (o.type === "chat" || o.type === "phone");
+  if (broll) {
+    const pipW = hasPip ? (land ? 300 : 280) : 0;
+    if (slot === "top") return hasPip ? { x: l + pipW + 40, y: t + 50, w: W - pipW - 40 } : { x: l + 20, y: t + 60, w: W - 40, center: true };
+    if (slot === "middle") return { x: l + 20, y: Math.round(cv.h * 0.4), w: W - 40, center: true };
+    if (tall) { const h = Math.min(610, subY - t - 90); return { x: Math.round(cv.w / 2 - 260), y: t + 60, w: 520, h }; }
+    const w = Math.min(land ? 900 : 780, W - 40);
+    // di bawah slot "top" (kicker + kata kunci ±190 px)
+    return { x: Math.round(cv.w / 2 - w / 2), y: land ? t + 270 : Math.round(cv.h * (big ? 0.3 : 0.36)), w };
+  }
+  if (slot === "top") return { x: l + 6, y: t + 50, w: land ? Math.round(W * 0.5) : W - 12 };
+  const right = o.side === "right";
+  if (o.type === "phone") { const h = Math.min(640, subY - t - 110); return { x: right ? r - 340 : l + 10, y: t + 80, w: 330, h }; }
+  if (land) {
+    // samping (dan tengah): setengah bingkai yang berlawanan dengan wajah, rata atas sedikit di bawah label atas
+    const w = Math.min(big ? 640 : 560, Math.round(W * 0.4));
+    const fx = o.face ? o.face.x + o.face.w / 2 : cv.w / 2;
+    const toRight = slot === "center" ? fx < cv.w / 2 : right;
+    // chips di bagian bawah sisi itu, kartu di atasnya: keduanya bisa tampil bersamaan tanpa bertumpuk
+    const y = o.type === "chips" ? subY - 40 - (o.items?.length ?? 1) * 82 : Math.round(cv.h * 0.26);
+    return { x: toRight ? r - w : l + 6, y, w, right: toRight };
+  }
+  // 4:5 / 1:1: di bawah wajah bila muat sebelum subtitle, selain itu di atas wajah
+  const need = o.type === "prompt" ? 400 : o.type === "doc" ? 520 : slot === "center" ? 300 : 260;
+  const top = o.face ? o.face.y : cv.h * 0.3, bot = o.face ? o.face.y + o.face.h : cv.h * 0.5;
+  const y = subY - 20 - (bot + 30) >= need ? bot + 30 : top - 30 - (t + 40) >= need ? t + 40 : Math.max(t + 40, subY - 20 - need);
+  const w = slot === "center" ? Math.min(780, W - 40) : Math.min(big ? 520 : 460, Math.round(W * 0.5));
+  return slot === "center" ? { x: Math.round(cv.w / 2 - w / 2), y, w, center: true } : { x: right ? r - w : l + 6, y, w, right };
+};
+
 // ---------------------------------------------------------------- probe (preview): kotak objek vs wajah
-const EditProbe: React.FC<{ enabled?: boolean; mode: string; face: Face | null }> = ({ enabled, mode, face }) => {
+const EditProbe: React.FC<{ enabled?: boolean; mode: string; face: Face | null; cw?: number }> = ({ enabled, mode, face, cw = 1080 }) => {
   const frame = useCurrentFrame();
   useEffect(() => {
     if (!enabled) return;
     const h = delayRender("cek objek");
     const t = setTimeout(() => {
       const root = document.querySelector('[data-probe="root"]')?.getBoundingClientRect();
-      const ox = root?.left ?? 0, oy = root?.top ?? 0, k = root ? 1080 / root.width : 1;
+      const ox = root?.left ?? 0, oy = root?.top ?? 0, k = root ? cw / root.width : 1;
       const boxes = Array.from(document.querySelectorAll("[data-edit]")).map((el) => {
         const r = el.getBoundingClientRect();
         return { label: (el as HTMLElement).dataset.edit, x: (r.left - ox) * k, y: (r.top - oy) * k, w: r.width * k, h: r.height * k };
@@ -359,7 +396,7 @@ const EditProbe: React.FC<{ enabled?: boolean; mode: string; face: Face | null }
       continueRender(h);
     }, 300);
     return () => { clearTimeout(t); continueRender(h); };
-  }, [enabled, frame, mode, face]);
+  }, [enabled, frame, mode, face, cw]);
   return null;
 };
 
@@ -369,7 +406,10 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
   const { frame, fps } = useT();
   const p = edit.style.palette;
   const faceAt = (f: number) => edit.face[Math.min(edit.face.length - 1, Math.max(0, f >> 1))] ?? null;
-  const c: Ctx = { p, frame, fps, video: edit.video, faceAt };
+  const cv = edit.canvas ?? CV916, nine = cv.format === "9:16", land = cv.w > cv.h;
+  const c: Ctx = { p, frame, fps, video: edit.video, faceAt, cv };
+  const pipD = nine ? 320 : land ? 260 : 280, pipX = nine ? 66 : cv.safe.l + 6, pipY = nine ? 250 : cv.safe.t + 50;
+  const probeOpts = useMemo(() => (nine ? undefined : { width: cv.w, height: cv.h, safeLeft: cv.safe.l, safeRight: cv.safe.r, safeTop: cv.safe.t, safeBottom: cv.safe.b, ui: cv.ui ?? cv.format }), [nine, cv]);
   const cut = edit.cuts.find((x) => frame >= x.f0 && frame < x.f1) ?? edit.cuts[edit.cuts.length - 1];
   const v = edit.visuals.find((x) => frame >= x.f0 && frame < x.f1);
   const mode = v?.mode ?? "aroll";
@@ -383,8 +423,8 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
   return (
     <AbsoluteFill style={{ background: "#000" }}>
       {/* A-roll + punch-in (bertumpu di wajah) */}
-      <AbsoluteFill style={{ transform: `scale(${cut?.scale ?? 1})`, transformOrigin: `${cut?.ox ?? 540}px ${cut?.oy ?? 760}px` }}>
-        <OffthreadVideo src={staticFile(edit.video)} muted style={{ width: 1080, height: 1920 }} />
+      <AbsoluteFill style={{ transform: `scale(${cut?.scale ?? 1})`, transformOrigin: `${cut?.ox ?? cv.w / 2}px ${cut?.oy ?? Math.round(cv.h * 0.4)}px` }}>
+        <OffthreadVideo src={staticFile(edit.video)} muted style={{ width: cv.w, height: cv.h }} />
       </AbsoluteFill>
       {mode === "dim" ? <AbsoluteFill style={{ background: bg.edge ?? "#0B2320", opacity: interpolate(frame, [v!.f0, v!.f0 + 8], [0, Number(edit.style.broll?.closingTransition?.dim ?? 0.55)], { extrapolateRight: "clamp" }) }} /> : null}
       {broll ? (
@@ -395,16 +435,16 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
       {/* klip penuh (cutaway) */}
       {fulls.map((o) => <ClipFull key={`${o.sid}-${o.k}`} o={o} c={c} />)}
       {pipOn ? (
-        <div style={{ position: "absolute", left: 66, top: 250, width: 320, height: 320, borderRadius: "50%", boxShadow: `0 0 0 ${edit.style.broll?.pip?.ring?.width ?? 6}px ${edit.style.broll?.pip?.ring?.color ?? "#fff"}, 0 20px 50px rgba(0,0,0,.45)` }}>
-          <Speaker c={c} w={320} h={320} round />
+        <div style={{ position: "absolute", left: pipX, top: pipY, width: pipD, height: pipD, borderRadius: "50%", boxShadow: `0 0 0 ${edit.style.broll?.pip?.ring?.width ?? 6}px ${edit.style.broll?.pip?.ring?.color ?? "#fff"}, 0 20px 50px rgba(0,0,0,.45)` }}>
+          <Speaker c={c} w={pipD} h={pipD} round />
         </div>
       ) : null}
       {/* objek */}
       {live.map((o) => {
-        const box = slotBox(o, broll, pipOn);
+        const box = slotBox(o, broll, pipOn, cv);
         const key = `${o.sid}-${o.k}`;
         switch (o.type) {
-          case "keyword": case "big": return <Keyword key={key} o={o.type === "big" ? { ...o, big: o.big ?? o.text } : o} c={c} box={box.center === undefined && o.type === "big" ? { ...box, center: true, x: 80, w: 860, y: broll ? 640 : box.y } : box} />;
+          case "keyword": case "big": return <Keyword key={key} o={o.type === "big" ? { ...o, big: o.big ?? o.text } : o} c={c} box={box.center === undefined && o.type === "big" ? (nine ? { ...box, center: true, x: 80, w: 860, y: broll ? 640 : box.y } : { ...box, center: true, x: cv.safe.l + 20, w: cv.safe.r - cv.safe.l - 40, y: broll ? Math.round(cv.h * 0.36) : box.y }) : box} />;
           case "chips": return <Chips key={key} o={o} c={c} box={box} />;
           case "annotate": return broll ? null : <Annotate key={key} o={o} c={c} />;
           case "brackets": return broll ? null : <Brackets key={key} o={o} c={c} />;
@@ -421,7 +461,9 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
       })}
       {/* subtitle karaoke (zona y 1244-1414) */}
       {sub ? (
-        <div data-sub="1" style={{ position: "absolute", left: 100, width: 840, top: (ST.zoneY?.[0] ?? 1244) + 20, textAlign: "center", fontFamily: HEAD, fontWeight: 800, fontSize: ST.size ?? 60, lineHeight: 1.2 }}>
+        <div data-sub="1" style={nine
+          ? { position: "absolute", left: 100, width: 840, top: (ST.zoneY?.[0] ?? 1244) + 20, textAlign: "center", fontFamily: HEAD, fontWeight: 800, fontSize: ST.size ?? 60, lineHeight: 1.2 }
+          : { position: "absolute", left: cv.safe.l + 40, width: cv.safe.r - cv.safe.l - 80, top: (cv.subY ?? cv.safe.b - 160) + 10, textAlign: "center", fontFamily: HEAD, fontWeight: 800, fontSize: Math.round((ST.size ?? 60) * (land ? 0.9 : 0.85)), lineHeight: 1.2 }}>
           {sub.words.map((w, i) => {
             const next = sub.words[i + 1]?.f0 ?? sub.f1;
             const on = frame >= w.f0 && frame < next;
@@ -433,13 +475,34 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
         </div>
       ) : null}
       {edit.brand?.left || edit.brand?.right ? (
-        <div data-probe="brand" style={{ position: "absolute", top: 254, left: 66, right: 140, display: "flex", justifyContent: "space-between", fontFamily: HEAD, fontWeight: 800, fontSize: 30, letterSpacing: 4, color: "rgba(255,255,255,.9)" }}>
+        <div data-probe="brand" style={{ position: "absolute", ...(nine ? { top: 254, left: 66, right: 140 } : { top: (cv.brand?.top ?? cv.safe.t) + 10, left: cv.brand?.left ?? cv.safe.l, right: cv.brand?.right ?? cv.w - cv.safe.r }), display: "flex", justifyContent: "space-between", fontFamily: HEAD, fontWeight: 800, fontSize: 30, letterSpacing: 4, color: "rgba(255,255,255,.9)" }}>
           <span>{edit.brand.left}</span><span>{edit.brand.right}</span>
         </div>
       ) : null}
+      {/* bab (opsional) */}
+      {(() => {
+        const ch = (edit.chapters ?? []).filter((x) => x.f0 <= frame).at(-1);
+        if (!ch || edit.bab === "tanpa" || !edit.bab) return null;
+        const i = (edit.chapters ?? []).indexOf(ch), d = frame - ch.f0;
+        if (edit.bab === "kartu" && ch.f0 > 15 && d < 48) {
+          const op = interpolate(d, [0, 8, 40, 48], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+          return (
+            <AbsoluteFill style={{ opacity: op, background: `${bg.edge ?? "#0B2320"}F2`, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: "0 12%", textAlign: "center" }}>
+              <div style={{ fontFamily: HEAD, fontWeight: 700, fontSize: 30, letterSpacing: 8, color: p.teal ?? "#9fe" }}>BAB {i + 1}</div>
+              <div style={{ fontFamily: HEAD, fontWeight: 800, fontSize: nine ? 84 : 76, lineHeight: 1.1, color: "#fff" }}>{ch.title}</div>
+            </AbsoluteFill>
+          );
+        }
+        if (edit.bab === "label" && d < 75) {
+          const op = interpolate(d, [0, 8, 67, 75], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+          const top = nine ? 300 : (cv.brand?.top ?? cv.safe.t) + 56, right = nine ? 140 : cv.brand?.right ?? cv.w - cv.safe.r;
+          return <div style={{ position: "absolute", top, right, opacity: op, padding: "10px 20px", borderRadius: 999, background: "rgba(0,0,0,.55)", fontFamily: HEAD, fontWeight: 700, fontSize: 26, letterSpacing: 3, color: "#fff" }}>{ch.title.toUpperCase()}</div>;
+        }
+        return null;
+      })()}
       <Audio src={staticFile(timing.audio)} />
-      <EditProbe enabled={layoutCheck} mode={mode} face={faceAt(frame)} />
-      <LayoutProbe enabled={layoutCheck} />
+      <EditProbe enabled={layoutCheck} mode={mode} face={faceAt(frame)} cw={cv.w} />
+      <LayoutProbe enabled={layoutCheck} opts={probeOpts} />
     </AbsoluteFill>
   );
 };

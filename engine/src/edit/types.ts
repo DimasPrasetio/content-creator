@@ -44,6 +44,11 @@ export type EObj = {
   bubbles?: { at: number; side: string; text?: string; file?: string; icon?: string }[];
 };
 
+export type EditCanvas = {
+  format: string; w: number; h: number; ui?: string; subY?: number;
+  safe: { l: number; r: number; t: number; b: number };
+  brand?: { top: number; left: number; right: number; h: number; font: number };
+};
 export type EditProps = {
   name: string;
   timing: Timing;
@@ -57,6 +62,11 @@ export type EditProps = {
     visuals: { id: string; mode: string; f0: number; f1: number }[];
     objects: EObj[];
     subs: { f0: number; f1: number; words: { w: string; f0: number; f1: number }[] }[];
+    /** kanvas (v0.8); tanpa = 9:16 1080x1920 */
+    canvas?: EditCanvas;
+    /** bab opsional: tanpa | label (judul kecil ±2,5 dtk) | kartu (kartu judul ±1,6 dtk) */
+    bab?: string;
+    chapters?: { f0: number; title: string }[];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     style: { palette: Record<string, string>; type: any; broll: any; aroll: any };
     brand?: { left?: string; right?: string };

@@ -1,4 +1,5 @@
-// Mesin edit footage berbasis STYLE (bukan brand): footage talking-head -> video 1080x1920 sesuai style (mis. ngobrol).
+// Mesin edit footage berbasis STYLE (bukan brand): footage talking-head -> video sesuai style (mis. ngobrol), kanvas
+// edit.json "format" (bawaan 9:16 1080x1920; 16:9 1920x1080 untuk YouTube/video panjang, 4:5, 1:1).
 //
 //   npm run edit -- <nama> --new --style=ngobrol --input=/path/a.mov[,b.mov] [--brand=<slug>]
 //        proyek baru: footage disalin ke Projects/<nama>/assets/raw/, dibuat Projects/<nama>/edit.json
@@ -18,7 +19,7 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DIRS, ENGINE, P, ROOT, archiveResult, bps, deepMerge, duration, encodeFor, listStyles, loadStyle, normTokens, readJson, resolveName, run, writeLayout } from "./lib.mjs";
+import { DIRS, ENGINE, FORMATS, P, ROOT, archiveResult, bps, deepMerge, duration, encodeFor, listStyles, loadStyle, normFormat, normTokens, readJson, resolveName, run, writeLayout } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -60,7 +61,8 @@ if (has("new")) {
   });
   if (existsSync(planFile) && !has("force")) throw new Error(`${path.relative(ROOT, planFile)} sudah ada (--force untuk menimpa)`);
   const brandSlug = opt("brand");
-  writeFileSync(planFile, JSON.stringify({ style, ...(brandSlug ? { profile: brandSlug } : {}), brand: { left: "", right: "" }, sources, glossary: {}, sentences: [] }, null, 2) + "\n");
+  const format = normFormat(opt("format") ?? "9:16");
+  writeFileSync(planFile, JSON.stringify({ style, ...(format !== "9:16" ? { format } : {}), ...(brandSlug ? { profile: brandSlug } : {}), brand: { left: "", right: "" }, sources, glossary: {}, sentences: [] }, null, 2) + "\n");
   console.log(`Proyek edit: ${path.relative(ROOT, paths.dir)}/ (style ${style}, ${sources.length} footage). Lanjut: npm run edit -- ${name} --analyze`);
   process.exit(0);
 }
@@ -68,6 +70,9 @@ if (has("new")) {
 const plan = readJson(planFile, null);
 if (!plan) throw new Error(`Belum ada ${path.relative(ROOT, planFile)}: npm run edit -- ${name} --new --style=<style> --input=<footage>`);
 const S = editStyle(plan.style ?? "ngobrol");
+// kanvas (v0.8): edit.json "format"; 9:16 = perilaku lama persis
+const CV = FORMATS[normFormat(plan.format)], CW = CV.w, CH = CV.h, ASP = CW / CH, LAND = CW > CH, V916 = CV.format === "9:16";
+const SUB_Y0 = V916 ? S.type?.subtitle?.zoneY?.[0] ?? 1244 : CV.safe.b - (LAND ? 150 : 170);
 const pace = S.pace ?? {};
 
 // ---------------------------------------------------------------- 1. normalisasi + analisis
@@ -81,7 +86,7 @@ const normalize = (i) => {
   const src = path.join(paths.dir, plan.sources[i].file);
   if (!existsSync(src)) throw new Error(`Footage hilang: ${plan.sources[i].file}`);
   const st = statSync(src);
-  const key = sha([src, st.size, st.mtimeMs, 2]);
+  const key = sha([src, st.size, st.mtimeMs, 2, ...(V916 ? [] : [CV.format])]);
   const info = readJson(srcInfo(i), {});
   if (info.key === key && existsSync(srcNorm(i)) && existsSync(srcWav(i))) return info;
   const pr = probeJson(src);
@@ -90,10 +95,11 @@ const normalize = (i) => {
   const rot = Math.abs(v.side_data_list?.find((d) => d.rotation !== undefined)?.rotation ?? 0) % 180 === 90;
   const [w, h] = rot ? [v.height, v.width] : [v.width, v.height];
   const hdr = ["smpte2084", "arib-std-b67"].includes(v.color_transfer);
-  const vertical = h / w > 1.6;
-  // ukuran kerja: vertikal -> 1080x1920 (isi penuh); lainnya -> tinggi 1920 bila sumber >= 1440, selain itu 1080
-  const outH = vertical ? 1920 : h >= 1440 ? 1920 : 1080;
-  const outW = vertical ? 1080 : Math.round((w * outH) / h / 2) * 2;
+  // "vertical" = sumber sudah sebentuk kanvas (9:16: tinggi/lebar > 1,6; format lain: rasio selisih < 4%)
+  const vertical = V916 ? h / w > 1.6 : Math.abs(w / h - ASP) / ASP < 0.04;
+  // ukuran kerja: sebentuk kanvas -> ukuran kanvas (isi penuh); lainnya -> tinggi 1920 bila sumber >= 1440, selain itu 1080
+  const outH = vertical ? CH : h >= 1440 ? 1920 : 1080;
+  const outW = vertical ? CW : Math.round((w * outH) / h / 2) * 2;
   const pre = [];
   const vf = [];
   let hdrHow = "";
@@ -217,7 +223,7 @@ const analyze = async () => {
     const a = readJson(path.join(edir, `src${i + 1}.analysis.json`));
     const c = a.color, au = a.audio ?? {};
     lines.push(`## src${i + 1}: ${inf.file}`,
-      `- ${inf.srcW}x${inf.srcH}${inf.vertical ? " vertikal" : " -> perlu dipotong ke 9:16 mengikuti wajah"} · ${inf.duration.toFixed(1)} dtk${inf.hdr ? ` · HDR (${inf.hdrHow})` : ""}`,
+      `- ${inf.srcW}x${inf.srcH}${inf.vertical ? (V916 ? " vertikal" : ` sebentuk ${CV.format}`) : ` -> perlu dipotong ke ${CV.format} mengikuti wajah`} · ${inf.duration.toFixed(1)} dtk${inf.hdr ? ` · HDR (${inf.hdrHow})` : ""}`,
       `- wajah terdeteksi ${Math.round(a.faceRate * 100)}% sampel${a.faceRate < 0.5 ? " (rendah: PiP/anotasi wajah dinonaktifkan otomatis)" : ""}`,
       `- cahaya: luma p1 ${c.lumaP1} · p50 ${c.lumaP50} · p99 ${c.lumaP99} · saturasi ${c.sat} · putih Lab ${JSON.stringify(c.whiteLab)} · kulit [L, chroma, hue] ${JSON.stringify(c.skin)}`,
       `- suara: noise floor ${au.noiseFloorDb} dBFS, bicara ${au.speechDb} dBFS${au.noiseFloorDb > -50 ? " (berisik: pembersih noise aktif)" : ""}`,
@@ -328,12 +334,16 @@ const scenes = wordMap.map(({ s, words }, k) => {
   const start = k === 0 ? 0 : Math.max(wordMap[k - 1].words.at(-1).e, words[0].s - LEAD);
   return { s, words, start };
 });
+// bab opsional (v0.8): kalimat ber-"chapter": "Judul"; bab pada kalimat yang dibuang pindah ke kalimat terpakai berikutnya
+const chapterOf = new Map();
+{ let pending = null; const used = new Set(wordMap.map((x) => x.s)); for (const s of plan.sentences) { if (s.chapter) pending = s.chapter; if (pending && used.has(s)) { chapterOf.set(s, pending); pending = null; } } }
+const BAB = chapterOf.size ? plan.bab ?? "tanpa" : "tanpa";
 const timing = {
-  fps: FPS, totalFrames, audio: `audio/${name}.wav`, provider: "footage", external: "footage", style: plan.style,
+  fps: FPS, totalFrames, audio: `audio/${name}.wav`, provider: "footage", external: "footage", style: plan.style, ...(chapterOf.size ? { bab: BAB } : {}),
   scenes: scenes.map(({ s, words, start }, k) => {
     const sf = Math.round(start * FPS);
     const ef = k < scenes.length - 1 ? Math.round(scenes[k + 1].start * FPS) : totalFrames;
-    return { index: k, id: s.id, text: words.map((w) => w.w).join(" "), style: "normal", startFrame: sf, durationFrames: Math.max(1, ef - sf),
+    return { index: k, id: s.id, text: words.map((w) => w.w).join(" "), style: "normal", startFrame: sf, durationFrames: Math.max(1, ef - sf), ...(chapterOf.has(s) ? { chapter: chapterOf.get(s) } : {}),
       words: words.map((w) => ({ w: w.w, f: Math.round(w.s * FPS) - sf, e: Math.round(w.e * FPS) - sf })) };
   }),
 };
@@ -395,7 +405,7 @@ const STEPS = ["cut", "sound", "preview", "render"];
 const startAt = from ? STEPS.indexOf(from) : 0;
 if (from && startAt < 0) throw new Error(`--from=${from} tidak dikenal (${STEPS.join(", ")})`);
 
-/** Jendela potong 9:16 per potongan: mengikuti wajah (sumber tidak vertikal). */
+/** Jendela potong sebentuk kanvas per potongan: mengikuti wajah (sumber tidak sebentuk kanvas). */
 const faceAt = (i, t) => {
   const f = analysis[i].face;
   if (!f?.length) return null;
@@ -405,11 +415,17 @@ const faceAt = (i, t) => {
 const cropFor = (seg) => {
   const inf = infos[seg.src];
   if (inf.vertical) return null;
-  const cw = Math.round((inf.h * 9) / 16 / 2) * 2;
-  const xs = [];
-  for (let t = seg.in; t < seg.out; t += 0.2) { const f = faceAt(seg.src, t); if (f) xs.push(f[1] + f[3] / 2); }
-  const cx = xs.length ? xs.sort((a, b) => a - b)[xs.length >> 1] : 0.5;
-  return { w: cw, x: clamp(Math.round(cx * inf.w - cw / 2), 0, inf.w - cw), srcW: inf.w };
+  const fs = [];
+  for (let t = seg.in; t < seg.out; t += 0.2) { const f = faceAt(seg.src, t); if (f) fs.push(f); }
+  const med = (g, d) => (fs.length ? fs.map(g).sort((a, b) => a - b)[fs.length >> 1] : d);
+  if (inf.w / inf.h >= ASP) {
+    // sumber lebih lebar dari kanvas: potong kiri-kanan, wajah di tengah
+    const cw = Math.min(inf.w, Math.round((inf.h * ASP) / 2) * 2), cx = med((f) => f[1] + f[3] / 2, 0.5);
+    return { w: cw, h: inf.h, x: clamp(Math.round(cx * inf.w - cw / 2), 0, inf.w - cw), y: 0, srcW: inf.w };
+  }
+  // sumber lebih tinggi dari kanvas (mis. vertikal -> 16:9): potong atas-bawah, wajah di ±40% tinggi
+  const ch = Math.min(inf.h, Math.round(inf.w / ASP / 2) * 2), cy = med((f) => f[2] + f[4] / 2, 0.4);
+  return { w: inf.w, h: ch, x: 0, y: clamp(Math.round(cy * inf.h - ch * 0.42), 0, inf.h - ch), srcW: inf.w };
 };
 
 if (errors) {
@@ -429,7 +445,7 @@ if (startAt <= 0 && (readJson(path.join(edir, "cut.json"), {}).key !== cutKey ||
     const inV = group.flatMap((s) => ["-ss", s.in.toFixed(4), "-t", (s.out - s.in).toFixed(4), "-i", srcNorm(s.src)]);
     const fc = group.map((s, k) => {
       const cr = cropFor(s);
-      const geo = cr ? `crop=${cr.w}:${infos[s.src].h}:${cr.x}:0,scale=1080:1920,` : "";
+      const geo = cr ? `crop=${cr.w}:${cr.h}:${cr.x}:${cr.y},scale=${CW}:${CH},` : "";
       return `[${k}:v]${geo}${chains[s.src]},setsar=1,fps=${FPS},trim=end_frame=${Math.round((s.out - s.in) * FPS)},setpts=PTS-STARTPTS[v${k}]`;
     });
     fc.push(`${group.map((_, k) => `[v${k}]`).join("")}concat=n=${group.length}:v=1:a=0[v]`);
@@ -482,7 +498,7 @@ const resolveAt = (sid, ref, fallback) => {
   const w = hits[(r.n ?? 1) - 1];
   return w ? fr(Math.max(x.start, w.s - LEAD)) : fr(x.start);
 };
-// wajah di linimasa baru (koordinat 1080x1920, setelah potong 9:16), tiap 2 frame
+// wajah di linimasa baru (koordinat kanvas, setelah dipotong sebentuk kanvas), tiap 2 frame
 const faceTrack = [];
 for (let f = 0; f < totalFrames; f += 2) {
   const t = f / FPS;
@@ -492,10 +508,11 @@ for (let f = 0; f < totalFrames; f += 2) {
   if (!ff) { faceTrack.push(null); continue; }
   const inf = infos[seg.src];
   const cr = cropFor(seg);
-  const X = (x) => (cr ? ((x * inf.w - cr.x) / cr.w) * 1080 : x * 1080);
-  const Y = (y) => y * 1920;
-  const Wd = (w) => (cr ? ((w * inf.w) / cr.w) * 1080 : w * 1080);
-  faceTrack.push([Math.round(X(ff[1])), Math.round(Y(ff[2])), Math.round(Wd(ff[3])), Math.round(ff[4] * 1920), Math.round(X(ff[5])), Math.round(Y(ff[6])), Math.round(X(ff[7])), Math.round(Y(ff[8]))]);
+  const X = (x) => (cr ? ((x * inf.w - cr.x) / cr.w) * CW : x * CW);
+  const Y = (y) => (cr ? ((y * inf.h - cr.y) / cr.h) * CH : y * CH);
+  const Wd = (w) => (cr ? ((w * inf.w) / cr.w) * CW : w * CW);
+  const Hd = (h) => (cr ? ((h * inf.h) / cr.h) * CH : h * CH);
+  faceTrack.push([Math.round(X(ff[1])), Math.round(Y(ff[2])), Math.round(Wd(ff[3])), Math.round(Hd(ff[4])), Math.round(X(ff[5])), Math.round(Y(ff[6])), Math.round(X(ff[7])), Math.round(Y(ff[8]))]);
 }
 const faceMid = (f0, f1) => {
   const xs = faceTrack.slice(Math.floor(f0 / 2), Math.ceil(f1 / 2) + 1).filter(Boolean);
@@ -524,7 +541,7 @@ segs.forEach((s, k) => {
   const punch = sc?.s.punch ?? "auto";
   let scale = punch === "none" ? 1 : punch === "strong" ? scales[2] ?? 1.28 : scales[k % 2 ? 1 : 0] ?? 1;
   const fm = faceMid(f0, f1);
-  cuts.push({ f0, f1, scale, ox: fm ? fm.cx : 540, oy: fm ? fm.cy : 760 });
+  cuts.push({ f0, f1, scale, ox: fm ? fm.cx : CW / 2, oy: fm ? fm.cy : Math.round(CH * 0.4) });
 });
 
 // objek visual -> frame
@@ -535,7 +552,7 @@ for (const { s, words, start } of scenes) {
   const mode = s.mode ?? "aroll";
   if (mode !== "aroll") visuals.push({ id: s.id, mode, f0, f1 });
   const fm = faceMid(f0, f1);
-  const side = fm ? (fm.cx > 560 ? "left" : fm.cx < 520 ? "right" : motionSide(s.id) > 0 ? "right" : "left") : "left";
+  const side = fm ? (fm.cx > CW / 2 + 20 ? "left" : fm.cx < CW / 2 - 20 ? "right" : motionSide(s.id) > 0 ? "right" : "left") : "left";
   (s.objects ?? []).forEach((o, k) => {
     const at = resolveAt(s.id, o.at, f0);
     const until = o.until ? resolveAt(s.id, o.until) : o.hold ? fr(start + o.hold) : f1;
@@ -549,12 +566,12 @@ for (const { s, words, start } of scenes) {
       copyFileSync(path.resolve(paths.dir, o.file), dst);
       src = `media/edit/${path.basename(dst)}`;
     }
-    // klip (mis. B-roll AI dari npm run gen): diseragamkan 30 fps tanpa suara; full = 1080x1920 cover, card = lebar 832
+    // klip (mis. B-roll AI dari npm run gen): diseragamkan 30 fps tanpa suara; full = seukuran kanvas (cover), card = lebar 832 (lebar: 760)
     if (o.type === "clip" && o.file) {
       const srcFile = path.resolve(paths.dir, o.file);
       const dst = path.join(ENGINE, "public", "media", "edit", `${name}-${s.id}-${k}.mp4`);
       mkdirSync(path.dirname(dst), { recursive: true });
-      const vf = (o.fit ?? "full") === "full" ? "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" : "scale=832:-2";
+      const vf = (o.fit ?? "full") === "full" ? `scale=${CW}:${CH}:force_original_aspect_ratio=increase,crop=${CW}:${CH}` : `scale=${LAND ? 760 : 832}:-2`;
       run("ffmpeg", ["-v", "error", "-y", "-ss", String(o.from ?? 0), "-i", srcFile, "-an", "-vf", `${vf},fps=${FPS},format=yuv420p`, "-c:v", "libx264", "-crf", "16", "-preset", "veryfast", dst]);
       src = `media/edit/${path.basename(dst)}`;
       const len = Math.floor(duration(dst) * FPS);
@@ -576,7 +593,7 @@ for (const { words } of scenes) {
   const flush = () => { if (cur.length) subs.push({ f0: fr(cur[0].s), f1: fr(cur.at(-1).e + 0.1), words: cur.map((w) => ({ w: w.w, f0: fr(w.s), f1: fr(w.e) })) }); cur = []; };
   words.forEach((w) => {
     const len = cur.map((x) => x.w).join(" ").length + w.w.length;
-    if (cur.length >= cw1 || (cur.length >= cw0 && len > 26) || (cur.length && w.s - cur.at(-1).e > 0.35)) flush();
+    if (cur.length >= cw1 || (cur.length >= cw0 && len > (LAND ? 40 : 26)) || (cur.length && w.s - cur.at(-1).e > 0.35)) flush();
     cur.push(w);
     if (/[.!?,]$/.test(w.w) && cur.length >= cw0) flush();
   });
@@ -586,6 +603,8 @@ subs.forEach((c, k) => { if (subs[k + 1]) c.f1 = Math.min(c.f1, subs[k + 1].f0);
 
 const editProps = {
   video: `media/edit/${name}.mp4`, totalFrames, cuts, face: faceTrack, visuals, objects, subs,
+  canvas: { format: CV.format, w: CW, h: CH, safe: CV.safe, ui: CV.ui, brand: CV.brand, subY: SUB_Y0 },
+  bab: BAB, chapters: scenes.filter((x) => chapterOf.has(x.s)).map((x) => ({ f0: fr(x.start), title: chapterOf.get(x.s) })),
   style: { palette: S.palette, type: S.type, broll: S.broll, aroll: S.aroll },
   brand: plan.brand ?? {},
 };
@@ -594,7 +613,7 @@ writeFileSync(path.join(edir, "props.json"), JSON.stringify(editProps));
 // storyboard (untuk sound.py & QA): tanpa musik (style), pop halus saat objek muncul bila style mengizinkan
 const pop = S.audio?.sfx?.objectPop;
 const board = {
-  composition: "Edit", style: plan.style, brand: plan.brand ?? {},
+  composition: "Edit", style: plan.style, ...(V916 ? {} : { format: CV.format }), brand: plan.brand ?? {},
   scenes: scenes.map(({ s }) => ({ music: S.audio?.music ? "pad" : "off",
     sfx: pop ? (s.objects ?? []).filter((o) => typeof o.at === "string" || o.at?.word).slice(0, 3).map((o) => ({ cue: typeof o.at === "string" ? o.at : o.at.word, type: "pop", gain: 0.5 })) : [] })),
 };
@@ -669,7 +688,7 @@ if (startAt <= 2) {
         }
       }
       // objek tidak boleh masuk zona subtitle saat subtitle tampil
-      const [zy0] = S.type?.subtitle?.zoneY ?? [1244, 1414];
+      const zy0 = SUB_Y0;
       if (ed?.sub) for (const b of ed.boxes) if (b.y + b.h > zy0 + 10 && b.label !== "phone") rep.errors.push(`objek "${b.label}" menabrak zona subtitle (bawah y ${Math.round(b.y + b.h)} > ${zy0})`);
       layout.push({ label: `${s.id} (${(frame / FPS).toFixed(1)} dtk)`, frame, ...rep });
     }

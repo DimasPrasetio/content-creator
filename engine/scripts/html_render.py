@@ -43,7 +43,8 @@ from pathlib import Path
 
 ENGINE = Path(__file__).resolve().parent.parent
 PROBE = (ENGINE / "src" / "probe" / "measure.js").read_text().replace("export function", "function")
-W, H = 1080, 1920
+W, H = 1080, 1920  # ditimpa kanvas dari --inject ("canvas": {w, h, safe, ui}; v0.8: 9:16, 16:9, 4:5, 1:1)
+CANVAS = {}
 SOFT_GL = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
 
 
@@ -122,13 +123,26 @@ SEEK_JS = """t => Promise.resolve(window.seek(t)).then(() => Promise.all([...doc
   .then(() => new Promise(r => requestAnimationFrame(() => r(true))))"""
 
 
+def probe_opts():
+    c = CANVAS or {}
+    sf = c.get("safe") or {}
+    o = {"width": W, "height": H}
+    if sf:
+        o.update(safeLeft=sf["l"], safeRight=sf["r"], safeTop=sf["t"], safeBottom=sf["b"], ui=c.get("ui", "TikTok"))
+    return o
+
+
 def open_page(p, a, inj, errors, gpu):
+    global W, H, CANVAS  # per proses (worker = proses terpisah): ukuran kanvas dari data sisipan
+    CANVAS = inj.get("canvas") or {}
+    W, H = int(CANVAS.get("w", 1080)), int(CANVAS.get("h", 1920))
     b = p.chromium.launch(args=["--no-sandbox", *([] if gpu else SOFT_GL)])
     page = b.new_page(viewport={"width": W, "height": H}, device_scale_factor=1)
     page.on("pageerror", lambda e: errors.append(str(e)))
     page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
     page.add_init_script(
-        f"window.__TIMING__={json.dumps(inj.get('timing'))};window.__BRAND__={json.dumps(inj.get('brand', {}))};window.__RENDER__=true;"
+        f"window.__TIMING__={json.dumps(inj.get('timing'))};window.__BRAND__={json.dumps(inj.get('brand', {}))};"
+        f"window.__CANVAS__={json.dumps(inj.get('canvas') or {'format': '9:16', 'w': 1080, 'h': 1920})};window.__RENDER__=true;"
     )
     page.goto(a.url, wait_until="load")
     page.wait_for_function("typeof window.seek === 'function'", timeout=60000, polling=100)  # timer, bukan rAF (rAF bisa macet saat GPU sibuk)
@@ -267,7 +281,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", required=True)
     ap.add_argument("--page", default="index.html")
-    ap.add_argument("--inject", required=True, help="JSON {timing, brand}")
+    ap.add_argument("--inject", required=True, help="JSON {timing, brand, canvas}")
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--duration", type=float)
     ap.add_argument("--out")
@@ -294,7 +308,7 @@ def main():
             for i, t in enumerate(float(x) for x in a.stills.split(",")):
                 seek(t)
                 page.screenshot(path=str(out / f"scene-{i + 1:02d}.png"))
-                rep = page.evaluate(f"(() => {{ {PROBE}\n return probeLayout(); }})()")
+                rep = page.evaluate(f"(() => {{ {PROBE}\n return probeLayout({json.dumps(probe_opts())}); }})()")
                 layout.append({"label": f"scene {i + 1}", "t": t, **rep})
             b.close()
         srv.shutdown()

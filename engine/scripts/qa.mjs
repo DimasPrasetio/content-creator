@@ -5,7 +5,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, alignTokens, bps, config, encodeFor, normTokens, resolveName, run, whisperReady } from "./lib.mjs";
+import { ENGINE, P, alignTokens, bps, canvasOf, config, encodeFor, normTokens, resolveName, run, whisperReady } from "./lib.mjs";
 
 const name = resolveName(process.argv.slice(2).find((a) => !a.startsWith("--")));
 const cfg = config();
@@ -33,7 +33,8 @@ const probe = JSON.parse(
 );
 const v = probe.streams.find((s) => s.codec_type === "video");
 const a = probe.streams.find((s) => s.codec_type === "audio");
-check(v && v.width === 1080 && v.height === 1920, `resolusi ${v?.width}x${v?.height} (target 1080x1920)`);
+const CV = canvasOf(name);
+check(v && v.width === CV.w && v.height === CV.h, `resolusi ${v?.width}x${v?.height} (target ${CV.w}x${CV.h}, ${CV.format})`);
 check(v?.codec_name === "h264" && v?.r_frame_rate === "30/1", `video ${v?.codec_name} ${v?.r_frame_rate} fps`);
 check(a?.codec_name === "aac", `audio ${a?.codec_name}`);
 const dur = parseFloat(probe.format.duration);

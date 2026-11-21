@@ -12,7 +12,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, ROOT, brandProfile, duration, parseScript, readJson, resolveName, run } from "./lib.mjs";
+import { ENGINE, P, ROOT, brandProfile, canvasOf, duration, parseScript, readJson, resolveName, run } from "./lib.mjs";
 import { checkProject } from "./istilah.mjs";
 
 const argv = process.argv.slice(2);
@@ -130,7 +130,10 @@ await step("render", "Render video", () => {
   if (!r.ok) die("Render gagal", r.out);
 });
 await step("render", "Cek layar kosong", () => {
-  const r = sh(PY, [path.join(ENGINE, "scripts", "visual_gaps.py"), paths.result, "--json"]);
+  // zona visual: 9:16 bawaan (y 250-1250); format lain = zona aman tanpa pita brand atas dan kotak subtitle bawah
+  const CV = canvasOf(name), S = CV.safe;
+  const zone = CV.format === "9:16" ? [] : ["--x0", S.l, "--x1", S.r, "--y0", S.t + 80, "--y1", S.b - 200].map(String);
+  const r = sh(PY, [path.join(ENGINE, "scripts", "visual_gaps.py"), paths.result, ...zone, "--json"]);
   if (!r.ok) return console.log("    (cek layar kosong gagal dijalankan)");
   const g = JSON.parse(r.out.trim().split("\n").at(-1));
   const fmt = (xs) => xs.map(([a, b]) => `${a}-${b}`).join(", ");

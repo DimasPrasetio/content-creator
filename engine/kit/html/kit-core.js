@@ -13,7 +13,7 @@ const tint = (hex, a) => { const h = col(hex).replace("#", ""); const n = parseI
 (function applyTheme() {
   const r = document.documentElement.style;
   // tata letak: bawaan zona aman TikTok (kit.css); tema "layout": "penuh" = tata letak lama tanpa zona aman
-  if (THEME_.layout === "penuh") document.getElementById("stage").classList.add("layout-penuh");
+  if (THEME_.layout === "penuh" && (window.__CANVAS__?.format ?? "9:16") === "9:16") document.getElementById("stage").classList.add("layout-penuh");
   for (const [k, v] of Object.entries(C)) if (v) r.setProperty(`--${k}`, v);
   r.setProperty("--grid", THEME_.colors.grid); r.setProperty("--font-head", F.head); r.setProperty("--font-body", F.body);
   r.setProperty("--progress", col(THEME_.progress || "accent2")); r.setProperty("--label", col(THEME_.label?.text || "accent2"));
@@ -22,6 +22,43 @@ const tint = (hex, a) => { const h = col(hex).replace("#", ""); const n = parseI
   const wm = document.getElementById("wm"), W = THEME_.watermark;
   if (W && W.parts) { W.parts.forEach(([t, c]) => { const s = document.createElement("span"); s.textContent = t; s.style.color = col(c); wm.appendChild(s); }); wm.style.opacity = W.opacity ?? 1; if (W.size) wm.style.fontSize = W.size + "px"; }
   else wm.remove();
+})();
+// ---------- kanvas (v0.8): 9:16 bawaan (kit.css), 16:9 / 4:5 / 1:1 ditata di sini ----------
+// Koordinat zona untuk scenes.js tetap: tinggi 1000, pusat x 540. Di format lebih lebar zona melebar ke KIRI & KANAN
+// (viewBox x ZONE.x0..ZONE.x1), jadi scene lama tetap di tengah dan scene baru boleh memakai ruang ekstra.
+const CANVAS = window.__CANVAS__ || { format: "9:16", w: 1080, h: 1920 };
+const FMT = CANVAS.format || "9:16";
+const KIT_GEO = {
+  "9:16": { zone: { left: 14, top: 316, s: 0.9, w: 1080 }, shots: { left: 14, top: 262, s: 0.9, w: 1080 }, sub: { chars: 42 } },
+  "16:9": { zone: { left: 96, top: 190, s: 0.66, w: 2618 }, shots: { left: 96, top: 186, s: 0.6, w: 2880 },
+    track: { l: 96, t: 124, w: 1728 }, label: { l: 96, t: 140 }, wm: { r: 96, t: 134 }, glow: { l: 610, t: 160, d: 700 },
+    sub: { l: 96, t: 868, w: 1728, h: 134, font: 46, cw: 1640, chars: 64 } },
+  "4:5": { zone: { left: 54, top: 190, s: 0.86, w: 1130 }, shots: { left: 54, top: 186, s: 0.8, w: 1215 },
+    track: { l: 54, t: 120, w: 972 }, label: { l: 54, t: 136 }, wm: { r: 54, t: 130 }, glow: { l: 110, t: 220, d: 860 },
+    sub: { l: 54, t: 1112, w: 972, h: 160, font: 46, cw: 912, chars: 40 } },
+  "1:1": { zone: { left: 54, top: 186, s: 0.66, w: 1473 }, shots: { left: 54, top: 182, s: 0.6, w: 1620 },
+    track: { l: 54, t: 120, w: 972 }, label: { l: 54, t: 136 }, wm: { r: 54, t: 130 }, glow: { l: 240, t: 190, d: 600 },
+    sub: { l: 54, t: 866, w: 972, h: 140, font: 44, cw: 912, chars: 40 } },
+}[FMT] || null;
+if (!KIT_GEO) console.error(`format kanvas tidak dikenal: ${FMT}`);
+const ZONE = (() => { const w = KIT_GEO?.zone.w ?? 1080, x0 = (1080 - w) / 2; return { x0, x1: x0 + w, w, h: 1000, cx: 540 }; })();
+(function applyCanvas() {
+  if (FMT === "9:16" || !KIT_GEO) return;
+  const $ = (id) => document.getElementById(id), px = (v) => v + "px", G = KIT_GEO;
+  const stage = $("stage"); Object.assign(stage.style, { width: px(CANVAS.w), height: px(CANVAS.h) }); stage.classList.add("fmt-" + FMT.replace(":", "x"));
+  const z = $("zone"); z.setAttribute("width", G.zone.w); z.setAttribute("height", 1000); z.setAttribute("viewBox", `${ZONE.x0} 0 ${ZONE.w} 1000`);
+  Object.assign(z.style, { left: px(G.zone.left), top: px(G.zone.top), transform: `scale(${G.zone.s})` });
+  // stabilo/CTA memakai koordinat layar lama (x = x zona, y = 250 + y zona)
+  $("qs").style.transform = `translate(${G.zone.left - ZONE.x0 * G.zone.s}px, ${G.zone.top - 250 * G.zone.s}px) scale(${G.zone.s})`;
+  Object.assign($("shots").style, { left: px(G.shots.left), top: px(G.shots.top), width: px(G.shots.w), transform: `scale(${G.shots.s})` });
+  Object.assign($("track").style, { left: px(G.track.l), top: px(G.track.t), width: px(G.track.w) });
+  Object.assign($("label").style, { left: px(G.label.l), top: px(G.label.t) });
+  const wm = $("wm"); if (wm) Object.assign(wm.style, { right: px(G.wm.r), top: px(G.wm.t) });
+  Object.assign($("glow").style, { left: px(G.glow.l), top: px(G.glow.t), width: px(G.glow.d), height: px(G.glow.d) });
+  Object.assign($("subbox").style, { left: px(G.sub.l), top: px(G.sub.t), width: px(G.sub.w), height: px(G.sub.h) });
+  const st = document.createElement("style");
+  st.textContent = `#stage.fmt-${FMT.replace(":", "x")} .chunk { width: ${G.sub.cw}px; font-size: ${G.sub.font}px; }`;
+  document.head.appendChild(st);
 })();
 const TM = window.__TIMING__;
 const SC = TM.scenes;
@@ -134,6 +171,7 @@ function cross(cx, cy, r, t0, o = {}) {
 // ---------- komponen kamus visual (Fondasi Brand 8.2) ----------
 // Semua koordinat di dalam zona visual (SVG 1080x1000; isi di x 60-1020, y 0-950). Zona ditampilkan diskalakan 0,9 di
 // area aman TikTok (layar x = 14 + 0,9·x, y = 316 + 0,9·y; lihat kit.css). t0 = detik muncul (pakai cue()).
+// Format lebar (16:9, 4:5, 1:1): pusat tetap x 540, ruang tambahan ZONE.x0..ZONE.x1 (mis. 16:9: -769..1849).
 // o: opsi animasi bersama ({ dims: [[detik, opasitas]], attrs: {stroke: ...} }).
 
 // logo/monogram dari tema (THEME.mark: [[teks, warna], ...]); mono() = nama lama

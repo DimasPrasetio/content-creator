@@ -99,6 +99,68 @@ export const deepMerge = (a, b) => {
 export const LOCAL_CONFIG = path.join(ENGINE, "config.local.json");
 export const config = () => deepMerge(readJson(path.join(ENGINE, "config.json"), {}), readJson(LOCAL_CONFIG, {}));
 
+// ------------------------------------------------------------------ FORMAT / KANVAS (v0.8)
+// Satu definisi untuk semua jalur asli (HTML & edit footage): ukuran + zona aman (semua teks & brand wajib di dalamnya).
+// 9:16 = TikTok/Reels/Shorts (UI aplikasi menimpa atas, kanan, bawah) · 16:9 = YouTube (margin title-safe 5%) ·
+// 4:5 & 1:1 = feed Instagram/Facebook/LinkedIn (margin 5%). Komik (Pop) & mg4 tetap 9:16; format lain lewat npm run export.
+export const FORMATS = {
+  "9:16": { format: "9:16", w: 1080, h: 1920, safe: { l: 60, r: 940, t: 220, b: 1440 }, ui: "TikTok/Reels", brand: { top: 226, left: 64, right: 140, h: 50, font: 24 } },
+  "16:9": { format: "16:9", w: 1920, h: 1080, safe: { l: 96, r: 1824, t: 54, b: 1026 }, ui: "YouTube", brand: { top: 54, left: 96, right: 96, h: 50, font: 24 } },
+  "4:5": { format: "4:5", w: 1080, h: 1350, safe: { l: 54, r: 1026, t: 54, b: 1296 }, ui: "feed", brand: { top: 54, left: 54, right: 54, h: 46, font: 22 } },
+  "1:1": { format: "1:1", w: 1080, h: 1080, safe: { l: 54, r: 1026, t: 54, b: 1026 }, ui: "feed", brand: { top: 54, left: 54, right: 54, h: 46, font: 22 } },
+};
+const FORMAT_ALIAS = { "9x16": "9:16", potret: "9:16", portrait: "9:16", vertikal: "9:16", vertical: "9:16", reels: "9:16", tiktok: "9:16", shorts: "9:16",
+  "16x9": "16:9", landscape: "16:9", lanskap: "16:9", horizontal: "16:9", youtube: "16:9", "4x5": "4:5", feed: "4:5", "1x1": "1:1", kotak: "1:1", square: "1:1" };
+/** "16x9" / "landscape" / "16:9" -> "16:9"; kosong -> "9:16"; tidak dikenal -> error berisi pilihan. */
+export const normFormat = (f) => {
+  if (f == null || f === "") return "9:16";
+  const k = String(f).trim().toLowerCase();
+  const v = FORMATS[k] ? k : FORMAT_ALIAS[k];
+  if (!v) throw new Error(`Format "${f}" tidak dikenal. Pilihan: ${Object.keys(FORMATS).join(", ")} (atau landscape, potret, feed, kotak)`);
+  return v;
+};
+/** Kanvas proyek: storyboard.json "format" (animasi) atau edit.json "format" (edit footage); bawaan 9:16. */
+export const canvasOf = (name) => {
+  const d = path.join(DIRS.projects, name);
+  const f = readJson(path.join(d, "storyboard.json"), {}).format ?? readJson(path.join(d, "edit.json"), {})?.format;
+  return FORMATS[normFormat(f)];
+};
+/**
+ * Bab video (opsional): [{start (detik), title}] + mode tampilan. Sumber: timing.json scenes[].chapter (edit footage) atau
+ * "> bab: <judul>" di script.md (sejajar dengan scene suara). Mode: storyboard/edit.json "bab" (tanpa | label | kartu).
+ */
+export const chaptersOf = (name) => {
+  const p = P(name), t = readJson(p.timing, null);
+  if (!t) return { bab: "tanpa", chapters: [], total: 0 };
+  const fps = t.fps ?? 30, total = t.totalFrames / fps;
+  let list = t.scenes.filter((s) => s.chapter).map((s) => ({ start: s.startFrame / fps, title: s.chapter }));
+  if (!list.length && existsSync(p.script)) {
+    const sc = parseScript(readFileSync(p.script, "utf8")).scenes;
+    list = t.scenes.map((s, i) => ({ start: s.startFrame / fps, title: sc[i]?.chapter })).filter((x) => x.title);
+  }
+  const bab = readJson(p.storyboard, {}).bab ?? readJson(path.join(p.dir, "edit.json"), {})?.bab ?? t.bab ?? "tanpa";
+  return { bab: list.length ? bab : "tanpa", chapters: list, total };
+};
+/** Detik -> "M:SS" atau "J:MM:SS" (timestamp bab YouTube). */
+export const ts = (sec) => {
+  const t = Math.max(0, Math.floor(sec)), h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = String(t % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
+};
+/**
+ * Bab yang sah sebagai chapter YouTube: >= 3 bab, bab pertama di 0:00, tiap bab >= 10 dtk. list = [{title, start}] (detik).
+ * Kembalikan {ok, chapters (bab pertama digeser ke 0), alasan}.
+ */
+export const youtubeChapters = (list, total) => {
+  const c = (list ?? []).filter((x) => x && x.title).map((x) => ({ title: String(x.title).trim(), start: Math.max(0, x.start) })).sort((a, b) => a.start - b.start);
+  if (c.length) c[0].start = 0;
+  if (c.length < 3) return { ok: false, chapters: c, alasan: `butuh minimal 3 bab (ada ${c.length})` };
+  for (let i = 0; i < c.length; i++) {
+    const end = i < c.length - 1 ? c[i + 1].start : total ?? Infinity;
+    if (end - c[i].start < 10) return { ok: false, chapters: c, alasan: `bab "${c[i].title}" kurang dari 10 detik` };
+  }
+  return { ok: true, chapters: c, alasan: "" };
+};
+
 // ------------------------------------------------------------------ STYLE = rasa video, lepas dari brand
 // Style bawaan plugin: Engine/styles/<slug>/; milik pengguna: Styles/<slug>/ (menimpa bawaan bernama sama, digabung dalam).
 // style.json: name, title, kind ("animasi" | "edit"), jalur (html | Pop | mg4 | edit), skill, warna ("brand" | "style"),
@@ -224,6 +286,7 @@ export const NAME_RE = /^\d{8}-\d{2,}-[a-z0-9][a-z0-9-]*$/;
  *  - baris diawali ">" adalah catatan visual, tidak dibacakan
  *  - "> gaya: <nama>" di dalam scene = gaya suara scene itu (mis. "pelan"; daftar di config.json "styles")
  *  - "> jeda: <detik>" = hening tambahan setelah scene itu (napas setelah punchline)
+ *  - "> bab: <judul>" = scene ini membuka bab baru (opsional; video panjang: label/kartu bab & timestamp YouTube)
  *  - komentar <!-- ... --> diabaikan
  */
 export const parseScript = (md) => {
@@ -251,6 +314,7 @@ export const parseScript = (md) => {
       text: clean(c),
       style: (c.match(/^\s*>\s*(?:gaya|voice|style):\s*(.+)$/im)?.[1].trim() ?? "normal").toLowerCase(),
       pause: parseFloat(c.match(/^\s*>\s*(?:jeda|pause):\s*([\d.]+)/im)?.[1] ?? "0"),
+      chapter: c.match(/^\s*>\s*(?:bab|chapter):\s*(.+)$/im)?.[1].trim() ?? null,
     }))
     .filter((sc) => sc.text);
   return { meta, scenes };

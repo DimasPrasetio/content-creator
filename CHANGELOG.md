@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.8.0
+Tahap kedua roadmap (`docs/ROADMAP.md`): kanvas fleksibel + video panjang.
+- **Kanvas asli 9:16, 16:9, 4:5, 1:1** untuk jalur HTML (kit standar) dan edit footage, bukan sekadar ekspor dengan sisi
+  blur. `npm run new -- <nama> --format=16:9` / `npm run edit -- <nama> --new --format=16:9` mencatat `"format"`;
+  render, preview, cek tata letak, QA, posting, thumbnail, subtitle ditanam, cek layar kosong, dan ekspor membaca ukuran
+  dari sana. Komik (Pop) dan mg4 tetap 9:16 + ekspor.
+- **Zona aman per format** (`FORMATS` di `scripts/lib.mjs`): 9:16 tetap zona TikTok/Reels; 16:9 margin 5% YouTube;
+  4:5 dan 1:1 margin 54 px. Brand pojok, label, progress bar, dan subtitle ikut ditata per format.
+- Kit HTML: `KIT_GEO` per format dan `ZONE` (lebar zona visual); `scenes.js` lama tampil di tengah tanpa diubah, scene
+  baru boleh memakai lebar penuh. 9:16 tidak berubah sama sekali.
+- Edit footage: footage dipotong mengikuti wajah sesuai bentuk kanvas; objek grafis, PiP, kartu, dan subtitle ditata
+  ulang untuk landscape/persegi (16:9: objek di sisi yang berlawanan dengan wajah).
+- **Bab opsional, ditanyakan per video**: `tanpa` (bawaan) · `label` · `kartu`. Animasi: `> bab: Judul` di naskah +
+  `--bab=`; edit: `"chapter"` per kalimat + `"bab"`. Label bab, tanda bab di progress bar, kartu judul bab, dan
+  `preview/bab-NN.png`.
+- **YouTube**: thumbnail 1280×720 untuk video 16:9 (teks kiri, visual kanan, pojok durasi dikosongkan), deskripsi dengan
+  blok `Bab:` bertimestamp otomatis bila bab memenuhi syarat YouTube (≥ 3, mulai 0:00, tiap bab ≥ 10 dtk), batas
+  5000 huruf dan 15 hashtag, subtitle SRT per baris lebih panjang.
+- `npm run export` dari kanvas mana pun: video 16:9 → `--format=9x16,4x5,1x1` (video utuh di tengah, latar blur).
+- Selftest menambah HTML 16:9 dengan bab (preview, render, QA, posting YouTube), contoh 4:5 dan 1:1, edit footage 16:9,
+  dan syarat bab YouTube.
+
 ## 0.7.1
 - Setup dari plugin terpasang berhenti di "Result/README.md: No such file": file itu tertahan `.gitignore` template
   sehingga tidak ikut rilis. Kini ikut dipublikasikan, dan setup melewati README template yang tidak ada.

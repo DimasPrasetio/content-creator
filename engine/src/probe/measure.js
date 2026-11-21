@@ -2,7 +2,8 @@
 // jalur HTML lewat scripts/html_render.py; file: src/probe/measure.js). Fungsi murni DOM, tanpa dependensi; JANGAN memakai sintaks TS di sini.
 // Mengukur setiap teks yang benar-benar terlihat (opasitas efektif >= 0.3, tidak display:none/visibility:hidden),
 // memotongnya dengan wadah overflow, lalu memberi:
-//   errors: teks keluar bingkai, terpotong wadahnya, menabrak brand pojok, dan di luar ZONA AMAN TIKTOK x 60-940 · y 220-1440
+//   errors: teks keluar bingkai, terpotong wadahnya, menabrak brand pojok, dan di luar ZONA AMAN (bawaan TikTok 9:16 x 60-940 · y 220-1440;
+//           format lain lewat opts: width, height, safeLeft/Right/Top/Bottom, ui — dari FORMATS di scripts/lib.mjs)
 //           (atas: status bar + tab "Mengikuti/Untuk Anda" + ikon cari; kanan 140 px: kolom tombol; bawah 480 px: nama akun,
 //           caption, musik) — termasuk brand pojok itu sendiri
 //   warns : mepet tepi kiri (x < 60), tabrakan antarteks (> 25% luas yang lebih kecil)
@@ -10,7 +11,8 @@
 // sengaja memotong UI di tepi bingkai kamera, jadi teks di dalamnya tidak dilaporkan "terpotong oleh wadahnya".
 export function probeLayout(opts) {
   // batas zona aman TikTok/Reels untuk 1080x1920 (semua teks & brand wajib di dalamnya)
-  const o = Object.assign({ width: 1080, height: 1920, safeLeft: 60, safeRight: 940, safeTop: 220, safeBottom: 1440 }, opts || {});
+  const o = Object.assign({ width: 1080, height: 1920, safeLeft: 60, safeRight: 940, safeTop: 220, safeBottom: 1440, ui: "TikTok" }, opts || {});
+  const tiktok = /tiktok/i.test(o.ui);
   // titik nol: penanda data-probe="root" (komposisi Remotion) bila ada, kalau tidak jendela browser (jalur HTML)
   const rootEl = document.querySelector('[data-probe="root"]');
   const R = rootEl ? rootEl.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
@@ -67,14 +69,14 @@ export function probeLayout(opts) {
     if (v.x < -2 || v.r > o.width + 2 || v.y < -2 || v.b > o.height + 2) errors.push(`keluar bingkai: ${at(it)}`);
     else if (it.cut > 0.04 && !it.cam) errors.push(`terpotong ${Math.round(it.cut * 100)}% oleh wadahnya: ${at(it)}`);
     if (brand.some((b) => area(inter(b, v)) > 4)) errors.push(`menabrak brand pojok: ${at(it)}`);
-    if (v.y < o.safeTop - 2) errors.push(`tertutup UI atas TikTok (y < ${o.safeTop}): ${at(it)}`);
-    if (v.b > o.safeBottom + 2) errors.push(`tertutup caption TikTok (y > ${o.safeBottom}): ${at(it)}`);
-    if (v.r > o.safeRight + 2) errors.push(`tertutup kolom tombol TikTok (x > ${o.safeRight}): ${at(it)}`);
+    if (v.y < o.safeTop - 2) errors.push(tiktok ? `tertutup UI atas TikTok (y < ${o.safeTop}): ${at(it)}` : `di luar zona aman ${o.ui} atas (y < ${o.safeTop}): ${at(it)}`);
+    if (v.b > o.safeBottom + 2) errors.push(tiktok ? `tertutup caption TikTok (y > ${o.safeBottom}): ${at(it)}` : `di luar zona aman ${o.ui} bawah (y > ${o.safeBottom}): ${at(it)}`);
+    if (v.r > o.safeRight + 2) errors.push(tiktok ? `tertutup kolom tombol TikTok (x > ${o.safeRight}): ${at(it)}` : `di luar zona aman ${o.ui} kanan (x > ${o.safeRight}): ${at(it)}`);
     else if (v.x < o.safeLeft - 2) warns.push(`mepet tepi kiri (x < ${o.safeLeft}): ${at(it)}`);
   }
   for (const b of brand) {
     const where = `(x ${Math.round(b.x)}-${Math.round(b.r)}, y ${Math.round(b.y)}-${Math.round(b.b)})`;
-    if (b.y < o.safeTop - 2 || b.r > o.safeRight + 2 || b.b > o.safeBottom + 2) errors.push(`brand pojok di luar zona aman TikTok ${where}`);
+    if (b.y < o.safeTop - 2 || b.x < o.safeLeft - 2 || b.r > o.safeRight + 2 || b.b > o.safeBottom + 2) errors.push(`brand pojok di luar zona aman ${o.ui} ${where}`);
   }
   for (let a = 0; a < items.length; a++)
     for (let b = a + 1; b < items.length; b++) {

@@ -1,12 +1,12 @@
 # Mesin edit footage berbasis style
 
-Mengedit video yang **sudah ada** (talking-head, rekaman bicara) menjadi video vertikal 1080×1920 sesuai sebuah
+Mengedit video yang **sudah ada** (talking-head, rekaman bicara) menjadi video 9:16 1080×1920 (bawaan) atau 16:9 / 4:5 / 1:1 (`--format=`) sesuai sebuah
 **style** (gaya edit, `kind: "edit"`), bukan sesuai brand. Folder ini juga berisi style animasi bawaan (`komik`); semua
 style dikelola dengan `npm run style -- list|show|new|save|selera`. Style mengunci identitas (ritme, tampilan, grading, audio); isi visual
 diputuskan agent dari **konteks** tiap video.
 
 ```
-npm run edit -- <nama> --new --style=ngobrol --input=/path/a.mov[,b.mp4]   # proyek + salin footage
+npm run edit -- <nama> --new --style=ngobrol --input=/path/a.mov[,b.mp4] [--format=16:9]   # proyek + salin footage
 npm run edit -- <nama> --analyze     # normalisasi, transkrip per kata, wajah/gerak/cahaya/noise -> edit/konteks.md
 #   (agent: baca edit/konteks.md + edit/kontak-srcN.jpg, isi keputusan per kalimat di Projects/<nama>/edit.json)
 npm run edit -- <nama> --draft       # validasi -> potong + grading terkalibrasi + suara -> preview tiap kalimat + cek
@@ -22,7 +22,7 @@ lewat `aliases`) dan `komik` (animasi Pop).
 1. **Isi**: transkrip per kata (ElevenLabs Scribe; atau sidecar `<footage>.words.json` = `[{w,s,e}]`, tanpa kredit) →
    kalimat. Agent menentukan topik, struktur, entitas, angka. **Glosarium** (`edit.json → glossary`) memperbaiki salah
    dengar dari konteks, mis. `{"cloud": "Claude"}`, lalu `--analyze` diulang (transkrip di-cache).
-2. **Footage** (`edit/konteks.md`): resolusi & orientasi (horizontal → dipotong 9:16 mengikuti wajah), HDR, persentase
+2. **Footage** (`edit/konteks.md`): resolusi & orientasi (bentuk berbeda dari kanvas → dipotong mengikuti wajah), HDR, persentase
    wajah terdeteksi, statistik cahaya & kulit, noise suara, kalimat yang tampak diambil ulang / terpotong / berisi
    kata pengisi. Lihat juga `edit/kontak-srcN.jpg` (1 frame per 2 dtk).
 3. **Rencana** (`edit.json`): satu entri per kalimat dengan maksud, keputusan, objek, alasan (format di bawah).
@@ -38,12 +38,14 @@ lewat `aliases`) dan `komik` (animasi Pop).
 ```json
 {
   "style": "ngobrol",
+  "format": "16:9",
+  "bab": "kartu",
   "brand": { "left": "", "right": "" },
   "sources": [{ "file": "assets/raw/01-a.mov" }],
   "glossary": { "cloud": "Claude" },
   "sentences": [
     { "id": "s1", "src": 0, "t": [0.1, 3.3], "text": "…", "flags": [], "keep": true,
-      "intent": "hook", "mode": "aroll", "punch": "auto", "pause": 0.3,
+      "intent": "hook", "mode": "aroll", "punch": "auto", "pause": 0.3, "chapter": "Pembuka",
       "objects": [ { "type": "keyword", "kicker": "part 2", "title": ["tutorial"], "keyword": "gratis", "at": "gratis" } ],
       "why": "alasan keputusan" }
   ]
@@ -55,6 +57,12 @@ lewat `aliases`) dan `komik` (animasi Pop).
 - `mode`: `aroll` (wajah) · `broll` (panel style + PiP wajah) · `dim` (A-roll diredupkan + tint, untuk penutup/teaser).
 - `punch`: `auto` (bergantian per potongan) · `strong` (penekanan/payoff) · `none`.
 - `pause`: detik jeda tambahan setelah kalimat (punchline).
+- `format` (opsional, bawaan `9:16`): kanvas hasil `16:9` 1920×1080 · `4:5` 1080×1350 · `1:1` 1080×1080. Footage dipotong
+  mengikuti wajah bila bentuknya berbeda; objek ditata ulang (16:9: objek sisi di separuh yang berlawanan dengan wajah,
+  B-roll panel di tengah), subtitle di atas tepi bawah zona aman format itu.
+- `chapter` (opsional): judul bab di kalimat pertama bab itu (bab di kalimat yang dibuang pindah ke kalimat terpakai
+  berikutnya). `bab` di akar: `tanpa` (bawaan) · `label` (chip judul bab ±2,5 dtk) · `kartu` (kartu judul ±1,6 dtk).
+  Video 16:9 dengan bab yang memenuhi syarat YouTube → timestamp otomatis di deskripsi.
 - Waktu objek: `at` / `until` = kata di kalimat itu (`"gratis"`, atau `{"word":"ke","n":2}`), angka detik dari awal
   kalimat, `"start"`, `"end"`. Elemen muncul 0,12 dtk sebelum katanya.
 

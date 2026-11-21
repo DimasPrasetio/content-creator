@@ -1,6 +1,8 @@
 """Overlay brand pojok atas (transparan 1080x1920) untuk video motion-graphics-v4.
 
-Pemakaian: python brand_png.py '<json brand>' out.png
+Pemakaian: python brand_png.py '<json brand>' out.png ['<json kanvas>']
+kanvas (opsional, v0.8): {"w":1920,"h":1080,"brand":{"top":54,"left":96,"right":96,"h":50,"font":24}} dari FORMATS di lib.mjs;
+tanpa kanvas = 1080x1920 TikTok seperti di bawah.
 brand: {"left": "...", "right": "...", "logoLeft": "x.png", "logoRight": "..."}  (logo di Engine/public/brand/, sama seperti komposisi lain)
 Teks/logo diletakkan di dalam chip gelap semi-transparan agar terbaca di tema terang maupun gelap,
 di pita atas zona aman TikTok y 226-276 (di bawah tab "Mengikuti/Untuk Anda"); chip kanan berakhir di x 940
@@ -14,13 +16,13 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 W, H = 1080, 1920
-TOP, PAD_L, PAD_R, CHIP_H = 226, 64, 140, 50
+TOP, PAD_L, PAD_R, CHIP_H, FONT_SIZE = 226, 64, 140, 50, 24
 PUBLIC = Path(__file__).resolve().parent.parent / "public"
 FONT = str(Path(__file__).resolve().parent.parent / "fonts" / "FiraSans-Black.ttf")  # dibawa plugin (OFL), sama di macOS & Linux
 
 
 def chip(img, draw, x, align, text=None, logo=None):
-    font = ImageFont.truetype(FONT, 24)
+    font = ImageFont.truetype(FONT, FONT_SIZE)
     content = None
     if logo:
         p = Path(logo) if Path(logo).is_absolute() else PUBLIC / "brand" / logo
@@ -45,7 +47,13 @@ def chip(img, draw, x, align, text=None, logo=None):
         img.alpha_composite(content, (x0 + 20, TOP + (CHIP_H - content.height) // 2))
 
 
-def main(brand_json, out):
+def main(brand_json, out, canvas_json=None):
+    global W, H, TOP, PAD_L, PAD_R, CHIP_H, FONT_SIZE
+    c = json.loads(canvas_json or "{}")
+    if c:
+        bb = c.get("brand", {})
+        W, H = int(c.get("w", W)), int(c.get("h", H))
+        TOP, PAD_L, PAD_R, CHIP_H, FONT_SIZE = bb.get("top", TOP), bb.get("left", PAD_L), bb.get("right", PAD_R), bb.get("h", CHIP_H), bb.get("font", FONT_SIZE)
     b = json.loads(brand_json or "{}")
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
@@ -55,4 +63,4 @@ def main(brand_json, out):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None)

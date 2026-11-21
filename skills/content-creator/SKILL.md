@@ -1,6 +1,6 @@
 ---
 name: content-creator
-description: Agent generator video pendek otomatis — dari ide sampai MP4 vertikal 1080×1920 siap upload (Reels/TikTok). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, rekaman bicara). Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
+description: Agent content-creator otomatis — dari ide sampai MP4 siap upload: vertikal 1080×1920 (Reels/TikTok), feed 4:5/1:1, atau YouTube 16:9 pendek maupun panjang (2-20 menit, bab opsional, thumbnail & deskripsi YouTube). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, rekaman bicara). Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
 argument-hint: "[ide atau topik video]"
 ---
 
@@ -58,11 +58,14 @@ Cabang pertama grill-me (tanyakan bila tidak jelas dari permintaan):
 - **Edit footage yang sudah ada** (pengguna memberi rekaman, mp4/mov, bisa beberapa file, vertikal atau horizontal,
   termasuk HDR iPhone): ikuti bagian **"Mode edit footage"** di bawah dengan style edit (`kind: edit`, mis. Ngobrol).
 
-Yang sudah didukung sekarang (sampaikan jujur saat grill-me): hasil **9:16 vertikal** 20 dtk - ±2 mnt; versi 4:5/16:9
-lewat `npm run export` (video utuh dikecilkan dengan sisi blur bila teks tidak muat); edit footage **talking-head satu
-orang**. Belum: kanvas landscape asli & video panjang 5-20 mnt (rencana v0.8), podcast multi-pembicara, rekaman layar,
-vlog/montase, klip pendek otomatis dari video panjang (rencana v0.9; lihat `docs/ROADMAP.md` plugin). Permintaan di luar
-itu → tawarkan cara terdekat yang sudah bisa, jangan berjanji.
+Yang sudah didukung sekarang (sampaikan jujur saat grill-me):
+- **Kanvas asli** 9:16 (1080×1920), 16:9 (1920×1080), 4:5 (1080×1350), 1:1 (1080×1080) untuk animasi style HTML (jalur C)
+  dan edit footage. Style Komik (Pop) dan mg4 tetap 9:16, format lain lewat `npm run export`.
+- **Durasi** 20 dtk sampai ±20 mnt; video panjang biasanya 16:9 untuk YouTube, dengan **bab opsional** (tanpa / label /
+  kartu), thumbnail YouTube 1280×720, dan deskripsi YouTube (timestamp bab otomatis bila memenuhi syarat YouTube).
+- Edit footage **talking-head satu orang**, vertikal atau horizontal.
+Belum: podcast multi-pembicara, rekaman layar, vlog/montase, klip pendek otomatis dari video panjang (rencana v0.9;
+lihat `docs/ROADMAP.md` plugin). Permintaan di luar itu → tawarkan cara terdekat yang sudah bisa, jangan berjanji.
 
 ## Mode: lengkap atau cepat
 
@@ -92,8 +95,12 @@ Urutan hulu ke hilir: **jenis pekerjaan → format → style → brand → sisan
 
 1. **Jenis pekerjaan** — video baru dari ide, atau edit footage milik pengguna (bagian sebelumnya)? Footage: jenisnya
    (talking-head, podcast, rekaman layar, vlog) dan file-nya.
-2. **Format** — tempat posting (Reels/TikTok, feed 4:5, YouTube 16:9), durasi (default 30-45 dtk, ±2,5 kata/dtk),
-   subtitle ditanam atau file SRT saja. Sampaikan batas yang belum didukung (bagian "Jenis pekerjaan").
+2. **Format** — tempat posting utama menentukan **kanvas asli** (Reels/TikTok/Shorts 9:16, feed 4:5 atau 1:1, YouTube
+   16:9; format lain = ekspor dari kanvas utama), durasi (default 30-45 dtk, ±2,5 kata/dtk; video panjang 2-20 mnt),
+   subtitle ditanam atau file SRT saja. **Bab** ditanyakan per video, jangan diasumsikan (banyak video tidak butuh bab):
+   `tanpa` (bawaan) · `label` (nama bab kecil di pojok + tanda di progress bar) · `kartu` (kartu judul bab ±1,5 dtk di
+   awal tiap bab). Bab apa pun ikut ke deskripsi YouTube sebagai timestamp bila video 16:9 dan memenuhi syarat YouTube
+   (≥ 3 bab, tiap bab ≥ 10 dtk). Sampaikan batas yang belum didukung (bagian "Jenis pekerjaan").
 3. **Style (rasa)** — tunjukkan style yang ada (`npm run style -- list`, gambar dari `examples/` style itu, rekomendasi
    = style bawaan brand atau yang paling cocok dengan rasa yang diminta) atau **buat style baru** (tahap 2). Minta
    **2-3 kata rasa** ("lucu, berani", "tenang, premium", "gelap, tegas") dan **referensi** bila ada (video, akun,
@@ -250,7 +257,7 @@ profil yang sama lewat `npm run brand -- pack <slug>` → kirim → `npm run bra
 
 ## 5 · Produksi otomatis (tanpa pertanyaan; berhenti hanya bila terhambat)
 
-**Jalur C standar (semua brand):** `npm run new -- <nama> --style=<style> [--warna=brand|style]` (kit HTML + tema
+**Jalur C standar (semua brand):** `npm run new -- <nama> --style=<style> [--warna=brand|style] [--format=16:9|4:5|1:1] [--bab=label|kartu]` (kit HTML + tema
 style + identitas brand + kerangka `scenes.js`/storyboard dari naskah; tanpa `--style` = style bawaan brand) → tulis **hanya** `html/scenes.js` mengikuti aturan timing & kejelasan di
 `Engine/kit/html/README.md` (setiap elemen muncul tepat pada katanya, satu fokus per scene, subtitle karaoke) + isi `sfx`
 storyboard + `posting/caption.md` + `posting/thumbnail.json` → `npm run produce -- <nama> --draft` (periksa board) → `npm run produce -- <nama>`
@@ -258,6 +265,13 @@ storyboard + `posting/caption.md` + `posting/thumbnail.json` → `npm run produc
 `theme.json` tetap bisa (identitas kosong, warna dari style); untuk watermark/penutup brand buat `theme.json`
 identitas dari `brand.md`/`MOTION.md` (format di README kit). Langkah di bawah adalah rincian yang
 dijalankan `produce`; pakai satu per satu hanya untuk revisi atau jalur A/B.
+
+**Format & bab (jalur C):** `--format` mencatat `"format"` di storyboard; kit menata ulang zona konten, subtitle, label,
+dan brand untuk kanvas itu (scene lama tetap di tengah), dan semua tahap (voice, preview, cek tata letak per zona aman
+format, render, QA, posting, ekspor) membaca ukuran dari sana. Bab ditulis di naskah: baris `> bab: Judul Bab` di scene
+pertama tiap bab; `--bab=label|kartu` mencatat cara tampilnya (`"bab"` storyboard). Video panjang: satu scene tetap satu
+ide (1-3 kalimat), tetapi banyak scene; tulis `scenes.js` per bab dan periksa board per bagian. Preview `kartu` juga
+menghasilkan `preview/bab-NN.png`.
 
 **Gaya produk-kamera (jalur C, kit kamera):** untuk iklan/demo produk dan aplikasi (UI sebagai bintang, seperti video
 peluncuran produk): scene memakai `shot(s)` + komponen UI (`S.window`, `S.phone`, `S.card`, `S.chip`, `S.cursor`,
@@ -285,13 +299,13 @@ Semua perintah dari `<workspace>/Engine/`.
    - **B · mg4**: `"style"`, `"palette"`, per scene `lines` (1-3 baris, ≤ 6 kata, kata asli narasi, urut), `key`,
      opsional `layout`/`icon`, plus `sfx`/`music`.
    - **C · HTML**: ikuti skill-nya (beat sheet, build brief, review rules), dengan **kontrak project**:
-     `Projects/<nama>/html/index.html` 1080×1920; `window.seek(seconds)` menggambar frame tepat sebagai fungsi murni
+     `Projects/<nama>/html/index.html` seukuran kanvas (bawaan 1080×1920; `window.__CANVAS__`); `window.seek(seconds)` menggambar frame tepat sebagai fungsi murni
      dari waktu (tanpa `Math.random`, rAF, transisi CSS), menunggu seek bila URL `?render`; **waktu beat diambil dari
      `window.__TIMING__.scenes[i].start/end` dan `words[k].s/e`** (detik, dari voice over) agar animasi tepat saat kata
      diucapkan; tidak memuat apa pun dari internet — pustaka lewat `/vendor/<paket npm>/...` (mis.
      `/vendor/three/build/three.module.js`), aset di `html/` atau `Projects/<nama>/assets/` (dilayani di `/assets/...`,
      mis. hasil Higgsfield `/assets/gen/<id>.mp4`; video di halaman wajib di-seek dari `window.seek`, tanpa autoplay); **semua teks & brand
-     di zona aman TikTok x 60-940 · y 220-1440** (kit standar sudah menatanya). Brand pojok ditempel otomatis; bila halaman menggambar brand sendiri, set `"brandOverlay": false`.
+     di zona aman TikTok x 60-940 · y 220-1440** untuk 9:16 (format lain: zona aman format itu, `FORMATS` di `scripts/lib.mjs`; kit standar sudah menatanya). Brand pojok ditempel otomatis; bila halaman menggambar brand sendiri, set `"brandOverlay": false`.
      Ekspor memakai `npm run html` (bukan HyperFrames; jangan memasang paket lain tanpa izin pengguna). Storyboard:
      `{"composition":"html","skill":"<skill>","brand":{...},"scenes":[{"music":"full","sfx":[...]}, ...]}`.
 3. **Sound effect**: `sfx`/`music` per scene → `npm run sound -- <nama>` (SFX -18 dB dari suara, musik di-duck).
@@ -308,7 +322,7 @@ Semua perintah dari `<workspace>/Engine/`.
    - C: `npm run html -- <nama> --preview` → perbaiki → `npm run html -- <nama>` (error di halaman dilaporkan & menggagalkan).
    Render lama → jalankan di background.
 5. **QA**: `npm run qa -- <nama>` wajib lolos (format, loudness, konsistensi suara vs jangkar, kejelasan, sinkron,
-   tata letak [8] — preview harus lebih baru dari storyboard/halaman), plus `ffprobe` (1080x1920, h264, aac, durasi = suara).
+   tata letak [8] — preview harus lebih baru dari storyboard/halaman), plus `ffprobe` (ukuran kanvas, h264, aac, durasi = suara).
 6. **Paket posting** (wajib): `npm run posting -- <nama>` → `Result/<brand>/<nama>/thumbnail.jpg` + `caption.txt`;
    bahan kerja di `Projects/<nama>/posting/` (`caption.md`, `thumbnail.json`, `thumb-N.jpg`, `thumb-pilihan.jpg`,
    `thumb-grid.jpg`, `subtitle.srt`/`.vtt`, `cover-grid.jpg`).
@@ -334,9 +348,16 @@ Semua perintah dari `<workspace>/Engine/`.
    video, 3-10 hashtag relevan (campur umum + niche, bahasa Indonesia), tanpa klaim yang tidak ada di brief. Jalankan
    lagi sampai lolos. Subtitle **ditanam** (`--burn [--y=1300]` → `Result/<brand>/<nama>/<nama>.sub.mp4`) hanya bila disepakati dan
    teks layar sedikit; lihat frame-nya, pastikan kotak subtitle tidak menutup elemen penting.
+   **Video 16:9 (YouTube):** thumbnail otomatis 1280×720 (teks kiri, visual kanan; pojok kanan bawah dibiarkan kosong
+   untuk label durasi YouTube; headline ≥ 56 px), tanpa simulasi grid profil. `caption.md` = **deskripsi YouTube**: baris
+   pertama tetap hook (tampil di pencarian), lalu 2-4 kalimat isi, CTA, dan 3-5 hashtag (maks 15, batas 5000 huruf).
+   Blok `Bab:` bertimestamp disisipkan otomatis sebelum hashtag bila video punya bab yang memenuhi syarat; jangan tulis
+   timestamp sendiri kecuali ingin menimpanya.
 7. **Format lain** (bila diminta di cabang 10): `npm run export -- <nama> --format=4x5,16x9[,1x1]`. Mode `auto`
    memotong hanya bila semua teks (dari `layout.json`) muat; kalau tidak, video utuh dikecilkan dengan sisi blur.
-   Video mendatar dari luar yang perlu dijadikan Reels → skill `reel-export`.
+   Video yang dibuat langsung dalam kanvas lain (mis. 16:9) → `--format=9x16,4x5,1x1`: video utuh di tengah dengan latar
+   blur. Potongan pendek bertumpu wajah dari video panjang = proyek edit 9:16 tersendiri. Video mendatar dari luar yang
+   perlu dijadikan Reels → skill `reel-export`.
    **Ukuran file**: hasil otomatis dienkode *capped CRF* (`encode` di config/profil/storyboard, bawaan CRF 23 maks 8 Mbps).
    QA [1] gagal bila bitrate melewati batas → `npm run compress -- <nama>`. Pengguna minta file lebih kecil / ukuran
    tertentu (mis. batas unggah) → `npm run compress -- <nama> --target=<MB>` atau `"encode": {"crf": 26, "maxrate": "6M"}`.
@@ -355,7 +376,9 @@ Format rencana, daftar objek, dan aturannya: `Engine/styles/README.md` (baca dul
    (boleh kosong), nama/istilah khusus yang sering salah dengar (→ `glossary`), aset pendukung (tangkapan layar, foto
    produk → `Projects/<nama>/assets/`). Pengguna memberi video **referensi** gaya baru? Bedah dulu menjadi
    `Styles/<slug>/` (STYLE.md + style.json, angka terukur termasuk color grading), lalu pakai slug itu.
-2. `npm run edit -- <nama> --new --style=<slug> --input=<file1>[,<file2>]` → `npm run edit -- <nama> --analyze`.
+2. `npm run edit -- <nama> --new --style=<slug> --input=<file1>[,<file2>] [--format=16:9|4:5|1:1]` → `npm run edit -- <nama> --analyze`.
+   Kanvas hasil mengikuti `format` (bawaan 9:16); footage dipotong mengikuti wajah bila bentuknya berbeda, objek grafis
+   ditata ulang untuk kanvas itu (16:9: objek di sisi yang berlawanan dengan wajah).
 3. **Pahami konteks** sebelum memutuskan: baca `Projects/<nama>/edit/konteks.md` dan lihat `edit/kontak-srcN.jpg`
    (Read). Tentukan topik, struktur, entitas; perbaiki salah dengar lewat `glossary` lalu `--analyze` lagi (gratis,
    transkrip di-cache).
@@ -365,6 +388,8 @@ Format rencana, daftar objek, dan aturannya: `Engine/styles/README.md` (baca dul
    - `mode`: `aroll` untuk opini/emosi/penekanan, `broll` untuk langkah/proses/alat/kutipan panjang, `dim` untuk penutup;
      jaga porsi B-roll sesuai style;
    - objek: teks penekanan = kata yang diucapkan, muncul tepat pada katanya; satu fokus per kalimat; `why` = alasan.
+   - bab (hanya bila disepakati): `"chapter": "Judul"` di kalimat pertama tiap bab + `"bab": "label"|"kartu"` di akar
+     `edit.json`; bab di kalimat yang dibuang pindah ke kalimat terpakai berikutnya.
    - B-roll klip AI (opsional, bila batas kredit disepakati): `Projects/<nama>/gen.json` → `npm run gen` (bagian
      "Aset AI" di bawah), lalu objek `clip` (`file: "assets/gen/<id>.mp4"`, `fit: full` cutaway atau `card`).
 5. `npm run edit -- <nama> --draft` → perbaiki semua **ERROR** (mis. objek menutup wajah → ganti slot atau jadikan

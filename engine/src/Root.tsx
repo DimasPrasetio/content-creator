@@ -57,7 +57,7 @@ export const Root: React.FC = () => (
     fps={FPS}
     durationInFrames={90}
     defaultProps={editDemo}
-    calculateMetadata={({ props }) => ({ durationInFrames: Math.max(1, props.timing.totalFrames) })}
+    calculateMetadata={({ props }) => ({ durationInFrames: Math.max(1, props.timing.totalFrames), width: props.edit.canvas?.w ?? W, height: props.edit.canvas?.h ?? H })}
   />
   </>
 );

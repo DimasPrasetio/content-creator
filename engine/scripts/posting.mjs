@@ -2,7 +2,8 @@
 //
 // Pemakaian: npm run posting -- <nama> [--burn] [--y=1300] [--cover=<detik>]
 // Hasil jadi (yang diunggah) -> Result/<brand>/<nama>/:
-//   <nama>.mp4 (dari render) · thumbnail.jpg (1080x1920) · caption.txt (caption + hashtag, siap tempel)
+//   <nama>.mp4 (dari render) · thumbnail.jpg (1080x1920; 16:9 = sampul YouTube 1280x720) · caption.txt (caption + hashtag;
+//   16:9 = deskripsi YouTube, ditambah daftar bab bertimestamp bila naskah punya "> bab:" yang memenuhi syarat YouTube)
 //   [+ <nama>.sub.mp4 bila --burn, <nama>.4x5.mp4 / .16x9.mp4 dari `npm run export`]
 // Bahan kerja -> Projects/<nama>/posting/:
 //   caption.md (ditulis agent; divalidasi: baris pembuka ≤ 125 huruf, total ≤ 2200, hashtag 3-10, maks 30)
@@ -12,7 +13,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { ENGINE, P, ROOT, encodeFor, readJson, resolveName, run, x264Args } from "./lib.mjs";
+import { ENGINE, P, ROOT, canvasOf, chaptersOf, encodeFor, readJson, resolveName, run, ts as hms, x264Args, youtubeChapters } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -26,6 +27,7 @@ const board = readJson(paths.storyboard, {});
 const out = path.join(paths.dir, "posting");
 mkdirSync(out, { recursive: true });
 const fps = timing.fps;
+const CV = canvasOf(name), YT = CV.format === "16:9";
 let problems = 0;
 const ok = (m) => console.log(`  OK    ${m}`);
 const bad = (m) => {
@@ -44,7 +46,7 @@ const flush = () => {
 };
 for (const w of words) {
   const len = cur.map((x) => x.w).join(" ").length + w.w.length + 1;
-  if (cur.length && (cur.length >= 5 || len > 32 || w.s - cur.at(-1).e > 0.6)) flush();
+  if (cur.length && (cur.length >= (YT ? 7 : 5) || len > (YT ? 42 : 32) || w.s - cur.at(-1).e > 0.6)) flush();
   cur.push(w);
   if (/[.!?…]$/.test(w.w)) flush();
 }
@@ -80,9 +82,9 @@ if (existsSync(thumbSpec) && !opt("cover")) {
   const s1 = timing.scenes[0];
   const coverAt = parseFloat(opt("cover") ?? board.cover?.at ?? ((s1.startFrame + s1.durationFrames) / fps - 0.5));
   const cover = paths.thumbnail;
-  run("ffmpeg", ["-v", "error", "-y", "-ss", coverAt.toFixed(2), "-i", paths.result, "-frames:v", "1", "-q:v", "2", cover]);
-  run("ffmpeg", ["-v", "error", "-y", "-i", cover, "-vf", "crop=1080:1350:0:285", "-q:v", "2", path.join(out, "cover-grid.jpg")]);
-  ok(`thumbnail: detik ${coverAt.toFixed(2)} -> ${path.relative(ROOT, cover)} (+ posting/cover-grid.jpg untuk cek grid 4:5)`);
+  run("ffmpeg", ["-v", "error", "-y", "-ss", coverAt.toFixed(2), "-i", paths.result, "-frames:v", "1", ...(YT ? ["-vf", "scale=1280:720"] : []), "-q:v", "2", cover]);
+  if (CV.format === "9:16") run("ffmpeg", ["-v", "error", "-y", "-i", cover, "-vf", "crop=1080:1350:0:285", "-q:v", "2", path.join(out, "cover-grid.jpg")]);
+  ok(`thumbnail: detik ${coverAt.toFixed(2)} -> ${path.relative(ROOT, cover)}${YT ? " (1280x720 YouTube)" : CV.format === "9:16" ? " (+ posting/cover-grid.jpg untuk cek grid 4:5)" : ""}`);
   if (!opt("cover")) console.log("  -     sampul = frame video; untuk sampul khusus tulis posting/thumbnail.json (npm run thumbnail)");
 }
 
@@ -95,7 +97,20 @@ if (!existsSync(capPath)) {
   );
   bad("caption.md baru dibuat sebagai templat: isi lalu jalankan posting lagi");
 } else {
-  const cap = readFileSync(capPath, "utf8").replace(/<!--[\s\S]*?-->/g, "").trim();
+  let cap = readFileSync(capPath, "utf8").replace(/<!--[\s\S]*?-->/g, "").trim();
+  // bab -> timestamp (YouTube: >= 3 bab, mulai 0:00, tiap bab >= 10 dtk); disisipkan sebelum baris hashtag
+  const { chapters, total } = chaptersOf(name);
+  if (chapters.length && !/^\s*\d{1,2}:\d{2}(:\d{2})?\s+\S/m.test(cap)) {
+    const yc = youtubeChapters(chapters, total);
+    if (!YT) console.log(`  -     ${chapters.length} bab tidak dicantumkan di caption (bab bertimestamp hanya untuk video 16:9/YouTube)`);
+    else if (!yc.ok) console.log(`  !     ${chapters.length} bab tidak memenuhi syarat bab YouTube (${yc.alasan}); deskripsi tanpa timestamp`);
+    else {
+      const block = `Bab:\n${yc.chapters.map((c) => `${hms(c.start)} ${c.title}`).join("\n")}`;
+      const lines = cap.split("\n"), hi = lines.findIndex((l, i) => i > 0 && /^\s*#[\p{L}\p{N}_]/u.test(l));
+      cap = hi > 0 ? [...lines.slice(0, hi), block, "", ...lines.slice(hi)].join("\n") : `${cap}\n\n${block}`;
+      ok(`deskripsi YouTube: ${yc.chapters.length} bab bertimestamp`);
+    }
+  }
   const first = cap.split("\n")[0].trim();
   const tags = cap.match(/#[\p{L}\p{N}_]+/gu) ?? [];
   if (/TODO/.test(cap)) bad("caption masih berisi TODO");
@@ -104,14 +119,20 @@ if (!existsSync(capPath)) {
     ok(`caption: ${cap.length} huruf, ${tags.length} hashtag -> ${path.relative(ROOT, paths.caption)}`);
   }
   if (first.length > 125) bad(`baris pembuka ${first.length} huruf (maks 125 agar tidak terpotong "selengkapnya")`);
-  if (cap.length > 2200) bad(`caption ${cap.length} huruf (batas Instagram/TikTok 2200)`);
-  if (tags.length > 30) bad(`${tags.length} hashtag (batas Instagram 30)`);
-  else if (tags.length < 3 || tags.length > 10) console.log(`  -     ${tags.length} hashtag; disarankan 3-10 yang relevan`);
+  if (YT) {
+    if (cap.length > 5000) bad(`deskripsi ${cap.length} huruf (batas YouTube 5000)`);
+    if (tags.length > 15) bad(`${tags.length} hashtag (YouTube mengabaikan semua hashtag bila lebih dari 15)`);
+    else if (tags.length < 1 || tags.length > 5) console.log(`  -     ${tags.length} hashtag; YouTube menampilkan 3 pertama di atas judul, disarankan 3-5`);
+  } else {
+    if (cap.length > 2200) bad(`caption ${cap.length} huruf (batas Instagram/TikTok 2200)`);
+    if (tags.length > 30) bad(`${tags.length} hashtag (batas Instagram 30)`);
+    else if (tags.length < 3 || tags.length > 10) console.log(`  -     ${tags.length} hashtag; disarankan 3-10 yang relevan`);
+  }
 }
 
 // --- subtitle ditanam (opsional) ---
 if (args.includes("--burn")) {
-  const y = parseInt(opt("y") ?? board.subtitleY ?? 1300);
+  const y = parseInt(opt("y") ?? board.subtitleY ?? (CV.format === "9:16" ? 1300 : CV.safe.b - 150));
   const dir = path.join(paths.work, "subtitle-png");
   mkdirSync(dir, { recursive: true });
   const inputs = [];
@@ -119,7 +140,7 @@ if (args.includes("--burn")) {
   let last = "0:v";
   cues.forEach((c, i) => {
     const f = path.join(dir, `c${i}.png`);
-    execFileSync(PY, [path.join(ENGINE, "scripts", "subtitle_png.py"), f, c.t, "--y", String(y)]);
+    execFileSync(PY, [path.join(ENGINE, "scripts", "subtitle_png.py"), f, c.t, "--y", String(y), "--w", String(CV.w), "--h", String(CV.h), ...(YT ? ["--size", "46"] : [])]);
     inputs.push("-i", f);
     const o = i === cues.length - 1 ? "v" : `s${i}`;
     chain.push(`[${last}][${i + 1}:v]overlay=0:0:enable='between(t,${c.s.toFixed(3)},${c.e.toFixed(3)})'[${o}]`);

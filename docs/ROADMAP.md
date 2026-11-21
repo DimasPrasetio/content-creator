@@ -17,7 +17,7 @@ Disepakati lewat grill-me pada 2026-11-21 (jawaban pengguna dikutip apa adanya):
 
 ## Tahapan
 
-### v0.7 · Style lepas dari brand + setup terpandu
+### v0.7 · Style lepas dari brand + setup terpandu (selesai, 0.7.1)
 - **Style** (`Styles/<slug>/` di workspace, bawaan di `engine/styles/<slug>/`) = rasa: jalur & skill, tema (huruf, palet
   bawaan, subtitle, glow, sorotan, progress, label), tempo, musik/SFX, grading & aturan edit, `STYLE.md` (cara menyusun),
   `selera.md` (riwayat selera per style), `examples/`. Opsi `warna`: `brand` (pakai warna brand bila ada) atau `style`.
@@ -31,10 +31,15 @@ Disepakati lewat grill-me pada 2026-11-21 (jawaban pengguna dikutip apa adanya):
 - Setup: `npm run akun` (status & langkah login ElevenLabs, Higgsfield, Google Drive), skill setup memandu satu per satu;
   panduan Windows lewat WSL2.
 
-### v0.8 · Kanvas fleksibel + video panjang
+### v0.8 · Kanvas fleksibel + video panjang (selesai, 0.8.0)
 - Kanvas 16:9 / 9:16 / 4:5 / 1:1 di semua jalur animasi dan edit (bukan sekadar ekspor dengan sisi blur), zona aman per
   platform.
 - Video panjang 2-20 menit: bab (chapter), thumbnail YouTube 1280×720, deskripsi + timestamp; explainer & kelas online landscape.
+
+Kesepakatan v0.8 (grill-me 2026-11-21): jalur yang dibuat asli multi-format = "HTML + edit footage" (Komik/Pop & mg4 tetap
+9:16 + ekspor); bab: "bisa jadi videonya bukan bab bab seperti itu yang di butuhkan user nanti, atau ada user yang tidak
+mau seperti bab bab seperti itu" → bab opsional, ditanyakan per video (tanpa / label / kartu + label), timestamp deskripsi
+hanya bila ada bab; edit talking-head landscape panjang: "Masuk v0.8"; ringkasan: "Sepakat, jalankan".
 
 ### v0.9 · Jenis footage baru
 - Podcast/wawancara multi-pembicara (pindah ke yang bicara, label nama), rekaman layar (zoom ke area aktif, buang loading),

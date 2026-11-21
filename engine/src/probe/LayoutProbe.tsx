@@ -8,7 +8,8 @@ import { probeLayout } from "./measure.js";
 
 type W = Window & { remotion_delayRenderHandles?: number[] };
 
-export const LayoutProbe: React.FC<{ enabled?: boolean }> = ({ enabled }) => {
+// opts: kanvas selain 9:16 (width, height, safeLeft/Right/Top/Bottom, ui), lihat measure.js
+export const LayoutProbe: React.FC<{ enabled?: boolean; opts?: Record<string, unknown> }> = ({ enabled, opts }) => {
   const frame = useCurrentFrame();
   useEffect(() => {
     if (!enabled) return;
@@ -24,7 +25,7 @@ export const LayoutProbe: React.FC<{ enabled?: boolean }> = ({ enabled }) => {
       }
       id = requestAnimationFrame(() => {
         id = requestAnimationFrame(() => {
-          console.log(`LAYOUT_PROBE ${JSON.stringify({ frame, unsure: waiting, ...probeLayout() })}`);
+          console.log(`LAYOUT_PROBE ${JSON.stringify({ frame, unsure: waiting, ...probeLayout(opts) })}`);
           continueRender(h);
         });
       });
@@ -34,6 +35,6 @@ export const LayoutProbe: React.FC<{ enabled?: boolean }> = ({ enabled }) => {
       cancelAnimationFrame(id);
       continueRender(h);
     };
-  }, [enabled, frame]);
+  }, [enabled, frame, opts]);
   return enabled ? <AbsoluteFill data-probe="root" style={{ visibility: "hidden", pointerEvents: "none" }} /> : null;
 };

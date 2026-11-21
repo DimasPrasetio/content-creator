@@ -12,7 +12,7 @@ SC.forEach((sc, si) => {
     const n = norm(w.w); seen[n] = (seen[n] ?? -1) + 1;
     const key = (KEY_[si] || []).some((k) => { const [kw, occ] = k.split("#"); return n === kw && (occ === undefined || +occ === seen[n]); });
     const L = w.w.length + 1;
-    if (len + L > 42 && words.length) flush();
+    if (len + L > (KIT_GEO?.sub.chars ?? 42) && words.length) flush();
     words.push({ ...w, key }); len += L;
     if (/[.?:]["”]?$/.test(w.w) && len >= 18 && wi < sc.words.length - 1) flush();
   });
@@ -30,6 +30,29 @@ chunks.forEach((c, i) => {
 const labelEl = document.getElementById("label"), labelTxt = document.getElementById("labeltxt"), labelDot = labelEl.querySelector("i");
 const fillEl = document.getElementById("fill"), dotEl = document.getElementById("dot");
 const same = (a, b) => (a && b ? a[0] === b[0] : a === b);
+
+// ---------- bab (opsional, v0.8): "> bab: Judul" di naskah -> TM.scenes[i].chapter; tampilan storyboard "bab" ----------
+const CHAPTERS = [];
+SC.forEach((sc, i) => { if (sc.chapter) CHAPTERS.push({ i: CHAPTERS.length, si: i, start: sc.start, title: sc.chapter }); });
+const BAB = CHAPTERS.length ? TM.bab || "tanpa" : "tanpa";
+const chapterAt = (si) => CHAPTERS.filter((c) => c.si <= si).at(-1);
+const labelOf = (si) => (typeof LABEL !== "undefined" && LABEL[si]) || (BAB !== "tanpa" && chapterAt(si) ? [chapterAt(si).title.toUpperCase(), C.accent2] : null);
+const TRACK_W = document.getElementById("track").offsetWidth || 880;
+// tanda bab di progress bar
+if (BAB !== "tanpa") for (const c of CHAPTERS.slice(1)) {
+  const m = document.createElement("div");
+  Object.assign(m.style, { position: "absolute", top: "-4px", width: "4px", height: "16px", marginLeft: "-2px", borderRadius: "2px", background: "var(--text)", opacity: 0.55, left: `${(c.start / TOTAL) * TRACK_W}px` });
+  document.getElementById("track").appendChild(m);
+}
+let chapCard = null, chapNo = null, chapTitle = null;
+if (BAB === "kartu") {
+  chapCard = document.createElement("div");
+  Object.assign(chapCard.style, { position: "absolute", inset: 0, display: "none", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "18px",
+    background: tint(C.bg, 0.94), backdropFilter: "blur(14px)", zIndex: 5, textAlign: "center", padding: "0 12%" });
+  chapNo = document.createElement("div"); Object.assign(chapNo.style, { font: `600 30px ${F.body}, sans-serif`, letterSpacing: "0.3em", color: col(THEME_.label?.text || "accent2") });
+  chapTitle = document.createElement("div"); Object.assign(chapTitle.style, { font: `800 ${FMT === "9:16" ? 84 : 76}px/1.1 ${F.head}, sans-serif`, color: C.text });
+  chapCard.append(chapNo, chapTitle); document.getElementById("stage").appendChild(chapCard);
+}
 
 // ---------- seek: semua keadaan dihitung dari waktu saja ----------
 const XF = THEME_.timing?.crossfade ?? 0.25;
@@ -140,17 +163,24 @@ window.seek = function (t) {
   if (typeof SHOTS !== "undefined") for (const sh of SHOTS) sh.seek(t, sceneOp(sh.si));
   // progress bar
   const k = clamp(t / TOTAL);
-  fillEl.style.width = `${k * 960}px`;
-  dotEl.style.left = `${k * 960}px`;
-  // label bab
-  const L = LABEL[si], s = SC[si];
+  fillEl.style.width = `${k * TRACK_W}px`;
+  dotEl.style.left = `${k * TRACK_W}px`;
+  // label bab (LABEL dari scenes.js; tanpa LABEL dan storyboard "bab": "label"/"kartu" -> judul bab naskah)
+  const L = labelOf(si), s = SC[si];
   if (L) {
     labelTxt.textContent = L[0]; labelEl.style.color = col(THEME_.label?.text || "accent2"); labelDot.style.background = L[1]; labelDot.style.color = L[1];
     let o = 1;
-    if (si > 0 && !same(LABEL[si - 1], L)) o *= eo(clamp((t - s.start) / 0.35));
-    if (si < SC.length - 1 && !same(LABEL[si + 1], L)) o *= clamp((s.end - t) / 0.25);
+    if (si > 0 && !same(labelOf(si - 1), L)) o *= eo(clamp((t - s.start) / 0.35));
+    if (si < SC.length - 1 && !same(labelOf(si + 1), L)) o *= clamp((s.end - t) / 0.25);
     labelEl.style.opacity = String(o);
   } else labelEl.style.opacity = "0";
+  // kartu bab (storyboard "bab": "kartu"): judul bab besar ±1,6 dtk di awal bab
+  if (chapCard) {
+    const c = CHAPTERS.filter((x) => x.start <= t + 1e-6).at(-1);
+    const o = c && c.start > 0.5 ? clamp((t - c.start) / 0.3) * clamp((c.start + 1.6 - t) / 0.3) : 0;
+    chapCard.style.opacity = String(o); chapCard.style.display = o > 0.001 ? "flex" : "none";
+    if (c && o > 0) { chapNo.textContent = `BAB ${c.i + 1}`; chapTitle.textContent = c.title; }
+  }
   // subtitle
   for (const c of chunks) {
     const on = t >= c.t0 && t < c.t1;
