@@ -429,7 +429,7 @@ def main(name):
         k = int(0.4 * SR)
         lvl = box_same(lvl, k)
         music = m / (np.max(np.abs(m)) + 1e-9) * lvl
-        print("Musik: track ElevenLabs (work/<nama>/music.wav)")
+        print("Musik: track dari work/<nama>/music.wav (file pengguna atau ElevenLabs)")
     else:
         music = cinematic_bed(mode, total)
 
@@ -473,9 +473,18 @@ def main(name):
     sfx_rms = active_rms(sfx, 1e-3)
     sfx_gain = vo_rms * 10 ** (-SFX_DB_BELOW_VOICE / 20) / sfx_rms if sfx_rms > 0 else 0
     MUSIC = 0.26
+    if vo_rms <= 0:
+        # montase musik tanpa narasi (v0.10): musik penuh tanpa ducking, SFX 18 dB di bawah musik
+        MUSIC = 0.9
+        duck = np.ones(total)
+        ref = active_rms(music * MUSIC * fade, 1e-3)
+        sfx_gain = ref * 10 ** (-SFX_DB_BELOW_VOICE / 20) / sfx_rms if sfx_rms > 0 else 0
     mix = vo * 1.0 + music * MUSIC * duck * fade + sfx * sfx_gain
     m_rms = active_rms(music * MUSIC * duck * fade, 1e-3)
-    print(f"Level: SFX {20 * np.log10(sfx_rms * sfx_gain / vo_rms):.1f} dB, musik {20 * np.log10(m_rms / vo_rms):.1f} dB relatif narasi")
+    if vo_rms > 0:
+        print(f"Level: SFX {20 * np.log10(sfx_rms * sfx_gain / vo_rms) if sfx_rms > 0 else float('-inf'):.1f} dB, musik {20 * np.log10(m_rms / vo_rms) if m_rms > 0 else float('-inf'):.1f} dB relatif narasi")
+    else:
+        print(f"Level: tanpa narasi, musik penuh (RMS {20 * np.log10(m_rms) if m_rms > 0 else float('-inf'):.1f} dBFS)")
     mix = mix / (np.max(np.abs(mix)) + 1e-9) * 0.9
 
     raw = work / "cache" / "mix-raw.wav"

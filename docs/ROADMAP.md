@@ -51,7 +51,15 @@ Kesepakatan v0.9 (grill-me 2026-11-21): rilis "Dua gelombang"; bentuk rekaman "S
 Rekaman online (Zoom/Meet)"; klip "AI usulkan, Anda pilih"; hasil "Episode penuh + klip"; saling menimpali "Selalu satu
 orang"; durasi klip "30-60 detik"; uji "Pakai rekaman buatan saja"; pembicara "Sampai 4 orang"; ringkasan "Sepakat, jalankan".
 
-### v0.10 · Rekaman layar + vlog/montase
-- Rekaman layar (zoom ke area aktif, buang loading), vlog/montase (pilih momen, potong mengikuti ketukan musik).
+### v0.10 · Rekaman layar + vlog/montase (selesai, 0.10.0)
+- Rekaman layar / tutorial (style Layar): suara sendiri, + kamera wajah, atau layar bisu + voice over AI; zoom otomatis ke
+  area yang berubah (bisa dikoreksi), loading dipercepat dengan label / dibuang / utuh (ditanya per video).
+- Vlog / montase (style Kilas): AI memilih momen terbaik tiap klip, potongan pada ketukan musik (file pengguna,
+  ElevenLabs, atau sintetis; ditanya per video), atau per kalimat voice over AI; vlog bicara + B-roll + musik latar.
+
+Kesepakatan v0.10 (grill-me 2026-11-21): rekaman layar "Layar + suara sendiri, Layar + kamera wajah, Layar bisu + voice
+over AI"; vlog "Montase musik, Vlog bicara + B-roll, Montase + voice over AI"; musik "Keduanya, ditanya per video"; zoom
+"Otomatis, bisa dikoreksi"; momen montase "AI pilih, saya periksa board"; uji "Rekaman buatan saja"; loading/diam
+"Ditanya per video"; format "Ditanya per video"; ringkasan "Sepakat, jalankan".
 
 Bukan lingkup: setup Windows asli tanpa WSL, posting otomatis ke platform.

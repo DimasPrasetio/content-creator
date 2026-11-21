@@ -1,0 +1,204 @@
+{
+  "_doc": "Style bawaan plugin 'Kilas' (vlog/montase, v0.10): potongan momen terbaik dari banyak klip mengikuti ketukan musik (2-4 ketukan per potongan, pembuka lebih lambat), gerak pelan Ken Burns, grading hangat sedikit lebih kontras. Narasi: musik saja, atau voice over AI dengan musik di bawahnya. AI memilih momen (tajam, bergerak, wajah), pengguna memeriksa board. Rincian: STYLE.md.",
+  "name": "kilas",
+  "title": "Kilas",
+  "aliases": [
+    "montase",
+    "montage",
+    "vlog",
+    "recap"
+  ],
+  "kind": "edit",
+  "jalur": "edit",
+  "footage": "montase",
+  "canvas": {
+    "width": 1080,
+    "height": 1920,
+    "fps": 30,
+    "safeZone": "tiktok"
+  },
+  "pace": {
+    "targetWordsPerSec": 2.6,
+    "maxGapSec": 0.3,
+    "keepGapSec": [
+      0.04,
+      0.1
+    ],
+    "duration": [
+      15,
+      90
+    ]
+  },
+  "montage": {
+    "durationSec": 30,
+    "beatsPerShot": [
+      2,
+      4
+    ],
+    "introBeats": 4,
+    "shotSec": [
+      0.6,
+      3.5
+    ],
+    "voShotSec": [
+      1.5,
+      3
+    ],
+    "edgeSec": 0.3,
+    "kenBurns": 1.06,
+    "order": "urut"
+  },
+  "aroll": {
+    "framing": "any",
+    "punchIn": {
+      "scales": [
+        1.0
+      ],
+      "everyCut": false
+    },
+    "floatingObjects": false
+  },
+  "broll": {
+    "share": [
+      0,
+      0
+    ],
+    "lengthSec": [
+      0.6,
+      3.5
+    ],
+    "background": {
+      "type": "radial",
+      "center": "#0D2E29",
+      "edge": "#0B2320",
+      "dots": {
+        "color": "#FFFFFF",
+        "opacity": 0.05,
+        "spacing": 22
+      }
+    },
+    "transition": "cut"
+  },
+  "type": {
+    "fonts": {
+      "head": "Poppins",
+      "hand": "Caveat",
+      "body": "Poppins"
+    },
+    "kicker": {
+      "font": "hand",
+      "color": "#FFFFFFD9",
+      "size": 60
+    },
+    "title": {
+      "font": "head",
+      "weight": 700,
+      "color": "#FFFFFF",
+      "size": 66
+    },
+    "keyword": {
+      "font": "head",
+      "weight": 900,
+      "upper": true,
+      "color": "#0A5A58",
+      "box": "#E3E9E9",
+      "size": 110,
+      "radius": 10,
+      "enter": "wipe-blur"
+    },
+    "bigword": {
+      "font": "head",
+      "weight": 900,
+      "upper": true,
+      "color": "#FFFFFF",
+      "size": 180,
+      "enter": "pop"
+    },
+    "chip": {
+      "font": "head",
+      "weight": 600,
+      "color": "#0B2420",
+      "box": "#E3E9E9",
+      "icon": "#097969",
+      "size": 44
+    },
+    "subtitle": {
+      "font": "head",
+      "weight": 700,
+      "color": "#FFFFFF",
+      "shadow": "#000000B3",
+      "active": {
+        "color": "#FFC24B",
+        "stroke": "#FFFFFF"
+      },
+      "size": 60,
+      "wordsPerChunk": [
+        2,
+        5
+      ],
+      "zoneY": [
+        1244,
+        1414
+      ],
+      "burn": true
+    }
+  },
+  "palette": {
+    "deep": "#120C06",
+    "teal": "#FFC24B",
+    "tealText": "#8A5A12",
+    "card": "#FFF4E0",
+    "white": "#FFFFFF",
+    "bg": "#120C06",
+    "bgEdge": "#080503"
+  },
+  "grade": {
+    "applyTo": "aroll",
+    "mode": "calibrate",
+    "targets": {
+      "lumaP1": 0.04,
+      "lumaP50": 0.38,
+      "lumaP99": 0.9,
+      "saturationScale": 1.08,
+      "whiteBalance": "warm",
+      "vignette": 0.12
+    }
+  },
+  "audio": {
+    "lufs": -14,
+    "lra": [
+      5,
+      8
+    ],
+    "truePeak": -1.5,
+    "music": "full",
+    "sfx": {
+      "transitions": false,
+      "objectPop": null
+    },
+    "voice": [
+      "denoise-light",
+      "deess"
+    ]
+  },
+  "fixed": [
+    "montage",
+    "type",
+    "palette",
+    "grade.targets",
+    "audio",
+    "canvas"
+  ],
+  "grammar": {
+    "intro": "potongan lebih panjang (4 ketukan pertama)",
+    "default": "momen terbaik tiap klip, ganti pada ketukan",
+    "vo": "satu-dua potongan per kalimat narasi (1,5-3 dtk)",
+    "closing": "potongan terakhir sampai musik selesai"
+  },
+  "context": {
+    "moments": "skor per detik: ketajaman + gerak + wajah, momen tidak berulang",
+    "beats": "ketukan musik (librosa) atau grid tempo",
+    "plan": "Projects/<nama>/edit.json → montage.shots (auto:false = pilihan agent/pengguna dihormati)"
+  },
+  "names": false
+}

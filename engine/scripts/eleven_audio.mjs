@@ -73,10 +73,12 @@ if (mode === "sfx") {
   const name = resolveName(rest.find((a) => !a.startsWith("--")));
   const paths = P(name);
   const timing = readJson(paths.timing);
-  if (!timing) throw new Error(`Timing belum ada: jalankan npm run voice -- ${name}`);
+  // --sec=N: panjang musik ditentukan sendiri (montase musik v0.10: musik dibuat dulu, potongan klip mengikuti ketukannya)
+  const sec = Number(opt("sec") ?? 0);
+  if (!timing && !sec) throw new Error(`Timing belum ada: jalankan npm run voice -- ${name} (atau --sec=<detik> untuk montase musik)`);
   const prompt = opt("prompt");
   if (!prompt) throw new Error('Butuh --prompt="gaya musik, tempo, suasana" (instrumental)');
-  const ms = Math.round((timing.totalFrames / timing.fps) * 1000);
+  const ms = Math.round(sec ? sec * 1000 : (timing.totalFrames / timing.fps) * 1000);
   console.log(`Musik ${(ms / 1000).toFixed(1)} dtk untuk ${name}: "${prompt}"`);
   if (!yes) {
     console.log("Belum dijalankan: perintah ini memakai kredit. Tambahkan --yes setelah pengguna setuju.");

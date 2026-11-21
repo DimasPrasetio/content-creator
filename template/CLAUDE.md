@@ -6,7 +6,8 @@ Mulai video baru dengan `/content-creator <ide video>`; skill itu memuat alur le
 gaya + audisi suara → lalu otomatis tanpa pertanyaan: naskah → voice over ElevenLabs → visual → SFX → preview → render → QA → posting;
 satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?; untuk klip pendek dari video panjang juga: klip mana yang dibuat).
 Jalur C: `npm run new` + `npm run produce` (kit `Engine/kit/html/`). Edit footage: `npm run edit` (talking-head; podcast 2-4 orang dengan
-style Siniar, `--speakers=N [--multicam]`); klip pendek 9:16 dari video panjang: `npm run clips`.
+style Siniar, `--speakers=N [--multicam]`; rekaman layar/tutorial dengan style Layar, `[--facecam=N] [--idle=cepat|buang|utuh] [--narasi=ai]`;
+vlog/montase dengan style Kilas, `[--music=file] [--narasi=ai]`; B-roll `--broll=`); klip pendek 9:16 dari video panjang: `npm run clips`.
 
 ## Struktur folder
 | Folder | Isi |

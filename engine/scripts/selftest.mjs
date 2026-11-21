@@ -6,11 +6,13 @@
 //                                   jalur API sungguhan; hanya setelah pengguna setuju
 //   --keep                          proyek uji tidak dihapus (untuk diperiksa)
 //   --only=podcast                  hanya bagian podcast + klip (v0.9)
+//   --only=layar | montase          hanya rekaman layar/tutorial atau vlog/montase (v0.10; juga cepat|buang|wajah|ai|v916|musik|vo|vlog)
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DIRS, ENGINE, P, ROOT, kitTheme, mg4Skill, resolveStyle, run, youtubeChapters } from "./lib.mjs";
 import { podcastTest } from "./selftest_podcast.mjs";
+import { layarTest } from "./selftest_layar.mjs";
 
 const args = process.argv.slice(2);
 const full = args.includes("--full");
@@ -45,6 +47,11 @@ const finish = () => {
 if (only === "podcast") {
   console.log("Selftest podcast + klip (tanpa kredit)\n");
   podcastTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO });
+  finish();
+}
+if (["layar", "montase", "cepat", "buang", "wajah", "ai", "musik", "vo", "vlog", "v916"].includes(only)) {
+  console.log(`Selftest ${only} (tanpa kredit)\n`);
+  layarTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO, sampleMd: SAMPLE_MD, only });
   finish();
 }
 
@@ -105,7 +112,7 @@ else npm("voice over (audio contoh, sinkron per kata)", "voice", [NAME, `--audio
 // 3) musik track (tiruan, menguji jalur music.wav) + SFX
 run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "sine=frequency=220:duration=8,volume=0.3", "-ar", "44100", "-ac", "1", path.join(p.work, "music.wav")]);
 npm("musik + SFX (jalur track music.wav)", "sound", [NAME]);
-rows.push({ langkah: "track musik terpakai", hasil: /track ElevenLabs/.test(step.last) ? "LULUS" : "GAGAL", detik: 0, catatan: "sound.py memakai work/<nama>/music.wav" });
+rows.push({ langkah: "track musik terpakai", hasil: /Musik: track (dari work\/|ElevenLabs)/.test(step.last) ? "LULUS" : "GAGAL", detik: 0, catatan: "sound.py memakai work/<nama>/music.wav" });
 // 4) jalur HTML: preview + render + QA + posting + export
 npm("preview HTML + cek tata letak", "html", [NAME, "--preview"]);
 npm("render akhir HTML", "html", [NAME]);
@@ -275,6 +282,9 @@ ${lines.map((l, i) => `scene(${i});\n{ const s = ${i}; big(540, 420, "${l.key.to
 
 // 9) podcast multi-kamera + identifikasi pembicara + klip pendek (v0.9)
 podcastTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO });
+
+// 10) rekaman layar/tutorial + vlog/montase (v0.10)
+layarTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO, sampleMd: SAMPLE_MD });
 
 if (keep) console.log(`Proyek uji disimpan: ${path.relative(ROOT, p.dir)}`);
 else clean();

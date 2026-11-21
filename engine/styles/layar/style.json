@@ -1,0 +1,238 @@
+{
+  "_doc": "Style bawaan plugin 'Layar' (rekaman layar/tutorial, v0.10): layar asli tajam (resolusi asli, tanpa grading), zoom otomatis ke bagian layar yang sedang berubah (bisa dikoreksi per kalimat), bagian loading/diam dipercepat dengan label 'dipercepat Nx' atau dibuang (ditanya per video), kamera wajah bulat opsional di pojok, subtitle ditanam. Narasi: suara rekaman sendiri atau voice over AI. Rincian: STYLE.md.",
+  "name": "layar",
+  "title": "Layar",
+  "aliases": [
+    "tutorial",
+    "screen",
+    "rekaman-layar",
+    "screencast"
+  ],
+  "kind": "edit",
+  "jalur": "edit",
+  "footage": "layar",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "safeZone": "youtube"
+  },
+  "pace": {
+    "targetWordsPerSec": 2.6,
+    "maxGapSec": 0.35,
+    "keepGapSec": [
+      0.06,
+      0.12
+    ],
+    "sentenceGapSec": 0.2,
+    "maxStillSec": 8,
+    "dropFillers": [
+      "eh",
+      "em",
+      "emm",
+      "anu",
+      "hmm"
+    ],
+    "duration": [
+      30,
+      1200
+    ]
+  },
+  "screen": {
+    "zoom": {
+      "auto": true,
+      "max": 2.0,
+      "pad": 0.08,
+      "holdSec": 2,
+      "easeSec": 0.6
+    },
+    "idle": {
+      "mode": "cepat",
+      "minGapSec": 1.2,
+      "maxOutSec": 2.5,
+      "minSpeed": 2,
+      "maxSpeed": 12
+    }
+  },
+  "facecam": {
+    "size": 280,
+    "ring": "#FFFFFF"
+  },
+  "aroll": {
+    "framing": "screen",
+    "punchIn": {
+      "scales": [
+        1.0
+      ],
+      "everyCut": false
+    },
+    "floatingObjects": true
+  },
+  "broll": {
+    "share": [
+      0,
+      0.1
+    ],
+    "lengthSec": [
+      1.5,
+      6
+    ],
+    "background": {
+      "type": "radial",
+      "center": "#1A1F22",
+      "edge": "#101315",
+      "dots": {
+        "color": "#FFFFFF",
+        "opacity": 0.04,
+        "spacing": 22
+      }
+    },
+    "pip": {
+      "shape": "circle",
+      "size": 340,
+      "ring": {
+        "color": "#FFFFFF",
+        "width": 6
+      },
+      "position": "top-left"
+    },
+    "objects": [
+      "keyword",
+      "chip-list",
+      "prompt-card",
+      "doc-card"
+    ],
+    "transition": "cut",
+    "closingTransition": {
+      "type": "dim-tint",
+      "dim": 0.5,
+      "tint": "#0B2320"
+    }
+  },
+  "type": {
+    "fonts": {
+      "head": "Poppins",
+      "hand": "Caveat",
+      "body": "Poppins"
+    },
+    "kicker": {
+      "font": "hand",
+      "color": "#FFFFFFD9",
+      "size": 60
+    },
+    "title": {
+      "font": "head",
+      "weight": 700,
+      "color": "#FFFFFF",
+      "size": 66
+    },
+    "keyword": {
+      "font": "head",
+      "weight": 900,
+      "upper": true,
+      "color": "#0B2A44",
+      "box": "#E6EEF6",
+      "size": 110,
+      "radius": 10,
+      "enter": "wipe-blur"
+    },
+    "bigword": {
+      "font": "head",
+      "weight": 900,
+      "upper": true,
+      "color": "#FFFFFF",
+      "size": 180,
+      "enter": "pop"
+    },
+    "chip": {
+      "font": "head",
+      "weight": 600,
+      "color": "#0B1A2A",
+      "box": "#E6EEF6",
+      "icon": "#2F8FE0",
+      "size": 44
+    },
+    "subtitle": {
+      "font": "head",
+      "weight": 700,
+      "color": "#FFFFFF",
+      "shadow": "#000000B3",
+      "active": {
+        "color": "#4FB3FF",
+        "stroke": "#FFFFFF"
+      },
+      "size": 60,
+      "wordsPerChunk": [
+        2,
+        5
+      ],
+      "zoneY": [
+        1244,
+        1414
+      ],
+      "burn": true
+    }
+  },
+  "palette": {
+    "deep": "#0B0F14",
+    "teal": "#4FB3FF",
+    "tealText": "#1F6FB2",
+    "card": "#E6EEF6",
+    "white": "#FFFFFF",
+    "bg": "#0B0F14",
+    "bgEdge": "#06080B"
+  },
+  "grade": {
+    "applyTo": "none",
+    "mode": "off",
+    "targets": {}
+  },
+  "audio": {
+    "lufs": -15,
+    "lra": [
+      5,
+      8
+    ],
+    "truePeak": -1.5,
+    "music": null,
+    "sfx": {
+      "transitions": false,
+      "objectPop": {
+        "maxDb": -26
+      }
+    },
+    "voice": [
+      "denoise-light",
+      "deess"
+    ]
+  },
+  "fixed": [
+    "pace",
+    "type",
+    "palette",
+    "audio",
+    "canvas",
+    "screen.zoom.max"
+  ],
+  "grammar": {
+    "default": "layar: zoom ke bagian yang berubah (otomatis), tahan minimal 2 dtk",
+    "overview": "layar penuh saat pindah halaman/aplikasi (zoom: \"penuh\")",
+    "idle": "loading/diam: dipercepat + label, atau dibuang (sesuai kesepakatan)",
+    "step": "judul langkah (titles) opsional",
+    "closing": "layar penuh"
+  },
+  "context": {
+    "transcript": "elevenlabs-scribe",
+    "activity": "perubahan piksel per area layar (grid 64x36, 2-4 fps)",
+    "plan": "Projects/<nama>/edit.json (per kalimat: zoom [x,y,w,h] | penuh | auto, screen, after)"
+  },
+  "names": false,
+  "clips": {
+    "style": "ngobrol",
+    "format": "9:16",
+    "lengthSec": [
+      30,
+      60
+    ]
+  }
+}

@@ -58,6 +58,9 @@ check(peak <= -0.5, `true peak ${peak} dBFS`);
 const ranges = timing.scenes.map((s) => `${(s.startFrame / fps).toFixed(2)}:${((s.startFrame + s.durationFrames) / fps).toFixed(2)}`);
 const py = (args) => JSON.parse(execFileSync(PY, [TOOLS, ...args], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
 
+// montase musik (v0.10): tanpa narasi, pemeriksaan suara [3]-[7] tidak berlaku
+if (timing.noVoice) console.log("\n[3-7] Suara & sinkron kata: dilewati (montase musik tanpa narasi)");
+else {
 console.log("\n[3] Konsistensi suara (kemiripan pembicara per scene vs jangkar voice ElevenLabs >= 0.86, narator VoiceStudio >= 0.80)");
 // ElevenLabs: dibandingkan dengan jangkar suara voice itu (pemakaian pertama voice+model), per scene.
 // Audio dari luar (voice --audio=...) memang bukan narator referensi: cek kemiripan dilewati.
@@ -141,6 +144,8 @@ check(
     ? `scene ${late.map((s) => s.index + 1).join(", ")}: kata pertama tidak dalam 0-12 frame dari awal scene`
     : "setiap scene mulai tepat sebelum kata pertamanya diucapkan (<= 0,4 dtk)",
 );
+
+}
 
 console.log("\n[8] Tata letak visual (teks keluar bingkai/terpotong, brand pojok, area UI Reels, tabrakan)");
 const board = existsSync(paths.storyboard) ? JSON.parse(readFileSync(paths.storyboard, "utf8")) : {};

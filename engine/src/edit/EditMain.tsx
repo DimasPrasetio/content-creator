@@ -400,6 +400,38 @@ const EditProbe: React.FC<{ enabled?: boolean; mode: string; face: Face | null; 
   return null;
 };
 
+// ---------------------------------------------------------------- rekaman layar (v0.10)
+type ScreenSpec = NonNullable<EditProps["edit"]["screen"]>;
+const FULL = [0, 0, 1, 1];
+/** Kotak kamera pada frame f: keadaan berganti dengan transisi halus (ease frame) yang berpusat di batas keadaan. */
+const screenBoxAt = (s: ScreenSpec, f: number) => {
+  const ks = s.keys;
+  if (!ks.length) return FULL;
+  const ease = Math.max(1, s.ease ?? 18);
+  let i = ks.findIndex((k) => f >= k.f0 && f < k.f1);
+  if (i < 0) i = f < ks[0].f0 ? 0 : ks.length - 1;
+  const cur = ks[i].box ?? FULL;
+  const blend = (a: number[], b: number[], t: number) => a.map((v, k) => v + (b[k] - v) * Easing.inOut(Easing.cubic)(Math.min(1, Math.max(0, t))));
+  if (i > 0 && f < ks[i].f0 + ease / 2) return blend(ks[i - 1].box ?? FULL, cur, (f - (ks[i].f0 - ease / 2)) / ease);
+  if (i < ks.length - 1 && f >= ks[i].f1 - ease / 2) return blend(cur, ks[i + 1].box ?? FULL, (f - (ks[i].f1 - ease / 2)) / ease);
+  return cur;
+};
+const ScreenLayer: React.FC<{ s: ScreenSpec; c: Ctx }> = ({ s, c }) => {
+  const [x, y, w, h] = screenBoxAt(s, c.frame);
+  const bw = w * s.w, bh = h * s.h;
+  // area tampil (kanvas sempit: di antara brand pojok dan subtitle) atau seluruh kanvas
+  const [ax, ay, aw, ah] = s.area ?? [0, 0, c.cv.w, c.cv.h];
+  const k = Math.min(aw / bw, ah / bh);
+  const cx = (x + w / 2) * s.w, cy = (y + h / 2) * s.h;
+  return (
+    <AbsoluteFill style={{ background: s.bg ?? "#0b0f14", overflow: "hidden" }}>
+      <div style={{ position: "absolute", left: ax, top: ay, width: aw, height: ah, overflow: "hidden" }}>
+        <OffthreadVideo src={staticFile(c.video)} muted style={{ position: "absolute", width: s.w, height: s.h, left: aw / 2 - cx * k, top: ah / 2 - cy * k, transform: `scale(${k})`, transformOrigin: "0 0" }} />
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 // ---------------------------------------------------------------- utama
 export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => {
   useFonts();
@@ -422,10 +454,12 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
   const ST = edit.style.type?.subtitle ?? {};
   return (
     <AbsoluteFill style={{ background: "#000" }}>
-      {/* A-roll + punch-in (bertumpu di wajah) */}
-      <AbsoluteFill style={{ transform: `scale(${cut?.scale ?? 1})`, transformOrigin: `${cut?.ox ?? cv.w / 2}px ${cut?.oy ?? Math.round(cv.h * 0.4)}px` }}>
-        <OffthreadVideo src={staticFile(edit.video)} muted style={{ width: cv.w, height: cv.h }} />
-      </AbsoluteFill>
+      {/* A-roll + punch-in (bertumpu di wajah); rekaman layar: zoom ke bagian yang berubah; montase: Ken Burns pelan */}
+      {edit.screen ? <ScreenLayer s={edit.screen} c={c} /> : (
+        <AbsoluteFill style={{ transform: `scale(${(cut?.scale ?? 1) * (cut?.zoom ? interpolate(frame, [cut.f0, Math.max(cut.f0 + 1, cut.f1)], cut.zoom, { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1)})`, transformOrigin: `${cut?.ox ?? cv.w / 2}px ${cut?.oy ?? Math.round(cv.h * 0.4)}px` }}>
+          <OffthreadVideo src={staticFile(edit.video)} muted style={{ width: cv.w, height: cv.h }} />
+        </AbsoluteFill>
+      )}
       {mode === "dim" ? <AbsoluteFill style={{ background: bg.edge ?? "#0B2320", opacity: interpolate(frame, [v!.f0, v!.f0 + 8], [0, Number(edit.style.broll?.closingTransition?.dim ?? 0.55)], { extrapolateRight: "clamp" }) }} /> : null}
       {broll ? (
         <AbsoluteFill style={{ background: `radial-gradient(ellipse 75% 60% at 50% 45%, ${bg.center ?? "#0D2E29"} 0%, ${bg.edge ?? "#0B2320"} 100%)` }}>
@@ -458,6 +492,31 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
           case "clip": return (o.fit ?? "full") === "card" ? <ClipCard key={key} o={o} c={c} box={box} /> : null;
           default: return null;
         }
+      })}
+      {/* kamera wajah di pojok (rekaman layar); disembunyikan saat bagian layar dipercepat */}
+      {edit.facecam ? (() => {
+        const sp = (edit.speedLabels ?? []).find((x) => frame >= x.f0 - 6 && frame < x.f1 + 6);
+        const op = sp ? interpolate(Math.min(frame - (sp.f0 - 6), sp.f1 + 6 - frame), [0, 6], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }) : 1;
+        const d = edit.facecam.size ?? (nine ? 300 : land ? 280 : 260);
+        const pos = nine ? { top: 330, right: 70 } : { right: cv.w - cv.safe.r + 8, bottom: cv.h - (cv.subY ?? cv.safe.b - 160) + 24 };
+        return (
+          <div data-probe="ignore" style={{ position: "absolute", ...pos, width: d, height: d, borderRadius: "50%", overflow: "hidden", opacity: op, boxShadow: `0 0 0 6px ${edit.facecam.ring ?? "#fff"}, 0 18px 44px rgba(0,0,0,.45)` }}>
+            <OffthreadVideo src={staticFile(edit.facecam.src)} muted style={{ width: d, height: d, objectFit: "cover" }} />
+          </div>
+        );
+      })() : null}
+      {/* label bagian yang dipercepat */}
+      {(edit.speedLabels ?? []).filter((x) => frame >= x.f0 && frame < x.f1).map((x) => {
+        const op = interpolate(Math.min(frame - x.f0, x.f1 - frame), [0, 5], [0, 1], { extrapolateRight: "clamp" });
+        const pos = nine ? { top: 330, right: 70 } : { top: (cv.brand?.top ?? cv.safe.t) + 64, right: cv.w - cv.safe.r + 8 };
+        return <div key={x.f0} style={{ position: "absolute", ...pos, opacity: op, padding: "10px 22px", borderRadius: 999, background: "rgba(0,0,0,.66)", fontFamily: HEAD, fontWeight: 800, fontSize: nine ? 34 : 30, letterSpacing: 1, color: "#fff" }}>{`dipercepat ${x.x}x`} ⏩</div>;
+      })}
+      {/* judul montase (opsional) */}
+      {(edit.texts ?? []).filter((x) => frame >= x.f0 && frame < x.f1).map((x) => {
+        const pp = pop(frame, x.f0, fps), out = interpolate(x.f1 - frame, [0, 8], [0, 1], { extrapolateRight: "clamp" });
+        return (
+          <div key={x.f0} style={{ position: "absolute", left: nine ? 90 : cv.safe.l + 40, right: nine ? 90 : cv.w - cv.safe.r + 40, top: Math.round(cv.h * (nine ? 0.36 : 0.38)), textAlign: "center", fontFamily: HEAD, fontWeight: 800, fontSize: nine ? 92 : 84, lineHeight: 1.08, color: "#fff", textShadow: "0 8px 28px rgba(0,0,0,.6)", opacity: pp * out, transform: `scale(${0.92 + 0.08 * pp})` }}>{x.text}</div>
+        );
       })}
       {/* subtitle karaoke (zona y 1244-1414) */}
       {sub ? (

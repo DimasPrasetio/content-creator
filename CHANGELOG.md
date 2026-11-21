@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.10.0
+Tahap keempat roadmap (`docs/ROADMAP.md`, gelombang kedua "jenis footage baru"): rekaman layar/tutorial + vlog/montase.
+- **Rekaman layar / tutorial** (style **Layar**, 16:9): `npm run edit -- <nama> --new --style=layar --input=layar.mp4
+  [,wajah.mp4 --facecam=2] [--idle=cepat|buang|utuh] [--narasi=ai]`. Layar dinormalisasi pada resolusi asli (maks 4K,
+  tanpa grading/crop); `--analyze` mengukur perubahan piksel per area.
+  - **Zoom otomatis** ke bagian yang berubah (maks 2x, tahan ≥ 2 dtk, transisi halus), koreksi per kalimat
+    `"zoom": [x, y, w, h] | "penuh" | "auto"`. Kanvas 9:16/4:5/1:1: layar di area antara brand pojok dan subtitle.
+  - **Loading/diam** (ditanya per video): dipercepat 2-12x dengan label "dipercepat Nx" (bawaan), dibuang, atau utuh;
+    per kalimat `"after"`.
+  - **Kamera wajah** bulat di pojok, disinkron otomatis dari suara, dipotong persegi di sekitar wajah.
+  - **Layar bisu + voice over AI** (`--narasi=ai`): naskah → `npm run voice` → layar mengikuti kalimat (`screenAuto` dari
+    aktivitas, koreksi `"screen"`), dipercepat atau ditahan agar pas dengan kalimatnya.
+- **Vlog / montase** (style **Kilas**, 9:16): `npm run edit -- <nama> --new --style=kilas --input=a.mp4,b.mov,...
+  [--music=lagu.mp3] [--duration=30] [--narasi=ai]`.
+  - **Momen terbaik** per klip (skor tajam + gerak + wajah per detik), tanpa berulang; disimpan di `montage.shots` untuk
+    diperiksa di board dan dikoreksi (`"auto": false`). Urutan `urut` (kronologis) atau `selang`.
+  - **Potongan pada ketukan musik** (deteksi tempo; 2-4 ketukan per potongan, pembuka lebih lambat) atau 1,5-3 dtk per
+    kalimat voice over AI. Ken Burns pelan, grading hangat (`whiteBalance: "warm"`).
+  - Musik: file pengguna (`--music`), ElevenLabs (`npm run music -- <nama> --sec=N`), atau sintetis. Montase tanpa
+    narasi: musik penuh, QA suara/sinkron dilewati.
+- **Vlog bicara + B-roll**: `--broll=a.mp4,b.mov` (style edit apa pun) → momen terbaik B-roll di konteks.md, dipakai
+  sebagai objek `clip`; `--music=` = musik latar di-duck di bawah suara untuk jenis apa pun.
+- `edit.json` baru: `kind`, `narasi`, `screen`, `facecam`, `idle`, `zoom`, `titles`, `broll`, `music`, `order`, `montage`;
+  per kalimat `zoom`, `after`, `screen`, `clips`. `--duration=N` → rentang N±5 dtk.
+- Selftest bagian 10 (rekaman buatan, tanpa kredit): zoom ikut area aktif, loading dipercepat/dibuang, layar 9:16,
+  sinkron kamera wajah, layar + voice over, montase pada ketukan 120 BPM, montase + voice over, vlog + B-roll + musik.
+  `npm run selftest -- --only=layar|montase`.
+- Bukan lingkup: merekam layar dari dalam plugin, kursor buatan, posting otomatis.
+
 ## 0.9.0
 Tahap ketiga roadmap (`docs/ROADMAP.md`, gelombang pertama "jenis footage baru"): podcast/wawancara + klip pendek.
 - **Podcast / wawancara 2-4 orang** lewat mesin edit: `npm run edit -- <nama> --new --style=siniar --speakers=N

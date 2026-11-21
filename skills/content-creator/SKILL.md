@@ -1,6 +1,6 @@
 ---
 name: content-creator
-description: Agent content-creator otomatis — dari ide sampai MP4 siap upload: vertikal 1080×1920 (Reels/TikTok), feed 4:5/1:1, atau YouTube 16:9 pendek maupun panjang (2-20 menit, bab opsional, thumbnail & deskripsi YouTube). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, podcast/wawancara 2-4 orang dengan satu kamera lebar atau beberapa kamera) dan memotong klip pendek 9:16 otomatis dari video panjang. Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
+description: Agent content-creator otomatis — dari ide sampai MP4 siap upload: vertikal 1080×1920 (Reels/TikTok), feed 4:5/1:1, atau YouTube 16:9 pendek maupun panjang (2-20 menit, bab opsional, thumbnail & deskripsi YouTube). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, podcast/wawancara 2-4 orang dengan satu kamera lebar atau beberapa kamera, rekaman layar/tutorial dengan zoom otomatis, vlog dan montase musik dari banyak klip) dan memotong klip pendek 9:16 otomatis dari video panjang. Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
 argument-hint: "[ide atau topik video]"
 ---
 
@@ -70,7 +70,12 @@ Yang sudah didukung sekarang (sampaikan jujur saat grill-me):
   (tanpa layar terbagi), nama pembicara (lower-third), bab opsional. Bagian "Mode podcast" di bawah.
 - **Klip pendek otomatis** (30-60 dtk, 9:16) dari video panjang apa pun yang sudah diedit/dianalisis: AI mengusulkan
   3-5 klip, pengguna memilih. Bagian "Klip pendek" di bawah.
-Belum: rekaman layar/tutorial, vlog/montase (rencana v0.10), podcast lebih dari 4 orang. Permintaan di luar itu →
+- **Rekaman layar / tutorial** (style Layar, 16:9): suara sendiri, + kamera wajah bulat, atau layar bisu + voice over AI.
+  Zoom otomatis ke bagian layar yang berubah (bisa dikoreksi), loading/diam dipercepat dengan label atau dibuang.
+  Bagian "Mode rekaman layar" di bawah.
+- **Vlog / montase** (style Kilas, 9:16): montase musik dari banyak klip (momen dipilih AI, potongan pada ketukan), montase
+  + voice over AI, atau vlog bicara + sisipan B-roll + musik latar (style Ngobrol). Bagian "Mode vlog / montase" di bawah.
+Belum: merekam layar dari dalam plugin, kursor buatan, podcast lebih dari 4 orang, posting otomatis. Permintaan di luar itu →
 tawarkan cara terdekat yang sudah bisa, jangan berjanji.
 
 ## Mode: lengkap atau cepat
@@ -100,7 +105,8 @@ dengan rekomendasi di opsi pertama "(Rekomendasi)". Tanyakan hanya cabang yang b
 Urutan hulu ke hilir: **jenis pekerjaan → format → style → brand → sisanya**. Keputusan hulu mengubah cabang hilir.
 
 1. **Jenis pekerjaan** — video baru dari ide, atau edit footage milik pengguna (bagian sebelumnya)? Footage: jenisnya
-   (talking-head, podcast, rekaman layar, vlog) dan file-nya. Podcast → cabang tambahan di "Mode podcast".
+   (talking-head, podcast, rekaman layar, vlog/montase) dan file-nya. Podcast → cabang tambahan di "Mode podcast";
+   rekaman layar → "Mode rekaman layar"; vlog/montase → "Mode vlog / montase".
 2. **Format** — tempat posting utama menentukan **kanvas asli** (Reels/TikTok/Shorts 9:16, feed 4:5 atau 1:1, YouTube
    16:9; format lain = ekspor dari kanvas utama), durasi (default 30-45 dtk, ±2,5 kata/dtk; video panjang 2-20 mnt),
    subtitle ditanam atau file SRT saja. **Bab** ditanyakan per video, jangan diasumsikan (banyak video tidak butuh bab):
@@ -427,6 +433,51 @@ Mesin edit yang sama dengan style **Siniar** (`siniar`, 16:9, warna netral, tanp
 4. `--draft` → periksa board (kamera pada orang yang bicara, nama tidak menutup wajah) → render + QA → posting
    (deskripsi YouTube dengan bab bila ada). Kamera pindah hanya bila giliran ≥ `pace.minTurnSec` dan bidikan sebelumnya
    cukup lama (`pace.minShotSec`); sahutan pendek tidak memindah kamera.
+
+## Mode rekaman layar / tutorial
+
+Mesin edit yang sama dengan style **Layar** (`layar`, 16:9 bawaan, layar asli tajam tanpa grading, subtitle karaoke).
+
+1. **Grill-me layar** (bersama cabang lain): **narasi** — suara rekaman sendiri, suara sendiri + **kamera wajah** (file
+   kamera terpisah), atau **layar bisu + voice over AI** (naskah ditulis agent, dibacakan ElevenLabs) · **loading/diam**
+   (ditanya per video): `cepat` (dipercepat 2-12x + label "dipercepat Nx", bawaan) · `buang` · `utuh` · **format**
+   (16:9 YouTube bawaan; 9:16/4:5/1:1 bila untuk Reels/feed: layar tampil di antara brand pojok dan subtitle, zoom ke area aktif) · judul langkah (ya/tidak) · musik pelan
+   (bawaan tanpa) · bab (bawaan tanpa).
+2. `npm run edit -- <nama> --new --style=layar --input=<layar.mp4>[,<wajah.mp4> --facecam=2] [--idle=cepat|buang|utuh] [--narasi=ai] [--format=9:16] [--music=<file>]`
+   → `--analyze` (suara sendiri: perkiraan kuota dulu dengan `--estimate`). Kamera wajah disinkron otomatis dari suara.
+3. **Baca `edit/konteks.md`** bagian aktivitas layar (rentang waktu + area yang berubah). Isi `edit.json` per kalimat:
+   - zoom otomatis sudah jalan (`"zoom": "auto"`); koreksi bila salah sasaran: `"zoom": [x, y, w, h]` (pecahan 0-1 dari
+     layar) atau `"zoom": "penuh"` (pindah halaman/aplikasi, gambaran umum);
+   - loading per kalimat: `"after": "cepat" | "buang" | "utuh"` (jeda setelah kalimat itu), menimpa `"idle"` proyek;
+   - judul langkah opsional: `"titles": [{"t": [awal, akhir], "text": "Langkah 1 · Buka pengaturan"}]` di akar;
+   - objek grafis seperlunya (keyword/chips/annotate), tidak menutup area yang sedang di-zoom.
+4. **Voice over AI** (`--narasi=ai`): setelah `--analyze`, tulis `script.md` (satu `##` per langkah, urutan mengikuti
+   layar) + `script.txt`, `npm run voice -- <nama>`, lalu `--draft` mengisi kalimat `v1..vn` dan `screenAuto` (rentang layar
+   per kalimat, dari aktivitas). Koreksi `"screen": [awal, akhir]` (detik rekaman) per kalimat bila perlu: bagian layar
+   lebih panjang dari kalimatnya dipercepat (label bila ≥ 1,5x), lebih pendek ditahan di frame terakhir.
+5. `--draft` → periksa board (zoom pada bagian yang benar, label & kamera wajah tidak menutup isi penting) → render + QA
+   → posting. Durasi = suara (rekaman yang dirapikan, atau voice over).
+
+## Mode vlog / montase
+
+1. **Grill-me vlog** (bersama cabang lain): bentuk — **montase musik** (tanpa narasi), **montase + voice over AI**, atau
+   **vlog bicara + B-roll** (rekaman bicara ke kamera + klip sisipan) · **musik** (ditanya per video): file milik pengguna
+   (`--music=`; pastikan hak pakainya), musik ElevenLabs (memakai kredit, sebut perkiraan), atau musik sintetis gratis ·
+   **format** (9:16 bawaan) · durasi (montase bawaan 30 dtk) · urutan klip: kronologis (bawaan) atau bergiliran · judul.
+2. **Montase** (style Kilas): `npm run edit -- <nama> --new --style=kilas --input=a.mp4,b.mov,... [--music=lagu.mp3] [--duration=30] [--narasi=ai]`
+   → `--analyze` (skor momen per detik: tajam + gerak + wajah; tanpa transkrip, tanpa kredit).
+   - Musik ElevenLabs: `npm run music -- <nama> --sec=<durasi> --prompt="instrumental, <suasana>, <tempo>" --yes`
+     sebelum `--draft` (tanpa `--music`).
+   - Voice over AI: tulis `script.md` + `script.txt` → `npm run voice -- <nama>`; potongan 1,5-3 dtk per kalimat, musik
+     turun saat narasi. Batasi klip per kalimat: `"clips": [nomor footage]`.
+   - `--draft` memilih momen & memotong pada ketukan → `edit.json` → `montage.shots` (`t`, `src`, `from`). **Lihat sendiri
+     board**: buang momen buram/berulang, ganti `src`/`from`, lalu set `"montage": {"auto": false, ...}` agar pilihanmu
+     dihormati. `"order": "selang"` untuk bergiliran antar-klip. Judul opsional: `"titles"`.
+   - Render + QA (montase musik: cek suara & sinkron dilewati) → posting.
+3. **Vlog bicara + B-roll** (style Ngobrol atau style edit lain): `npm run edit -- <nama> --new --style=ngobrol --input=bicara.mp4 --broll=b1.mp4,b2.mov [--music=lagu.mp3]`
+   → `--analyze` (konteks.md mendaftar momen terbaik tiap B-roll) → objek `clip` di kalimat yang cocok:
+   `{"type": "clip", "file": "assets/broll/01-b1.mp4", "from": <detik momen>, "at": "<kata>", "fit": "full"}` (suara
+   tetap dari rekaman bicara) → seperti "Mode edit footage". Musik latar di-duck di bawah suara.
 
 ## Klip pendek dari video panjang
 

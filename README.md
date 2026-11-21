@@ -24,6 +24,11 @@ Docs and prompts are in Indonesian.*
   selalu pada orang yang bicara, nama pembicara muncul otomatis, jeda mati dan salah ucap dibuang, bab opsional.
 - **Klip pendek otomatis**: dari video panjang mana pun, AI mengusulkan 3-5 klip 30-60 dtk (hook, alasan, durasi),
   Anda memilih, lalu tiap klip dirender 9:16 dengan subtitle dan kamera pada pembicara (`npm run clips`).
+- **Rekaman layar / tutorial** (style `layar`, 16:9 atau 9:16): zoom otomatis ke bagian layar yang sedang berubah
+  (bisa dikoreksi), loading dipercepat dengan label atau dibuang, kamera wajah bulat opsional (disinkron dari suara),
+  suara sendiri atau voice over AI untuk rekaman bisu.
+- **Vlog / montase** (style `kilas`): AI memilih momen terbaik dari banyak klip dan memotongnya pada ketukan musik
+  (musik Anda, musik ElevenLabs, atau sintetis), dengan atau tanpa voice over AI; vlog bicara + sisipan B-roll + musik latar.
 - **Tiga jalur visual**, dipilih dari contoh frame naskah Anda:
   - **A · Pop cinematic** (Remotion): poster komik-pop, transisi grafis, grain, scene khusus per video.
   - **B · Motion graphics v4**: 5 gaya explainer teks (butuh skill Anthropic `motion-graphics-v4` terpasang terpisah).

@@ -57,7 +57,16 @@ export type EditProps = {
   edit: {
     video: string;
     totalFrames: number;
-    cuts: { f0: number; f1: number; scale: number; ox: number; oy: number }[];
+    /** zoom: [skala awal, skala akhir] di sepanjang potongan (Ken Burns montase, v0.10) */
+    cuts: { f0: number; f1: number; scale: number; ox: number; oy: number; zoom?: [number, number] }[];
+    /** rekaman layar (v0.10): video berukuran asli w x h; kamera per rentang frame = kotak [x, y, w, h] 0-1 bingkai layar (null = utuh) */
+    screen?: { w: number; h: number; area?: number[]; ease?: number; bg?: string; keys: { f0: number; f1: number; box: number[] | null }[] } | null;
+    /** bagian layar diam/loading yang dipercepat: label "dipercepat Nx" */
+    speedLabels?: { f0: number; f1: number; x: number }[];
+    /** kamera wajah di pojok (rekaman layar + kamera wajah), sinkron dengan linimasa video */
+    facecam?: { src: string; size?: number; ring?: string } | null;
+    /** judul montase (opsional) */
+    texts?: { f0: number; f1: number; text: string }[];
     face: (Face | null)[];
     visuals: { id: string; mode: string; f0: number; f1: number }[];
     objects: EObj[];

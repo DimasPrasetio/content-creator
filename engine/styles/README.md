@@ -1,6 +1,6 @@
 # Mesin edit footage berbasis style
 
-Mengedit video yang **sudah ada** (talking-head, rekaman bicara) menjadi video 9:16 1080×1920 (bawaan) atau 16:9 / 4:5 / 1:1 (`--format=`) sesuai sebuah
+Mengedit video yang **sudah ada** (talking-head, podcast, rekaman layar, vlog/montase) menjadi video 9:16 1080×1920 (bawaan) atau 16:9 / 4:5 / 1:1 (`--format=`) sesuai sebuah
 **style** (gaya edit, `kind: "edit"`), bukan sesuai brand. Folder ini juga berisi style animasi bawaan (`komik`); semua
 style dikelola dengan `npm run style -- list|show|new|save|selera`. Style mengunci identitas (ritme, tampilan, grading, audio); isi visual
 diputuskan agent dari **konteks** tiap video.
@@ -15,6 +15,12 @@ npm run edit -- <nama> --from=cut|sound|preview|render
 # podcast / wawancara 2-4 orang (style siniar, 16:9):
 npm run edit -- <nama> --new --style=siniar --speakers=2 --input=lebar.mp4[,kamA.mp4,kamB.mp4] [--multicam --audio-src=1]
 npm run edit -- <nama> --analyze --estimate   # perkiraan menit Speech to Text (gratis), lalu --analyze
+# rekaman layar / tutorial (style layar, 16:9; v0.10):
+npm run edit -- <nama> --new --style=layar --input=layar.mp4[,wajah.mp4 --facecam=2] [--idle=cepat|buang|utuh] [--narasi=ai]
+# vlog / montase (style kilas, 9:16; v0.10):
+npm run edit -- <nama> --new --style=kilas --input=a.mp4,b.mov,c.mp4 [--music=lagu.mp3] [--duration=30] [--narasi=ai]
+# vlog bicara + B-roll + musik latar (style edit apa pun):
+npm run edit -- <nama> --new --style=ngobrol --input=bicara.mp4 --broll=b1.mp4,b2.mov [--music=lagu.mp3]
 # klip pendek 9:16 dari proyek yang sudah --analyze:
 npm run clips -- <nama> [--min=30 --max=60]   # klip/kandidat.md -> agent menulis klip.json (3-5 usulan)
 npm run clips -- <nama> --check               # tabel untuk dipilih pengguna
@@ -24,7 +30,8 @@ npm run clips -- <nama> --make=k1,k3 [--render]   # proyek anak <nama>-k1 ... (f
 Style dicari di `Styles/<slug>/style.json` (workspace, mis. hasil analisis video referensi pengguna) lalu
 `Engine/styles/<slug>/style.json` (bawaan plugin), digabung dalam. Bawaan: `ngobrol` (dulu `narration`, nama lama tetap dikenali
 lewat `aliases`), `siniar` (podcast/wawancara 16:9: warna netral, tanpa subtitle tertanam, nama pembicara, kamera pada
-yang bicara) dan `komik` (animasi Pop).
+yang bicara), `layar` (rekaman layar/tutorial 16:9: zoom otomatis, loading dipercepat, kamera wajah opsional),
+`kilas` (vlog/montase 9:16: momen terbaik dipotong pada ketukan musik) dan `komik` (animasi Pop).
 
 ## Alur pemahaman konteks
 1. **Isi**: transkrip per kata (ElevenLabs Scribe; atau sidecar `<footage>.words.json` = `[{w,s,e}]`, tanpa kredit) →
@@ -97,6 +104,48 @@ yang bicara) dan `komik` (animasi Pop).
   menimpa subtitle style; `"duration": [min, maks]` menimpa rentang durasi style.
 - Pace style: `minShotSec` (bidikan minimal sebelum pindah, kecuali giliran baru ≥ itu), `minTurnSec` (giliran
   minimal agar kamera pindah), `sentenceGapSec` (hening alami sebelum kalimat), `maxStillSec` (batas layar tanpa perubahan).
+
+### Rekaman layar / tutorial (v0.10)
+```json
+{
+  "style": "layar", "kind": "layar", "screen": 1, "facecam": { "src": 2, "size": 280 }, "idle": "cepat",
+  "zoom": true, "titles": [{ "t": [0, 3], "text": "Langkah 1 · Buka pengaturan" }],
+  "sentences": [{ "id": "s1", "t": [0.2, 3.4], "zoom": [0.05, 0.1, 0.45, 0.3], "after": "buang", "…": "…" }]
+}
+```
+- `kind: "layar"` (`--kind=layar` atau style bawaan `footage: "layar"`): footage `screen` dinormalisasi pada resolusi
+  asli (maks 3840 lebar), tanpa grading/crop; `--analyze` mengukur perubahan piksel per area (grid 64x36) →
+  `edit/srcN.activity.json` + rentang aktivitas di konteks.md.
+- Zoom per kalimat: otomatis ke kotak aktivitas (`style.screen.zoom`: `max` 2x, `pad`, `holdSec`, `easeSec`), atau
+  `"zoom": [x, y, w, h]` (0-1 dari layar), `"penuh"`, `"auto"`. `"zoom": false` di akar mematikan zoom otomatis.
+  Kanvas lebih sempit dari layar (9:16, 4:5, 1:1): layar tampil di area antara brand pojok dan subtitle.
+- Jeda ≥ `style.screen.idle.minGapSec` antar-kalimat: `cepat` (dipercepat `minSpeed`-`maxSpeed`x menjadi ≤ `maxOutSec`,
+  bisu, label "dipercepat Nx"), `buang`, `utuh`. `idle` di akar, `after` per kalimat.
+- `facecam`: kamera wajah (nomor footage) disinkron dari suara (`sources[].offset`), dipotong persegi di sekitar wajah,
+  tampil bulat (`size`, `ring` dari style); `"show": false` menyembunyikan.
+- `narasi: "ai"` (`--narasi=ai`): linimasa = voice over `npm run voice`; kalimat `v1..vn` = scene naskah, `screenAuto` =
+  rentang layar otomatis per kalimat, `"screen": [awal, akhir]` = koreksi (dipercepat bila lebih panjang dari kalimat,
+  ditahan bila lebih pendek).
+
+### Vlog / montase (v0.10)
+```json
+{
+  "style": "kilas", "kind": "montase", "narasi": "musik", "music": { "file": "assets/music/01-lagu.mp3", "start": 0 },
+  "duration": [25, 35], "order": "urut",
+  "montage": { "auto": true, "tempo": 120, "shots": [{ "t": [0, 2], "src": 1, "from": 3.4, "score": 0.81 }] }
+}
+```
+- `kind: "montase"`: `--analyze` memberi skor momen per detik tiap klip (tajam + gerak + wajah) → `edit/srcN.moments.json`.
+- Slot potongan: ketukan musik (`style.montage.beatsPerShot`, `introBeats`, `shotSec`; tempo dari musik, tanpa musik kisi
+  100 BPM) atau, dengan `narasi: "ai"`, 1,5-3 dtk per kalimat voice over (`voShotSec`, `"clips": [nomor footage]` per kalimat).
+- Momen dipilih otomatis tanpa berulang dan disimpan di `montage.shots` (`t` linimasa, `src` nomor klip, `from` detik
+  klip, `hold` bila klip lebih pendek); dipilih ulang bila musik/naskah/klip berubah, kecuali `"auto": false`.
+  `order`: `urut` (kronologis) atau `selang` (bergiliran antar-klip). Ken Burns `style.montage.kenBurns`.
+- Musik: `music.file` (dari `--music`), atau `work/<nama>/music.wav` dari `npm run music -- <nama> --sec=N --prompt=...`
+  (ElevenLabs), atau sintetis. Montase musik tanpa narasi: musik penuh, QA suara/sinkron dilewati.
+- `titles`: judul opsional `[{"t": [awal, akhir], "text": "..."}]` (juga untuk jenis lain).
+- `broll` (`--broll`): klip sisipan di `assets/broll/` untuk vlog bicara; konteks.md mendaftar momen terbaiknya; pakai
+  sebagai objek `clip` (`file`, `from`, `at`, `fit`). `music` berlaku untuk jenis apa pun (musik latar di-duck).
 
 ### Klip (proyek anak)
 `clips --make` menulis proyek anak dengan `"parent"`, `"clip": {id, title, hook, why}`, `"duration"`, dan
