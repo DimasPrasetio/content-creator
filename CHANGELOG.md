@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.1
+- Setup dari plugin terpasang berhenti di "Result/README.md: No such file": file itu tertahan `.gitignore` template
+  sehingga tidak ikut rilis. Kini ikut dipublikasikan, dan setup melewati README template yang tidak ada.
+
 ## 0.7.0
 Tahap pertama roadmap "content creator lengkap" (`docs/ROADMAP.md`).
 - **Style lepas dari brand.** Style = rasa video (jalur & skill, tema huruf/palet/subtitle/glow/progress, musik, aturan

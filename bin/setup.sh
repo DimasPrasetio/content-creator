@@ -178,6 +178,7 @@ copy_once() { [ -e "$WS/$1" ] || { mkdir -p "$(dirname "$WS/$1")"; cp "$PLUGIN_R
 for f in CLAUDE.md .gitignore Brands/_selera.md; do copy_once "$f"; done
 # README folder = dokumentasi plugin (bukan data pengguna): selalu diperbarui mengikuti versi plugin
 for f in Projects/README.md Brands/README.md References/README.md Result/README.md Styles/README.md; do
+  [ -f "$PLUGIN_ROOT/template/$f" ] || continue
   if ! cmp -s "$PLUGIN_ROOT/template/$f" "$WS/$f" 2>/dev/null; then cp "$PLUGIN_ROOT/template/$f" "$WS/$f"; ok "diperbarui $f"; fi
 done
 
