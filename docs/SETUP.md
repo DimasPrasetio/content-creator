@@ -43,6 +43,8 @@ semua yang belum ada:
 | HDR → SDR (footage iPhone) | edit footage | ffmpeg `zscale` (Linux) · VideoToolbox `scale_vt` (macOS), dicek `npm run check` |
 | Chromium (Playwright + Remotion) | render & cek tata letak | otomatis |
 | Library sistem Chromium (Linux) | menjalankan browser di server | otomatis bila root / sudo tanpa password |
+| CLI Higgsfield 1.2.3 (`higgsfield`) | aset AI opsional (`npm run gen`) | unduhan resmi GitHub higgsfield-ai/cli, SHA-256 dipatok di setup |
+| *(opsional)* MCP Higgsfield untuk Claude Code | memakai Higgsfield langsung dari obrolan | hanya dengan `--with-higgsfield-mcp` |
 | *(opsional)* whisper large-v3-turbo (±1,8 GB) | QA kejelasan kata gratis, sinkron offline, VoiceStudio | hanya dengan `--with-whisper` |
 
 Catatan per sistem:
@@ -112,6 +114,22 @@ Voice per brand diatur di profil brand (langkah 7) dan menimpa voice default.
 
 > rclone memakai client ID bersama bawaan yang akan dipensiunkan sepanjang 2026. Untuk pemakaian jangka panjang, buat
 > client ID Google sendiri: https://rclone.org/drive/#making-your-own-client-id, lalu jalankan ulang `rclone config`.
+
+## 5b. Higgsfield (opsional, aset AI berbayar kredit)
+
+Untuk gambar/klip B-roll buatan AI (Seedance, GPT Image, Kling, ...). Butuh akun Higgsfield **berbayar**: setiap generate
+memotong kredit, dan paket "unlimited" tidak berlaku untuk pemakaian otomatis.
+
+1. Login sekali per komputer (browser terbuka, token disimpan CLI di folder pengguna, tidak di workspace):
+   ```bash
+   higgsfield auth login
+   ```
+2. `npm run check` menampilkan `Higgsfield CLI ... (email, paket, N kredit)`. Daftar model: `npm run gen -- --models`.
+3. Pemakaian per video diatur agent: batas kredit disepakati di awal, `npm run gen -- <nama> --estimate` (gratis) lalu
+   `--yes`. Klip/gambar AI yang tampak nyata wajib diberi label konten AI saat posting.
+4. *(Opsional)* MCP Higgsfield di Claude Code: jalankan setup dengan `--with-higgsfield-mcp` (atau
+   `claude mcp add --transport http --scope user higgsfield https://mcp.higgsfield.ai/mcp`), lalu ketik `/mcp` di Claude
+   Code dan login. Tidak dipasang bawaan agar pengguna tanpa akun Higgsfield tidak melihat peringatan "needs auth".
 
 ## 6. Uji semua jalur
 

@@ -70,5 +70,12 @@
     "rootName": "",
     "_catatan": "Isi di config.local.json: rootFolderId folder Google Drive tujuan + remote rclone. Kosong = unggah Drive nonaktif."
   },
+  "higgsfield": {
+    "bin": "higgsfield",
+    "models": { "image": "gpt_image_2_6", "video": "seedance_2_5", "audio": "seed_audio" },
+    "budget": 0,
+    "waitTimeout": "20m",
+    "_catatan": "Aset AI lewat CLI higgsfield (npm run gen). budget = batas kredit bawaan per proyek; 0 = wajib diisi di Projects/<nama>/gen.json (disepakati pengguna). Model bawaan mengikuti rekomendasi Higgsfield; daftar: npm run gen -- --models"
+  },
   "_catatan": "Bawaan plugin content-creator. Jangan ubah di workspace: timpa nilai di Engine/config.local.json (dalam .gitignore, tidak ditimpa update plugin)."
 }

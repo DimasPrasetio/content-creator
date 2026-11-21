@@ -33,5 +33,7 @@ satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `n
 4. Wajib preview + cek tata letak + `npm run qa` lolos sebelum diserahkan; `npm run posting` menghasilkan thumbnail (sampul khusus dari `posting/thumbnail.json`, 3 varian berpemicu psikologis yang jujur) + caption.
 5. Setelah pengguna menyetujui video final: `npm run drive -- <nama>` (bila Drive sudah diatur). Jangan unggah yang belum disetujui.
 6. Jangan membuka, menampilkan, atau menyalin API key (`.env.local`).
+7. Aset AI Higgsfield (opsional, `npm run gen`): hanya dengan batas kredit yang disepakati pengguna; login hanya oleh pengguna
+   (`higgsfield auth login`); tanpa teks, orang nyata, atau testimoni palsu di prompt; klip AI yang tampak nyata diberi label AI saat posting.
 
 Semua perintah `npm run ...` dijalankan dari `Engine/`. Rincian teknis: `Engine/README.md`.

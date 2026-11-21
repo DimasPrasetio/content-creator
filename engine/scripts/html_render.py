@@ -6,7 +6,8 @@ Pemakaian (dipanggil oleh scripts/html.mjs):
   python html_render.py --root <folder html> --inject <file.json> --stills 3.2,7.5 --png-dir <folder>
 
 - Folder html disajikan lewat server lokal (ES module tidak jalan dari file://); /vendor/ = Engine/node_modules,
-  /fonts/ = Engine/fonts (Fira Sans, Anton, Poppins, Inter, JetBrains Mono), /kit/ = Engine/kit (kit HTML standar).
+  /fonts/ = Engine/fonts (Fira Sans, Anton, Poppins, Inter, JetBrains Mono), /kit/ = Engine/kit (kit HTML standar),
+  /assets/ = Projects/<nama>/assets (mis. /assets/gen/<id>.mp4 dari npm run gen).
   Tidak ada yang dimuat dari internet.
 - Sebelum halaman jalan disisipkan: window.__TIMING__ (scene & kata dari voice over), window.__BRAND__,
   window.__RENDER__ = true. Halaman dibuka dengan ?render sehingga menunggu seek.
@@ -26,9 +27,11 @@ _os.environ["PATH"] = _os.pathsep.join([_os.path.expanduser("~/.local/share/cont
 
 
 import argparse
+import os
 import io
 import functools
 import http.server
+import urllib.parse
 import json
 import subprocess
 import sys
@@ -48,6 +51,39 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    # Range (206) agar <video> bisa di-seek: tanpa ini Chromium tidak bisa mencari posisi di mp4 dan klip tertahan di frame 0.
+    def send_head(self):
+        rng = self.headers.get("Range", "")
+        path = self.translate_path(self.path)
+        if not rng.startswith("bytes=") or not os.path.isfile(path):
+            return super().send_head()
+        size = os.path.getsize(path)
+        a, _, b = rng[6:].split(",")[0].strip().partition("-")
+        try:
+            start, end = (int(a), int(b) if b else size - 1) if a else (max(0, size - int(b)), size - 1)
+        except ValueError:
+            return super().send_head()
+        if start >= size or start > end:
+            self.send_response(416)
+            self.send_header("Content-Range", f"bytes */{size}")
+            self.end_headers()
+            return None
+        end = min(end, size - 1)
+        with open(path, "rb") as f:
+            f.seek(start)
+            data = f.read(end - start + 1)
+        self.send_response(206)
+        self.send_header("Content-Type", self.guess_type(path))
+        self.send_header("Accept-Ranges", "bytes")
+        self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.send_header("Content-Length", str(end - start + 1))
+        self.end_headers()
+        return io.BytesIO(data)
+
+    def end_headers(self):
+        self.send_header("Accept-Ranges", "bytes")
+        super().end_headers()
+
     def translate_path(self, p):
         p = p.split("?", 1)[0].split("#", 1)[0]
         if p.startswith("/vendor/"):
@@ -56,6 +92,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return str(ENGINE / "fonts" / p[len("/fonts/") :])
         if p.startswith("/kit/"):
             return str(ENGINE / "kit" / p[len("/kit/") :])
+        if p.startswith("/assets/"):
+            # aset proyek (Projects/<nama>/assets/, mis. hasil npm run gen di /assets/gen/) tanpa menyalin ke html/
+            base = (Path(self.directory).resolve().parent / "assets").resolve()
+            f = (base / urllib.parse.unquote(p[len("/assets/") :])).resolve()
+            return str(f) if f.is_relative_to(base) else str(base / "__tidak_ada__")
         return super().translate_path(p)
 
 
@@ -72,6 +113,15 @@ def serve(root):
     return srv
 
 
+# seek -> tunggu <video> di halaman selesai mencari frame (mis. klip /assets/gen/*.mp4 yang di-seek dari window.seek)
+# -> satu rAF agar frame tergambar. Video gagal dimuat tidak ditunggu; batas 5 dtk per frame.
+SEEK_JS = """t => Promise.resolve(window.seek(t)).then(() => Promise.all([...document.querySelectorAll('video')].map(v =>
+  (v.seeking || (v.readyState < 2 && !v.error && v.networkState !== 3 && v.currentSrc)) ? new Promise(r => {
+    const done = () => r(true); v.addEventListener('seeked', done, { once: true }); v.addEventListener('loadeddata', done, { once: true });
+    v.addEventListener('error', done, { once: true }); setTimeout(done, 5000); }) : true)))
+  .then(() => new Promise(r => requestAnimationFrame(() => r(true))))"""
+
+
 def open_page(p, a, inj, errors, gpu):
     b = p.chromium.launch(args=["--no-sandbox", *([] if gpu else SOFT_GL)])
     page = b.new_page(viewport={"width": W, "height": H}, device_scale_factor=1)
@@ -83,7 +133,7 @@ def open_page(p, a, inj, errors, gpu):
     page.goto(a.url, wait_until="load")
     page.wait_for_function("typeof window.seek === 'function'", timeout=60000, polling=100)  # timer, bukan rAF (rAF bisa macet saat GPU sibuk)
     page.evaluate("document.fonts ? document.fonts.ready.then(() => true) : true")
-    seek = lambda t: page.evaluate("t => Promise.resolve(window.seek(t)).then(() => new Promise(r => requestAnimationFrame(() => r(true))))", t)
+    seek = lambda t: page.evaluate(SEEK_JS, t)
     return b, page, seek
 
 

@@ -71,10 +71,13 @@ Style dicari di `Styles/<slug>/style.json` (workspace, mis. hasil analisis video
 | `card` | hasil / manfaat | `kicker`, `title`, `sub`, `icon`, `at` |
 | `phone` | CTA follow (HP berisi klip pembicara) | `at`, `followAt` |
 | `image` | tangkapan layar/foto asli pengguna | `file` (relatif ke folder proyek, mis. `assets/layar.png`), `at`, `slot` |
+| `clip` | B-roll video (mis. klip AI dari `npm run gen`) | `file` (mis. `assets/gen/meja.mp4`), `at`, `until`, `from` (detik awal di klip), `fit: full` (cutaway layar penuh, bawaan) / `card` (di kartu), `slot` |
 
 **Aturan isi** (dicek): teks `keyword`/`big`/`chips`/`annotate` = kata yang diucapkan di kalimat itu (`"label": true`
 hanya untuk label UI). Isi kartu UI (`doc`, `chat`, `prompt`, `file`, `card`) boleh berupa ringkasan, tanpa klaim baru.
 Ikon alat memakai ikon generik, bukan logo resmi. Satu fokus per kalimat; maks 2-3 objek bersamaan.
+`clip` tanpa suara (suara tetap dari footage); waktu tampil dipotong ke panjang klip (peringatan). `fit: full` menutup
+A-roll/panel B-roll tetapi di bawah PiP, objek lain, dan subtitle. Klip AI yang tampak nyata = label konten AI saat posting.
 
 **Penempatan** (otomatis, sadar konteks): A-roll `slot: side` = sisi berlawanan dengan wajah/gerak tangan, di bawah
 dagu; `center` = di bawah wajah bila muat sebelum zona subtitle, selain itu di atas wajah; bila tidak ada ruang, cek

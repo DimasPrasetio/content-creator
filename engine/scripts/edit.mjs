@@ -15,6 +15,7 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { DIRS, ENGINE, P, ROOT, archiveResult, bps, deepMerge, duration, encodeFor, normTokens, readJson, resolveName, run, writeLayout } from "./lib.mjs";
 
@@ -235,7 +236,7 @@ if (has("analyze")) {
 }
 
 // ---------------------------------------------------------------- 2. validasi rencana
-const TYPES = ["keyword", "big", "chips", "annotate", "brackets", "doc", "chat", "prompt", "file", "card", "phone", "image"];
+const TYPES = ["keyword", "big", "chips", "annotate", "brackets", "doc", "chat", "prompt", "file", "card", "phone", "image", "clip"];
 const infos = plan.sources.map((_, i) => readJson(srcInfo(i), null));
 if (infos.some((x) => !x) || !plan.sentences?.length) throw new Error(`Jalankan dulu: npm run edit -- ${name} --analyze`);
 const srcWords = plan.sources.map((_, i) => readJson(path.join(edir, `src${i + 1}.words.json`)).words.map((w) => ({ ...w, w: fix(w.w) })));
@@ -275,6 +276,10 @@ for (const s of kept) {
     }
     if (o.type === "annotate" && (analysis[s.src].faceRate ?? 0) < 0.5) warn(`${tag}: wajah jarang terdeteksi, anotasi mungkin meleset`);
     if (o.type === "image" && !existsSync(path.resolve(paths.dir, o.file ?? ""))) err(`${tag}: gambar tidak ada: ${o.file}`);
+    if (o.type === "clip") {
+      if (!existsSync(path.resolve(paths.dir, o.file ?? ""))) err(`${tag}: klip tidak ada: ${o.file} (buat dengan npm run gen, atau taruh di assets/)`);
+      if (o.fit && !["full", "card"].includes(o.fit)) err(`${tag}: fit harus full | card`);
+    }
   }
 }
 
@@ -538,13 +543,28 @@ for (const { s, words, start } of scenes) {
     const sub = (arr) => (arr ?? []).map((x) => ({ ...x, at: resolveAt(s.id, x.at, at) }));
     // gambar milik proyek (assets/...) disalin ke public/ agar bisa disajikan ke komposisi
     let src = o.src;
+    let end = Math.max(until, at + 12);
     if (o.type === "image" && o.file) {
       const dst = path.join(ENGINE, "public", "media", "edit", `${name}-${s.id}-${k}${path.extname(o.file)}`);
       mkdirSync(path.dirname(dst), { recursive: true });
       copyFileSync(path.resolve(paths.dir, o.file), dst);
       src = `media/edit/${path.basename(dst)}`;
     }
-    objects.push({ ...o, ...(src ? { src } : {}), sid: s.id, mode, k, at, until: Math.max(until, at + 12), side: o.side ?? side, face: fm,
+    // klip (mis. B-roll AI dari npm run gen): diseragamkan 30 fps tanpa suara; full = 1080x1920 cover, card = lebar 832
+    if (o.type === "clip" && o.file) {
+      const srcFile = path.resolve(paths.dir, o.file);
+      const dst = path.join(ENGINE, "public", "media", "edit", `${name}-${s.id}-${k}.mp4`);
+      mkdirSync(path.dirname(dst), { recursive: true });
+      const vf = (o.fit ?? "full") === "full" ? "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920" : "scale=832:-2";
+      run("ffmpeg", ["-v", "error", "-y", "-ss", String(o.from ?? 0), "-i", srcFile, "-an", "-vf", `${vf},fps=${FPS},format=yuv420p`, "-c:v", "libx264", "-crf", "16", "-preset", "veryfast", dst]);
+      src = `media/edit/${path.basename(dst)}`;
+      const len = Math.floor(duration(dst) * FPS);
+      if (end - at > len) {
+        warn(`${s.id}: klip ${o.file} hanya ${(len / FPS).toFixed(1)} dtk, tampil dipendekkan dari ${((end - at) / FPS).toFixed(1)} dtk`);
+        end = at + len;
+      }
+    }
+    objects.push({ ...o, ...(src ? { src } : {}), sid: s.id, mode, k, at, until: end, side: o.side ?? side, face: fm,
       ...(o.items ? { items: sub(o.items) } : {}), ...(o.rows ? { rows: sub(o.rows) } : {}), ...(o.bubbles ? { bubbles: sub(o.bubbles) } : {}),
       ...(o.titleAt ? { titleAt: resolveAt(s.id, o.titleAt, at) } : {}) });
   });
@@ -595,7 +615,7 @@ for (const v of visuals.filter((x) => x.mode === "broll")) {
 }
 // layar diam: rentang > 2 dtk tanpa potongan, objek baru, atau pergantian visual
 const typing = objects.filter((o) => o.type === "prompt").flatMap((o) => Array.from({ length: Math.max(0, Math.floor((o.until - o.at) / FPS)) }, (_, i) => o.at + i * FPS));
-const events = [...typing, ...cuts.map((c) => c.f0), ...objects.map((o) => o.at), ...objects.flatMap((o) => [...(o.items ?? []), ...(o.rows ?? []), ...(o.bubbles ?? [])].map((x) => x.at)), ...visuals.map((v) => v.f0)].sort((a, b) => a - b);
+const events = [...typing, ...cuts.map((c) => c.f0), ...objects.map((o) => o.at), ...objects.filter((o) => o.type === "clip").flatMap((o) => Array.from({ length: Math.floor((o.until - o.at) / FPS) }, (_, i) => o.at + (i + 1) * FPS)), ...objects.flatMap((o) => [...(o.items ?? []), ...(o.rows ?? []), ...(o.bubbles ?? [])].map((x) => x.at)), ...visuals.map((v) => v.f0)].sort((a, b) => a - b);
 let lastEv = 0;
 for (const e of [...events, totalFrames]) { if (e - lastEv > 2.2 * FPS) warn(`layar tanpa perubahan ${((e - lastEv) / FPS).toFixed(1)} dtk (${(lastEv / FPS).toFixed(1)}-${(e / FPS).toFixed(1)})`); lastEv = Math.max(lastEv, e); }
 
@@ -676,7 +696,12 @@ if (startAt <= 3) {
   mkdirSync(paths.resultDir, { recursive: true });
   archiveResult(name);
   let last = -1;
-  await renderMedia({ composition, serveUrl, inputProps, codec: "h264", crf: e.crf, x264Preset: e.preset,
+  // Memori: A-roll + klip B-roll didekode compositor (OffthreadVideo). Cache bawaan Remotion bisa memakan separuh RAM dan
+  // tiap tab Chromium ±300-500 MB, jadi di mesin kecil (< 7 GB, mis. VPS 4 GB) konkurensi & cache dibatasi agar tidak SIGKILL.
+  const memGB = os.totalmem() / 2 ** 30;
+  const memOpts = { offthreadVideoCacheSizeInBytes: Math.round(Math.min(1024, (memGB * 1024) / 8)) * 2 ** 20,
+    ...(memGB < 7 ? { concurrency: memGB < 5 ? 1 : 2 } : {}) };
+  await renderMedia({ composition, serveUrl, inputProps, ...memOpts, codec: "h264", crf: e.crf, x264Preset: e.preset,
     ...(e.maxrate ? { encodingMaxRate: String(e.maxrate), encodingBufferSize: String(e.bufsize) } : {}),
     pixelFormat: "yuv420p", audioCodec: "aac", audioBitrate: String(e.audioBitrate), outputLocation: paths.result,
     onProgress: ({ progress }) => { const p = Math.floor(progress * 10) * 10; if (p !== last) { last = p; process.stdout.write(`\rRender ${p}%`); } } });

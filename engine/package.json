@@ -18,6 +18,7 @@
     "posting": "node scripts/posting.mjs",
     "sfxkit": "node scripts/eleven_audio.mjs sfx",
     "music": "node scripts/eleven_audio.mjs music",
+    "gen": "node scripts/gen.mjs",
     "export": "node scripts/export.mjs",
     "selftest": "node scripts/selftest.mjs",
     "drive": "node scripts/drive.mjs",

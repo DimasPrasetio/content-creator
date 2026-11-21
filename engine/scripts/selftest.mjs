@@ -6,7 +6,7 @@
 //                                   jalur API sungguhan; hanya setelah pengguna setuju
 //   --keep                          proyek uji tidak dihapus (untuk diperiksa)
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DIRS, ENGINE, P, ROOT, mg4Skill, run } from "./lib.mjs";
 
@@ -124,7 +124,9 @@ const NE = "00000000-02-selftest-edit";
 const pe = P(NE);
 const cleanEdit = () => {
   for (const d of [pe.dir, pe.work, pe.resultDir]) rmSync(d, { recursive: true, force: true });
-  for (const f of [path.join(ENGINE, "public", "audio", `${NE}.wav`), path.join(ENGINE, "public", "media", "edit", `${NE}.mp4`)]) rmSync(f, { force: true });
+  rmSync(path.join(ENGINE, "public", "audio", `${NE}.wav`), { force: true });
+  const md = path.join(ENGINE, "public", "media", "edit");
+  if (existsSync(md)) for (const f of readdirSync(md)) if (f.startsWith(NE)) rmSync(path.join(md, f), { force: true });
 };
 cleanEdit();
 const raw = path.join(ENGINE, "work", "_edit-sample");
@@ -133,6 +135,13 @@ run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=1080x1920:r
 copyFileSync(SAMPLE_AUDIO.replace(/\.mp3$/, ".align.json"), path.join(raw, "footage.words.json"));
 npm("edit: proyek baru (style narration)", "edit", [NE, "--new", "--style=narration", `--input=${path.join(raw, "footage.mp4")}`, "--force"]);
 npm("edit: normalisasi + analisis konteks", "edit", [NE, "--analyze"]);
+// aset AI (Higgsfield) lewat CLI tiruan: perkiraan biaya, batas kredit, unduh, cache -> klip penuh di kalimat ketiga
+process.env.HIGGSFIELD_BIN = path.join(ENGINE, "scripts", "stub", "higgsfield.mjs");
+mkdirSync(pe.dir, { recursive: true });
+writeFileSync(path.join(pe.dir, "gen.json"), JSON.stringify({ budget: 40, items: [{ id: "klip", kind: "video", prompt: "slow dolly-in, empty desk, no text", aspect_ratio: "9:16", duration: 3 }] }));
+npm("gen: aset Higgsfield (CLI tiruan, tanpa kredit)", "gen", [NE, "--yes"]);
+rows.push({ langkah: "gen: klip tersimpan", hasil: existsSync(path.join(pe.assets, "gen", "klip.mp4")) ? "LULUS" : "GAGAL", detik: 0, catatan: "assets/gen/klip.mp4 + manifest" });
+delete process.env.HIGGSFIELD_BIN;
 const ej = path.join(pe.dir, "edit.json");
 if (existsSync(ej)) {
   const plan = JSON.parse(readFileSync(ej, "utf8"));
@@ -140,7 +149,7 @@ if (existsSync(ej)) {
   if (a) Object.assign(a, { intent: "hook", objects: [{ type: "keyword", kicker: "bikin video", keyword: "gampang", at: "gampang" }] });
   if (b) Object.assign(b, { intent: "langkah", mode: "broll", objects: [{ type: "keyword", kicker: "mulai dari", keyword: "naskah", at: "naskah" },
     { type: "doc", title: "alur.docx", at: "naskah", rows: [{ label: "Naskah", at: "naskah" }, { label: "Suara", at: "suara" }, { label: "Visual", at: "visual" }] }] });
-  if (c) Object.assign(c, { intent: "hasil", punch: "strong", objects: [{ type: "chips", items: [{ text: "dicek otomatis", icon: "check", at: "dicek" }] }, { type: "card", kicker: "hasil", title: "siap diunggah", at: "diunggah" }] });
+  if (c) Object.assign(c, { intent: "hasil", punch: "strong", objects: [{ type: "clip", file: "assets/gen/klip.mp4", at: "start" }, { type: "chips", items: [{ text: "dicek otomatis", icon: "check", at: "dicek" }] }, { type: "card", kicker: "hasil", title: "siap diunggah", at: "diunggah" }] });
   writeFileSync(ej, JSON.stringify(plan, null, 2));
 }
 npm("edit: potong + grading + grafis + render + QA", "edit", [NE]);

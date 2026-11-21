@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
 # content-creator · pasang / perbarui workspace di komputer ini (macOS atau Linux), termasuk SEMUA komponen pendukung.
 #
-#   bash bin/setup.sh [WORKSPACE] [--with-whisper] [--skip-browsers]
+#   bash bin/setup.sh [WORKSPACE] [--with-whisper] [--skip-browsers] [--with-higgsfield-mcp]
 #
 # Yang dipasang otomatis bila belum ada (tanpa langkah manual):
 #   Node.js 22, ffmpeg (libx264), uv + Python 3.12, rclone, dependensi npm & Python, Chromium (Playwright + Remotion),
-#   library sistem Chromium (Linux), OpenCV (deteksi wajah untuk edit footage). Sinkron kata memakai timestamps ElevenLabs, jadi model transkripsi tidak wajib.
+#   library sistem Chromium (Linux), OpenCV (deteksi wajah untuk edit footage), CLI Higgsfield (aset AI, npm run gen). Sinkron kata memakai timestamps ElevenLabs, jadi model transkripsi tidak wajib.
 # --with-whisper: tambahan opsional faster-whisper + model large-v3-turbo (±1,8 GB) untuk QA kejelasan kata gratis,
 #   sinkron offline, dan VoiceStudio. Sekali dipasang, setup berikutnya ikut memperbaruinya.
+# --with-higgsfield-mcp: tambahan opsional server MCP Higgsfield (https://mcp.higgsfield.ai/mcp) untuk Claude Code
+#   (scope user), agar Higgsfield juga bisa dipakai langsung dari obrolan. Login lewat /mcp. Butuh paket Higgsfield.
 # Cara memasang: Homebrew (macOS, bila ada) · apt (Linux, bila root / sudo tanpa password) · selain itu unduhan resmi
 #   ke folder pengguna ~/.local/share/content-creator/tools (tanpa sudo; checksum diverifikasi bila tersedia).
 # Aman dijalankan berulang (mis. setelah plugin diperbarui): mesin di <WORKSPACE>/Engine diganti versi plugin, tetapi
@@ -22,13 +24,15 @@ TOOLS="$HOME/.local/share/content-creator/tools"
 TB="$TOOLS/bin"
 WITH_WHISPER=0
 SKIP_BROWSERS=0
+WITH_HF_MCP=0
 WS=""
 for a in "$@"; do
   case "$a" in
     --with-whisper) WITH_WHISPER=1 ;;
     --skip-model) ;; # lama: model kini opsional (--with-whisper)
     --skip-browsers) SKIP_BROWSERS=1 ;;
-    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
+    --with-higgsfield-mcp) WITH_HF_MCP=1 ;;
+    -h|--help) sed -n '2,18p' "$0"; exit 0 ;;
     *) WS="$a" ;;
   esac
 done
@@ -123,6 +127,40 @@ if ! has rclone; then
 fi
 has rclone && ok "rclone $(rclone version | sed -n 1p | cut -d' ' -f2)"
 
+# CLI Higgsfield (aset AI: npm run gen). Versi & checksum dipatok di sini; dipasang sebagai `higgsfield` di folder alat
+# (tanpa alias `hf` agar tidak bentrok dengan CLI Hugging Face). CLI milik pengguna di tempat lain dibiarkan.
+HF_VER=1.2.3
+hf_sum() {
+  case "$1" in
+    darwin_amd64) echo c97c702127ed74381bd24eafdc8cf0b917d9c4a1ed1d512483a7676dd1d3fd2a ;;
+    darwin_arm64) echo 613d83b9288abdec08b85e0da984df62faf550e391976c7fe4468d5aa34daeae ;;
+    linux_amd64) echo 0ed594ae42646d494b9eaeec4359211f6cfd653ce4f790aa4ca6a48c1a431529 ;;
+    linux_arm64) echo efa302d6d189b81d98d09884830f6b0f89cab7a8c07117825b758d2cc6b49259 ;;
+  esac
+}
+HF_CUR="$(higgsfield version 2>/dev/null | awk '{print $2}' || true)"
+if [ -z "$HF_CUR" ] || { [ "$HF_CUR" != "$HF_VER" ] && [ "$(command -v higgsfield)" = "$TB/higgsfield" ]; }; then
+  HOS=$([ "$OS" = Darwin ] && echo darwin || echo linux)
+  HF_TGZ="hf_${HF_VER}_${HOS}_${ARCH2}.tar.gz"
+  info "mengunduh CLI Higgsfield $HF_VER (github.com/higgsfield-ai/cli)"
+  if fetch "https://github.com/higgsfield-ai/cli/releases/download/v$HF_VER/$HF_TGZ" "$TMPD/hf.tgz" \
+    && [ "$(sha256 "$TMPD/hf.tgz")" = "$(hf_sum "${HOS}_$ARCH2")" ]; then
+    mkdir -p "$TMPD/hf" && tar -xzf "$TMPD/hf.tgz" -C "$TMPD/hf" && install -m 0755 "$TMPD/hf/hf" "$TB/higgsfield"
+    [ "$OS" = Darwin ] && xattr -d com.apple.quarantine "$TB/higgsfield" 2>/dev/null || true
+  else
+    info "CLI Higgsfield gagal dipasang / checksum tidak cocok (opsional, hanya untuk aset AI)"
+  fi
+fi
+has higgsfield && ok "higgsfield $(higgsfield version 2>/dev/null | awk '{print $2}') (aset AI; login sekali: higgsfield auth login)"
+
+# MCP Higgsfield untuk Claude Code (opsional, --with-higgsfield-mcp)
+if [ "$WITH_HF_MCP" = 1 ]; then
+  if ! has claude; then info "MCP Higgsfield dilewati: perintah claude tidak ditemukan"
+  elif claude mcp get higgsfield >/dev/null 2>&1; then ok "MCP Higgsfield sudah terdaftar (login lewat /mcp di Claude Code)"
+  elif claude mcp add --transport http --scope user higgsfield https://mcp.higgsfield.ai/mcp >/dev/null 2>&1; then ok "MCP Higgsfield didaftarkan (scope user); login lewat /mcp di Claude Code"
+  else info "MCP Higgsfield gagal didaftarkan; jalankan manual: claude mcp add --transport http --scope user higgsfield https://mcp.higgsfield.ai/mcp"; fi
+fi
+
 say "2/8 Workspace: $WS"
 mkdir -p "$WS"/{Projects,Brands,References,Result,Styles}
 copy_once() { [ -e "$WS/$1" ] || { mkdir -p "$(dirname "$WS/$1")"; cp "$PLUGIN_ROOT/template/$1" "$WS/$1"; ok "dibuat $1"; }; }
@@ -201,5 +239,7 @@ Komponen terpasang. Yang tersisa hanya AKUN milik Anda (panduan lengkap: $PLUGIN
   3. Google Drive (opsional): rclone config create gdrive drive scope=drive root_folder_id=<ID folder>
                               lalu isi drive.rootFolderId di $WS/Engine/config.local.json
   4. Uji semua jalur:        cd "$WS/Engine" && npm run selftest
+  5. Higgsfield (opsional, aset AI berbayar kredit): higgsfield auth login      (login di browser, sekali)
+     MCP di Claude Code (opsional): jalankan setup dengan --with-higgsfield-mcp, lalu /mcp untuk login
 Lalu buka Claude Code di mana saja dan ketik: /content-creator <ide video>
 EOF

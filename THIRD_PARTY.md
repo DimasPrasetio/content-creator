@@ -13,6 +13,7 @@
 |---|---|---|
 | Skill `motion-graphics-v4` (Anthropic) | jalur B | Tidak didistribusikan di repo ini. Bila terpasang (mis. `~/.claude/skills/motion-graphics-v4`), mesin mendeteksinya otomatis. |
 | Skill `pop-cinematic-motion` (Anthropic) | arahan seni jalur A | Opsional. Pustaka & komposisi Pop di `engine/src/pop` ditulis sendiri dan sudah ikut. |
+| CLI Higgsfield (`higgsfield`), https://github.com/higgsfield-ai/cli (MIT) | aset AI (`npm run gen`) | Diunduh setup dari rilis resmi GitHub (versi & SHA-256 dipatok), dipasang ke `~/.local/share/content-creator/tools/bin`. Pemakaian layanan mengikuti ketentuan & kredit akun Higgsfield Anda. |
 
 ## Dependensi dengan ketentuan sendiri
 - **Remotion** (render komposisi Video/Pop) memakai [Remotion License](https://www.remotion.dev/license): gratis untuk individu

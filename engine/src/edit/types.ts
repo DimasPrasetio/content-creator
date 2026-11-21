@@ -37,6 +37,8 @@ export type EObj = {
   followAt?: number;
   maxBubbles?: number;
   src?: string;
+  /** klip: full (cutaway 1080x1920) | card (di kartu) */
+  fit?: string;
   items?: EAt[];
   rows?: { at: number; label: string; value?: string | string[] }[];
   bubbles?: { at: number; side: string; text?: string; file?: string; icon?: string }[];

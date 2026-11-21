@@ -124,5 +124,17 @@ try {
   fail(`browser render: ${e.message}`);
 }
 
+// Higgsfield (opsional, aset AI lewat npm run gen): informasi saja, tidak pernah menggagalkan
+{
+  const hfm = await import("./higgsfield.mjs");
+  const v = hfm.version();
+  if (!v) console.log("  -    CLI Higgsfield tidak terpasang (opsional, aset AI): jalankan ulang /content-creator:setup");
+  else {
+    const a = hfm.account();
+    if (a.ok) ok(`Higgsfield CLI ${v} (${a.email ?? "akun"}${a.plan ? `, paket ${a.plan}` : ""}${Number.isFinite(a.credits) ? `, ${a.credits} kredit` : ""}) · aset AI: npm run gen`);
+    else console.log(`  -    Higgsfield CLI ${v} belum login (opsional, aset AI): higgsfield auth login`);
+  }
+}
+
 console.log(bad ? `\n${bad} masalah ditemukan.` : "\nSemua siap. Pipeline bisa dipakai.");
 process.exit(bad ? 1 : 0);

@@ -90,6 +90,10 @@ dengan rekomendasi di opsi pertama "(Rekomendasi)". Tanyakan hanya cabang yang b
 9. **Batasan & fakta** — klaim/angka yang boleh beserta sumbernya, kata wajib/terlarang, ejaan nama khusus, tenggat.
 10. **Tempat posting & musik** — Reels/TikTok saja, atau juga feed (4:5) / YouTube (16:9)? Subtitle ditanam atau
     file SRT saja? Musik sintetis (gratis, default) atau musik ElevenLabs (lebih natural, memakai kredit)?
+11. **Aset AI (opsional, Higgsfield)** — hanya bila `npm run check` menunjukkan Higgsfield sudah login dan visualnya
+    benar-benar butuh gambar/klip yang tidak bisa dibuat kode (suasana sinematik, B-roll benda/tempat, latar thumbnail).
+    Usulkan daftar aset konkret (3-6 item: apa, di scene mana), perkiraan kredit dari `npm run gen -- <nama> --estimate`
+    bila naskah sudah ada (atau dari harga model), dan minta **batas kredit** (`budget`). Tanpa persetujuan batas → tanpa aset AI.
 
 Gali kata kabur ("viral", "keren", "profesional") menjadi contoh konkret. "Terserah" → pakai rekomendasimu dan catat
 sebagai asumsi. **Brand baru yang akan dipakai berulang** → tawarkan sesi singkat `brand-intake` (tahap 2e).
@@ -243,7 +247,8 @@ Semua perintah dari `<workspace>/Engine/`.
      dari waktu (tanpa `Math.random`, rAF, transisi CSS), menunggu seek bila URL `?render`; **waktu beat diambil dari
      `window.__TIMING__.scenes[i].start/end` dan `words[k].s/e`** (detik, dari voice over) agar animasi tepat saat kata
      diucapkan; tidak memuat apa pun dari internet — pustaka lewat `/vendor/<paket npm>/...` (mis.
-     `/vendor/three/build/three.module.js`), aset di `html/` atau `Projects/<nama>/assets/`; **semua teks & brand
+     `/vendor/three/build/three.module.js`), aset di `html/` atau `Projects/<nama>/assets/` (dilayani di `/assets/...`,
+     mis. hasil Higgsfield `/assets/gen/<id>.mp4`; video di halaman wajib di-seek dari `window.seek`, tanpa autoplay); **semua teks & brand
      di zona aman TikTok x 60-940 · y 220-1440** (kit standar sudah menatanya). Brand pojok ditempel otomatis; bila halaman menggambar brand sendiri, set `"brandOverlay": false`.
      Ekspor memakai `npm run html` (bukan HyperFrames; jangan memasang paket lain tanpa izin pengguna). Storyboard:
      `{"composition":"html","skill":"<skill>","brand":{...},"scenes":[{"music":"full","sfx":[...]}, ...]}`.
@@ -318,10 +323,36 @@ Format rencana, daftar objek, dan aturannya: `Engine/styles/README.md` (baca dul
    - `mode`: `aroll` untuk opini/emosi/penekanan, `broll` untuk langkah/proses/alat/kutipan panjang, `dim` untuk penutup;
      jaga porsi B-roll sesuai style;
    - objek: teks penekanan = kata yang diucapkan, muncul tepat pada katanya; satu fokus per kalimat; `why` = alasan.
+   - B-roll klip AI (opsional, bila batas kredit disepakati): `Projects/<nama>/gen.json` → `npm run gen` (bagian
+     "Aset AI" di bawah), lalu objek `clip` (`file: "assets/gen/<id>.mp4"`, `fit: full` cutaway atau `card`).
 5. `npm run edit -- <nama> --draft` → perbaiki semua **ERROR** (mis. objek menutup wajah → ganti slot atau jadikan
    `broll`; kata tidak diucapkan → ganti teks), pertimbangkan peringatan, **lihat sendiri** `preview/board.png`.
 6. `npm run edit -- <nama>` → render + QA (grading dikalibrasi otomatis dan dilaporkan terhadap target). Lalu
    `posting/caption.md` + `posting/thumbnail.json` → `npm run posting -- <nama>`. Drive hanya setelah disetujui.
+
+## Aset AI dengan Higgsfield (opsional, memakai kredit Higgsfield)
+
+Lewat CLI resmi `higgsfield` (dipasang setup). Login sekali per komputer oleh **pengguna sendiri** di terminal:
+`higgsfield auth login` (OAuth di browser; jangan pernah meminta kode atau token di obrolan). Paket "unlimited"
+Higgsfield tidak berlaku untuk pemakaian otomatis: setiap generate memotong kredit. MCP Higgsfield (opsional,
+`setup --with-higgsfield-mcp` lalu `/mcp`) hanya untuk eksplorasi langsung di obrolan; produksi selalu lewat `npm run gen`
+agar biaya dicek, dibatasi, di-cache, dan tercatat.
+
+1. `npm run gen -- --status` (akun, paket, kredit) · `npm run gen -- --models [--video|--image|--audio]`.
+2. Tulis `Projects/<nama>/gen.json` **setelah voice** (durasi klip mengikuti kalimatnya):
+   `{"budget": <kredit disepakati>, "items": [{"id": "meja", "kind": "video", "prompt": "...", "aspect_ratio": "9:16",
+   "duration": 5, "image": "assets/foto.png", "use": "scene 3, cutaway"}]}`. `kind` = image | video | audio; `model`
+   opsional (bawaan `config.json` → `higgsfield.models`); media (`image`, `start_image`, `end_image`, `video`, `audio`,
+   `*_references`) = path di proyek atau UUID; parameter lain di `params`.
+   Prompt: satu subjek, gerak kamera jelas, **tanpa teks/huruf/logo** (teks layar selalu dari mesin kita), tanpa orang
+   nyata/tokoh terkenal, tanpa wajah yang bisa disangka testimoni asli.
+3. `npm run gen -- <nama> --estimate` (gratis) → `npm run gen -- <nama> --yes`. Berhenti otomatis bila total + yang sudah
+   terpakai melewati `budget` atau melebihi kredit akun. Hasil: `assets/gen/<id>.<ext>` + `assets/gen/manifest.json`
+   (job, kredit, ukuran); dijalankan lagi = cache (tanpa kredit). `--only=id`, `--force` untuk membuat ulang.
+4. Pakai: **edit footage** objek `clip`; **jalur C** `<video src="/assets/gen/<id>.mp4">` / `<img>` (di-seek dari waktu);
+   **jalur A** `staticFile` setelah disalin ke `Engine/public/media/`; **thumbnail** `"visual": {"image": "assets/gen/<id>.png"}`.
+5. Posting: klip/gambar AI yang tampak nyata **wajib diberi label konten AI** saat unggah (TikTok/Instagram); catat di
+   laporan akhir dan di `brief.md` aset AI mana yang dipakai beserta kreditnya.
 
 ## Revisi setelah serah terima
 
@@ -380,3 +411,5 @@ lokasi file (peta folder di atas), ekspor `npm run html`, brand pojok, dan voice
 - Tidak mengubah naskah setelah voice over dibuat tanpa menjalankan `voice` lagi.
 - Tidak menyerahkan video yang belum lewat preview dan QA.
 - Tidak membuat visual di luar tiga jalur tanpa keputusan tegas pengguna.
+- Tidak memakai kredit Higgsfield tanpa batas kredit yang disepakati di grill-me, dan tidak meminta kode/token login.
+- Tidak membuat aset AI berisi orang nyata, testimoni palsu, atau teks/angka (teks layar selalu dari mesin).

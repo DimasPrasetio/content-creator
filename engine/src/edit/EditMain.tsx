@@ -1,7 +1,7 @@
 // Komposisi "Edit": footage hasil potong (A-roll) + grafis style (narration) + subtitle karaoke.
 // Semua waktu sudah diselesaikan scripts/edit.mjs ke frame; komponen di sini hanya menggambar sebagai fungsi frame.
 import React, { useEffect, useState } from "react";
-import { AbsoluteFill, Audio, OffthreadVideo, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, OffthreadVideo, Sequence, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { LayoutProbe } from "../probe/LayoutProbe";
 import type { EditProps, EObj, Face } from "./types";
 
@@ -288,10 +288,34 @@ const ImageCard: React.FC<{ o: EObj; c: Ctx; box: Box }> = ({ o, c, box }) => (
   </Card>
 );
 
+// klip di kartu (fit: card): video tanpa suara mulai tepat pada katanya
+const ClipCard: React.FC<{ o: EObj; c: Ctx; box: Box }> = ({ o, c, box }) => (
+  <Card c={c} box={box} at={o.at} until={o.until} pad={14}>
+    <div style={{ borderRadius: 24, overflow: "hidden", lineHeight: 0 }}>
+      <Sequence from={o.at} durationInFrames={Math.max(1, o.until - o.at)} layout="none">
+        <OffthreadVideo src={staticFile(o.src ?? "")} muted style={{ width: "100%", display: "block" }} />
+      </Sequence>
+    </div>
+  </Card>
+);
+
+// klip penuh (fit: full, bawaan): cutaway 1080x1920 di atas A-roll / panel B-roll, di bawah PiP, objek, dan subtitle
+const ClipFull: React.FC<{ o: EObj; c: Ctx }> = ({ o, c }) => {
+  const op = interpolate(c.frame, [o.at, o.at + 6, o.until - 6, o.until], [0, 1, 1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  return (
+    <AbsoluteFill data-probe="ignore" style={{ opacity: op }}>
+      <Sequence from={o.at} durationInFrames={Math.max(1, o.until - o.at)} layout="none">
+        <OffthreadVideo src={staticFile(o.src ?? "")} muted style={{ width: 1080, height: 1920, objectFit: "cover" }} />
+      </Sequence>
+      <AbsoluteFill style={{ background: "linear-gradient(180deg, rgba(0,0,0,.28) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 58%, rgba(0,0,0,.55) 82%)" }} />
+    </AbsoluteFill>
+  );
+};
+
 // ---------------------------------------------------------------- tata letak slot (zona aman TikTok: x 60-940, y 220-1440)
 type Box = { x: number; y: number; w: number; h?: number; center?: boolean; right?: boolean };
 const slotBox = (o: EObj, broll: boolean, hasPip: boolean): Box => {
-  const big = ["doc", "chat", "phone", "image"].includes(o.type);
+  const big = ["doc", "chat", "phone", "image", "clip"].includes(o.type);
   if (o.box) return o.box;
   const slot = o.slot ?? (o.type === "keyword" || o.type === "big" ? "top" : broll ? "center" : "side");
   if (broll) {
@@ -353,6 +377,7 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
   const pipOn = broll && (edit.style.broll?.pip ?? null) !== null && edit.face.some(Boolean);
   const bg = edit.style.broll?.background ?? {};
   const live = edit.objects.filter((o) => (broll ? o.mode === "broll" : o.mode !== "broll") && vis(frame, o.at - 30, o.until + 1) && frame >= Math.min(o.at, o.kickerAt ?? o.at, o.titleAt ?? o.at, ...(o.items ?? []).map((i) => i.at)) - 16);
+  const fulls = edit.objects.filter((o) => o.type === "clip" && (o.fit ?? "full") === "full" && frame >= o.at && frame < o.until);
   const sub = edit.subs.find((s) => frame >= s.f0 && frame < s.f1);
   const ST = edit.style.type?.subtitle ?? {};
   return (
@@ -365,12 +390,14 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
       {broll ? (
         <AbsoluteFill style={{ background: `radial-gradient(ellipse 75% 60% at 50% 45%, ${bg.center ?? "#0D2E29"} 0%, ${bg.edge ?? "#0B2320"} 100%)` }}>
           <AbsoluteFill data-probe="ignore" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,${bg.dots?.opacity ?? 0.05}) 1.6px, transparent 1.8px)`, backgroundSize: `${bg.dots?.spacing ?? 22}px ${bg.dots?.spacing ?? 22}px` }} />
-          {pipOn ? (
-            <div style={{ position: "absolute", left: 66, top: 250, width: 320, height: 320, borderRadius: "50%", boxShadow: `0 0 0 ${edit.style.broll?.pip?.ring?.width ?? 6}px ${edit.style.broll?.pip?.ring?.color ?? "#fff"}, 0 20px 50px rgba(0,0,0,.45)` }}>
-              <Speaker c={c} w={320} h={320} round />
-            </div>
-          ) : null}
         </AbsoluteFill>
+      ) : null}
+      {/* klip penuh (cutaway) */}
+      {fulls.map((o) => <ClipFull key={`${o.sid}-${o.k}`} o={o} c={c} />)}
+      {pipOn ? (
+        <div style={{ position: "absolute", left: 66, top: 250, width: 320, height: 320, borderRadius: "50%", boxShadow: `0 0 0 ${edit.style.broll?.pip?.ring?.width ?? 6}px ${edit.style.broll?.pip?.ring?.color ?? "#fff"}, 0 20px 50px rgba(0,0,0,.45)` }}>
+          <Speaker c={c} w={320} h={320} round />
+        </div>
       ) : null}
       {/* objek */}
       {live.map((o) => {
@@ -388,6 +415,7 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
           case "card": return <ResultCard key={key} o={o} c={c} box={box} />;
           case "phone": return <PhoneCTA key={key} o={o} c={c} box={box} />;
           case "image": return <ImageCard key={key} o={o} c={c} box={box} />;
+          case "clip": return (o.fit ?? "full") === "card" ? <ClipCard key={key} o={o} c={c} box={box} /> : null;
           default: return null;
         }
       })}

@@ -32,14 +32,19 @@ Docs and prompts are in Indonesian.*
 - **Ukuran file wajar**: encode *capped CRF* (±30-60 MB per menit untuk video bergrain, jauh lebih kecil untuk video
   bersih); `npm run compress` untuk mengecilkan hasil lama atau mencapai ukuran target.
 - **Hasil per brand**: `Result/<brand>/<nama>/` dan, setelah disetujui, salinan ke Google Drive (rclone).
+- **Aset AI Higgsfield (opsional)**: gambar & klip B-roll dari model Higgsfield (Seedance, GPT Image, ...) lewat CLI resmi
+  yang dipasang setup (`npm run gen`): perkiraan kredit gratis, batas kredit per proyek, cache, manifest. Dipakai sebagai
+  klip cutaway di edit footage, aset jalur C, dan latar thumbnail. MCP Higgsfield untuk Claude Code opsional
+  (`--with-higgsfield-mcp`).
 
 ## Kebutuhan
 - [Claude Code](https://claude.com/claude-code), macOS (dengan [Homebrew](https://brew.sh)) atau Linux (Ubuntu/Debian; root atau sudo tanpa password paling mulus)
 - 4 CPU, RAM 8 GB+, disk kosong ±4 GB (+1,8 GB bila memakai whisper); GPU tidak perlu
 - **Semua komponen pendukung dipasang otomatis oleh setup**: Node.js, ffmpeg, uv + Python 3.12, rclone, paket npm/Python,
-  Chromium, library sistem Chromium (Linux). Tidak ada model besar yang wajib diunduh.
+  Chromium, library sistem Chromium (Linux), CLI Higgsfield. Tidak ada model besar yang wajib diunduh.
 - Yang Anda siapkan sendiri hanya **akun**: ElevenLabs (wajib; voice Voice Library butuh paket berbayar), Google
-  Drive (opsional), dan skill Anthropic `motion-graphics-v4` (opsional, jalur B).
+  Drive (opsional), Higgsfield (opsional, paket berbayar untuk aset AI), dan skill Anthropic `motion-graphics-v4`
+  (opsional, jalur B).
 
 Panduan lengkap, termasuk pola tim: **[docs/SETUP.md](docs/SETUP.md)**
 

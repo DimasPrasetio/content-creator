@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.6.0
+- **Aset AI Higgsfield** (`npm run gen`): gambar, klip video, dan audio dari model Higgsfield lewat CLI resmi
+  `higgsfield` (OAuth `higgsfield auth login`, tanpa API key di workspace). `Projects/<nama>/gen.json` → perkiraan kredit
+  gratis (`--estimate`), generate hanya dengan `--yes`, berhenti bila melewati `budget` proyek atau kredit akun, cache per
+  hash (model + prompt + parameter + isi media), hasil `assets/gen/<id>.<ext>` + `manifest.json` (job, kredit, ukuran),
+  peringatan bila bukan 9:16 dan pengingat label konten AI. `--status`, `--models`.
+- Setup memasang CLI Higgsfield 1.2.3 (rilis GitHub, SHA-256 dipatok; tanpa alias `hf`). Opsi `--with-higgsfield-mcp`
+  mendaftarkan MCP Higgsfield (`https://mcp.higgsfield.ai/mcp`, scope user) untuk Claude Code. `npm run check` menampilkan
+  status login, paket, dan kredit (informasi saja).
+- Edit footage: objek **`clip`** (B-roll video, mis. klip AI): `fit: full` cutaway layar penuh di bawah PiP/objek/subtitle,
+  atau `fit: card`; ditranskode 30 fps tanpa suara, waktu tampil dipotong ke panjang klip.
+- Jalur C: server render melayani `Projects/<nama>/assets/` di `/assets/...` dan mendukung HTTP Range, jadi `<video>` di
+  halaman bisa di-seek frame-tepat; render menunggu setiap video selesai mencari frame.
+- Render edit footage menyesuaikan RAM: cache OffthreadVideo maks 1 GB (≤ RAM/8), konkurensi 1-2 di mesin < 7 GB
+  (sebelumnya compositor bisa SIGKILL di VPS 4 GB saat ada dua sumber video).
+- Skill: cabang grill-me "Aset AI" (batas kredit disepakati di awal), bagian "Aset AI dengan Higgsfield", larangan
+  (tanpa batas kredit, orang nyata, testimoni palsu, teks di prompt). Selftest menguji `gen` + `clip` dengan CLI tiruan.
+
 ## 0.5.1
 - **Cek istilah sebelum voice** (`npm run istilah -- <nama>`): setiap singkatan di narasi (IPO, AOL, SOP, ...) wajib
   punya cara baca di kamus `pronounce` (plugin < `config.local.json` < profil brand). Tanpa itu `voice` berhenti

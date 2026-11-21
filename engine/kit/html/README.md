@@ -57,6 +57,12 @@ Zona visual = SVG 1080×1000 (isi x 60–1020, y 0–950), ditampilkan diskalaka
 y = 316 + 0,9·y). `cue(s, "kata", n)` mencocokkan awalan kata
 (tanpa tanda baca), `n` = kemunculan ke-n.
 
+## Aset proyek & aset AI
+Server render melayani `Projects/<nama>/assets/` di `/assets/...`: foto/tangkapan layar pengguna dan hasil Higgsfield
+(`npm run gen` → `/assets/gen/<id>.png|mp4`). Video wajib dikendalikan waktu: `muted`, tanpa `autoplay`, dan di setiap
+`seek(t)` set `video.currentTime = t - mulai` (render menunggu frame siap). Jangan menaruh teks di dalam prompt AI;
+teks selalu dari kit.
+
 ## Dasar
 `D(tag, attrs, t0, dur, {fill, dims, dash})` garis tergambar · `A(el, t0, "fade"|"pop", o)` · `TX(x, y, teks, attrs, t0, kind, o)` ·
 `el(tag, attrs)` · `rr(x,y,w,h,r)` · `start(s, d)` awal scene · `at(s, f)` titik f (0-1) sepanjang scene · `col(nama|hex)` · `tint(warna, alpha)` · `o.dims: [[detik, opasitas]]`.
