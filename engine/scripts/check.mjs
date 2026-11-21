@@ -84,8 +84,8 @@ if (provider === "elevenlabs") {
 }
 
 try {
-  run(path.join(ENGINE, ".venv", "bin", "python"), ["-c", "import resemblyzer, scipy, soundfile"]);
-  ok("venv analisis audio (resemblyzer, scipy)");
+  run(path.join(ENGINE, ".venv", "bin", "python"), ["-c", "import resemblyzer, scipy, soundfile, sklearn"]);
+  ok("venv analisis audio & pembicara (resemblyzer, scipy, scikit-learn)");
 } catch {
   fail("venv analisis audio belum siap", "lihat Engine/README.md bagian Persiapan");
 }

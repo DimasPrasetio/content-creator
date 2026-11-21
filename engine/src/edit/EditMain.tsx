@@ -1,7 +1,7 @@
 // Komposisi "Edit": footage hasil potong (A-roll) + grafis style (narration) + subtitle karaoke.
 // Semua waktu sudah diselesaikan scripts/edit.mjs ke frame; komponen di sini hanya menggambar sebagai fungsi frame.
 import React, { useEffect, useMemo, useState } from "react";
-import { AbsoluteFill, Audio, OffthreadVideo, Sequence, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, Easing, OffthreadVideo, Sequence, continueRender, delayRender, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { LayoutProbe } from "../probe/LayoutProbe";
 import type { EditCanvas, EditProps, EObj, Face } from "./types";
 
@@ -479,6 +479,22 @@ export const EditMain: React.FC<EditProps> = ({ timing, edit, layoutCheck }) => 
           <span>{edit.brand.left}</span><span>{edit.brand.right}</span>
         </div>
       ) : null}
+      {/* nama pembicara (podcast): kiri bawah, di atas zona subtitle */}
+      {(edit.names ?? []).filter((n) => frame >= n.f0 && frame < n.f1).map((n) => {
+        const d = frame - n.f0, left = n.f1 - frame;
+        const op = interpolate(Math.min(d, left), [0, 10], [0, 1], { extrapolateRight: "clamp" });
+        const dx = interpolate(d, [0, 14], [-40, 0], { extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
+        const x = nine ? 80 : cv.safe.l + 24, bottom = cv.h - (cv.subY ?? cv.safe.b - 160) + (nine ? 40 : 24);
+        return (
+          <div key={n.f0} style={{ position: "absolute", left: x, bottom, opacity: op, transform: `translateX(${dx}px)`, display: "flex", alignItems: "stretch", gap: 0, maxWidth: nine ? 900 : Math.round(cv.w * 0.5) }}>
+            <div style={{ width: 8, borderRadius: 4, background: p.teal ?? "#2fb6a0" }} />
+            <div style={{ padding: "12px 24px 14px 20px", background: "rgba(10,14,14,.72)", borderRadius: "0 12px 12px 0" }}>
+              <div style={{ fontFamily: HEAD, fontWeight: 800, fontSize: nine ? 46 : 40, lineHeight: 1.1, color: "#fff" }}>{n.name}</div>
+              {n.title ? <div style={{ fontFamily: HEAD, fontWeight: 500, fontSize: nine ? 30 : 26, lineHeight: 1.25, color: "rgba(255,255,255,.78)", marginTop: 4 }}>{n.title}</div> : null}
+            </div>
+          </div>
+        );
+      })}
       {/* bab (opsional) */}
       {(() => {
         const ch = (edit.chapters ?? []).filter((x) => x.f0 <= frame).at(-1);

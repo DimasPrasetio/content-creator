@@ -1,0 +1,232 @@
+{
+  "_doc": "Style bawaan plugin 'Siniar' (podcast/wawancara, v0.9): episode utuh yang rapi, kamera selalu pada orang yang bicara (tahan minimal 2,5 dtk), nama pembicara sebagai lower-third, jeda alami antar-giliran, grading netral, subtitle tidak ditanam (SRT untuk YouTube). Klip pendeknya memakai style lain (bawaan: ngobrol). Rincian: STYLE.md.",
+  "name": "siniar",
+  "title": "Siniar",
+  "aliases": [
+    "podcast",
+    "wawancara"
+  ],
+  "kind": "edit",
+  "jalur": "edit",
+  "canvas": {
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "safeZone": "youtube"
+  },
+  "pace": {
+    "targetWordsPerSec": 2.6,
+    "maxGapSec": 0.45,
+    "keepGapSec": [
+      0.06,
+      0.12
+    ],
+    "sentenceGapSec": 0.25,
+    "minShotSec": 2.5,
+    "minTurnSec": 1.0,
+    "maxStillSec": 30,
+    "dropFillers": [
+      "eh",
+      "em",
+      "emm",
+      "hmm"
+    ],
+    "duration": [
+      120,
+      7200
+    ]
+  },
+  "aroll": {
+    "framing": "medium-close-up",
+    "punchIn": {
+      "scales": [
+        1.0,
+        1.0,
+        1.1
+      ],
+      "everyCut": false
+    },
+    "floatingObjects": true
+  },
+  "broll": {
+    "share": [
+      0,
+      0.15
+    ],
+    "lengthSec": [
+      1.5,
+      10
+    ],
+    "background": {
+      "type": "radial",
+      "center": "#1A1F22",
+      "edge": "#101315",
+      "dots": {
+        "color": "#FFFFFF",
+        "opacity": 0.04,
+        "spacing": 22
+      }
+    },
+    "pip": {
+      "shape": "circle",
+      "size": 340,
+      "ring": {
+        "color": "#FFFFFF",
+        "width": 6
+      },
+      "position": "top-left"
+    },
+    "objects": [
+      "doc-card",
+      "phone-chat",
+      "prompt-card",
+      "file-bubble",
+      "skill-card",
+      "chip-list"
+    ],
+    "transition": "cut",
+    "closingTransition": {
+      "type": "dim-tint",
+      "dim": 0.5,
+      "tint": "#0B2320"
+    }
+  },
+  "type": {
+    "fonts": {
+      "head": "Poppins",
+      "hand": "Caveat",
+      "body": "Poppins"
+    },
+    "kicker": {
+      "font": "hand",
+      "color": "#FFFFFFD9",
+      "size": 60
+    },
+    "title": {
+      "font": "head",
+      "weight": 700,
+      "color": "#FFFFFF",
+      "size": 66
+    },
+    "keyword": {
+      "font": "head",
+      "weight": 900,
+      "upper": true,
+      "color": "#3A2A0E",
+      "box": "#F1ECE3",
+      "size": 110,
+      "radius": 10,
+      "enter": "wipe-blur"
+    },
+    "bigword": {
+      "font": "head",
+      "weight": 900,
+      "upper": true,
+      "color": "#FFFFFF",
+      "size": 180,
+      "enter": "pop"
+    },
+    "chip": {
+      "font": "head",
+      "weight": 600,
+      "color": "#1A1A1A",
+      "box": "#F1ECE3",
+      "icon": "#B97F1E",
+      "size": 44
+    },
+    "subtitle": {
+      "font": "head",
+      "weight": 700,
+      "color": "#FFFFFF",
+      "shadow": "#000000B3",
+      "active": {
+        "color": "#E0A33A",
+        "stroke": "#FFFFFF"
+      },
+      "size": 60,
+      "wordsPerChunk": [
+        2,
+        5
+      ],
+      "zoneY": [
+        1244,
+        1414
+      ],
+      "burn": false
+    }
+  },
+  "palette": {
+    "deep": "#14181A",
+    "teal": "#E0A33A",
+    "tealText": "#8A5A12",
+    "card": "#F1ECE3",
+    "white": "#FFFFFF",
+    "bg": "#1A1F22",
+    "bgEdge": "#101315"
+  },
+  "grade": {
+    "applyTo": "aroll",
+    "mode": "calibrate",
+    "targets": {
+      "lumaP1": 0.05,
+      "lumaP50": 0.36,
+      "lumaP99": 0.86,
+      "saturationScale": 0.95,
+      "whiteBalance": "neutral",
+      "vignette": 0.06
+    }
+  },
+  "audio": {
+    "lufs": -15,
+    "lra": [
+      5,
+      8
+    ],
+    "truePeak": -1.5,
+    "music": null,
+    "sfx": {
+      "transitions": false,
+      "objectPop": null
+    },
+    "voice": [
+      "denoise-light",
+      "deess"
+    ]
+  },
+  "fixed": [
+    "pace",
+    "broll.share",
+    "broll.lengthSec",
+    "type",
+    "palette",
+    "grade.targets",
+    "audio",
+    "canvas"
+  ],
+  "grammar": {
+    "default": "aroll: kamera pada pembicara (satu orang, tahan minimal 2,5 dtk)",
+    "intro": "aroll+nama pembicara (lower-third otomatis)",
+    "chapter": "bab label/kartu (opsional, disepakati)",
+    "data|tool": "objek ringan (keyword/chips/card) hanya bila menambah kejelasan",
+    "closing": "aroll"
+  },
+  "context": {
+    "transcript": "elevenlabs-scribe",
+    "glossary": "Projects/<nama>/glossary.json",
+    "face": "per-frame box+landmarks",
+    "motion": "hand-motion mask",
+    "perClipGrade": true,
+    "retakes": "similar-sentence detection",
+    "plan": "Projects/<nama>/edit.json (per kalimat: maksud, keputusan, visual, kata kunci, alasan)",
+    "speakers": "diarize per kata (Scribe / resemblyzer) + kursi wajah + gerak mulut"
+  },
+  "names": true,
+  "clips": {
+    "style": "ngobrol",
+    "format": "9:16",
+    "lengthSec": [
+      30,
+      60
+    ]
+  }
+}

@@ -197,16 +197,16 @@ say "5/8 Python 3.12 + paket analisis audio, motion graphics, HTML"
 HF_HUB="${HF_HUB_CACHE:-${HF_HOME:-$HOME/.cache/huggingface}/hub}"
 [ -d "$HF_HUB/models--deepdml--faster-whisper-large-v3-turbo-ct2/snapshots" ] && WITH_WHISPER=1
 WH_PKG=""; [ "$WITH_WHISPER" = 1 ] && WH_PKG="faster-whisper==1.2.1"
-PYREQ="v4|$WH_PKG numpy soundfile scipy librosa webrtcvad-wheels setuptools<81 playwright pillow opencv-python-headless|resemblyzer"
+PYREQ="v4|$WH_PKG numpy soundfile scipy scikit-learn librosa webrtcvad-wheels setuptools<81 playwright pillow opencv-python-headless|resemblyzer"
 if [ -x .venv/bin/python ] && [ "$(cat .deps-py 2>/dev/null)" = "$PYREQ" ]; then ok "sudah terpasang"; else
   [ -x .venv/bin/python ] || uv venv .venv --python 3.12 --python-preference only-managed -q
   # Linux tanpa GPU: PyTorch versi CPU (±200 MB, bukan CUDA ±2,5 GB)
   if [ "$OS" = Linux ]; then uv pip install -q --python .venv/bin/python torch --index-url https://download.pytorch.org/whl/cpu; else uv pip install -q --python .venv/bin/python torch; fi
   # webrtcvad-wheels = webrtcvad siap pakai (tanpa compiler); resemblyzer dipasang tanpa menarik webrtcvad versi source
   # opencv-python-headless: deteksi wajah (model YuNet dibawa plugin, engine/models/) untuk mesin edit footage
-  uv pip install -q --python .venv/bin/python $WH_PKG numpy soundfile scipy librosa webrtcvad-wheels "setuptools<81" playwright pillow opencv-python-headless
+  uv pip install -q --python .venv/bin/python $WH_PKG numpy soundfile scipy scikit-learn librosa webrtcvad-wheels "setuptools<81" playwright pillow opencv-python-headless
   uv pip install -q --python .venv/bin/python --no-deps resemblyzer
-  .venv/bin/python -c "import resemblyzer, scipy, soundfile, PIL, playwright, cv2${WH_PKG:+, faster_whisper}; cv2.FaceDetectorYN" && echo "$PYREQ" > .deps-py && ok "terpasang${WH_PKG:+ (+ faster-whisper)}"
+  .venv/bin/python -c "import resemblyzer, scipy, sklearn, soundfile, PIL, playwright, cv2${WH_PKG:+, faster_whisper}; cv2.FaceDetectorYN" && echo "$PYREQ" > .deps-py && ok "terpasang${WH_PKG:+ (+ faster-whisper)}"
 fi
 
 say "6/8 Browser render (Chromium Playwright + Chrome Headless Remotion)"

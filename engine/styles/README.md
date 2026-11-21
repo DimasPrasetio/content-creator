@@ -12,11 +12,19 @@ npm run edit -- <nama> --analyze     # normalisasi, transkrip per kata, wajah/ge
 npm run edit -- <nama> --draft       # validasi -> potong + grading terkalibrasi + suara -> preview tiap kalimat + cek
 npm run edit -- <nama>               # ... + render akhir + QA (+ posting bila caption.md ada)
 npm run edit -- <nama> --from=cut|sound|preview|render
+# podcast / wawancara 2-4 orang (style siniar, 16:9):
+npm run edit -- <nama> --new --style=siniar --speakers=2 --input=lebar.mp4[,kamA.mp4,kamB.mp4] [--multicam --audio-src=1]
+npm run edit -- <nama> --analyze --estimate   # perkiraan menit Speech to Text (gratis), lalu --analyze
+# klip pendek 9:16 dari proyek yang sudah --analyze:
+npm run clips -- <nama> [--min=30 --max=60]   # klip/kandidat.md -> agent menulis klip.json (3-5 usulan)
+npm run clips -- <nama> --check               # tabel untuk dipilih pengguna
+npm run clips -- <nama> --make=k1,k3 [--render]   # proyek anak <nama>-k1 ... (footage induk sebagian, tanpa kredit)
 ```
 
 Style dicari di `Styles/<slug>/style.json` (workspace, mis. hasil analisis video referensi pengguna) lalu
 `Engine/styles/<slug>/style.json` (bawaan plugin), digabung dalam. Bawaan: `ngobrol` (dulu `narration`, nama lama tetap dikenali
-lewat `aliases`) dan `komik` (animasi Pop).
+lewat `aliases`), `siniar` (podcast/wawancara 16:9: warna netral, tanpa subtitle tertanam, nama pembicara, kamera pada
+yang bicara) dan `komik` (animasi Pop).
 
 ## Alur pemahaman konteks
 1. **Isi**: transkrip per kata (ElevenLabs Scribe; atau sidecar `<footage>.words.json` = `[{w,s,e}]`, tanpa kredit) →
@@ -63,6 +71,39 @@ lewat `aliases`) dan `komik` (animasi Pop).
 - `chapter` (opsional): judul bab di kalimat pertama bab itu (bab di kalimat yang dibuang pindah ke kalimat terpakai
   berikutnya). `bab` di akar: `tanpa` (bawaan) · `label` (chip judul bab ±2,5 dtk) · `kartu` (kartu judul ±1,6 dtk).
   Video 16:9 dengan bab yang memenuhi syarat YouTube → timestamp otomatis di deskripsi.
+
+### Podcast / multi-pembicara (v0.9)
+```json
+{
+  "style": "siniar", "multicam": true, "audio": 1, "wide": 1,
+  "sources": [{ "file": "assets/raw/01-lebar.mp4", "offset": 0 }, { "file": "assets/raw/02-kamA.mp4", "offset": 1.3, "syncScore": 1 }],
+  "speakers": [
+    { "id": "A", "name": "Rina", "title": "Pembawa acara", "cam": 2,
+      "auto": { "cam": 2, "wide": 1, "seat": 1, "skor": { "cam": 0.8, "seat": 0.7 } } },
+    { "id": "B", "name": "Budi", "title": "Tamu", "seat": 2, "wide": 1 }
+  ],
+  "sentences": [{ "id": "s1", "src": 0, "t": [0.1, 3.3], "spk": "A", "speaker": "A", "…": "…" }]
+}
+```
+- `--speakers=N` (2-4) membuat `speakers` A-D; `--analyze` mengisi `spk` per kalimat (kalimat dipecah saat pembicara
+  berganti) dan `auto` (tebakan dari gerak mulut; `skor` 0-1). `speaker` di kalimat = koreksi agent.
+- Tampilan pembicara (nomor footage/kursi mulai 1): `box` [x, y, w, h] 0-1 (+ `boxSrc`) > `cam` (kamera dekat) >
+  `seat` di rekaman lebar (`wide`) > `auto.cam` > `auto.seat`. Kursi = posisi orang di rekaman lebar (kiri → kanan);
+  potongan dekat dari rekaman lebar maks ±2,4x.
+- `multicam: true`: semua footage merekam momen yang sama; `audio` = footage yang suaranya dipakai, `sources[].offset`
+  = waktu master − waktu kamera (dihitung otomatis dari suara, `--resync` mengulang). Bagian kalimat di luar rekaman
+  kamera pilihan memakai footage suara.
+- `lowerThird: false` per pembicara atau `"names": false` di akar mematikan nama; `"subtitle": true|false` di akar
+  menimpa subtitle style; `"duration": [min, maks]` menimpa rentang durasi style.
+- Pace style: `minShotSec` (bidikan minimal sebelum pindah, kecuali giliran baru ≥ itu), `minTurnSec` (giliran
+  minimal agar kamera pindah), `sentenceGapSec` (hening alami sebelum kalimat), `maxStillSec` (batas layar tanpa perubahan).
+
+### Klip (proyek anak)
+`clips --make` menulis proyek anak dengan `"parent"`, `"clip": {id, title, hook, why}`, `"duration"`, dan
+`sources[].range: [a, b]` (detik footage induk) + `from: {project, src}` (transkrip induk dipakai ulang, tanpa kredit).
+Pembicara (nama, kamera) disalin dari induk. `klip.json` di induk: `{style, format, lengthSec, clips: [{id, title, hook,
+why, from, to}]}` (`from`/`to` = id kalimat induk).
+
 - Waktu objek: `at` / `until` = kata di kalimat itu (`"gratis"`, atau `{"word":"ke","n":2}`), angka detik dari awal
   kalimat, `"start"`, `"end"`. Elemen muncul 0,12 dtk sebelum katanya.
 

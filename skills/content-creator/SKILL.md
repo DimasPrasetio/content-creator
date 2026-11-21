@@ -1,6 +1,6 @@
 ---
 name: content-creator
-description: Agent content-creator otomatis — dari ide sampai MP4 siap upload: vertikal 1080×1920 (Reels/TikTok), feed 4:5/1:1, atau YouTube 16:9 pendek maupun panjang (2-20 menit, bab opsional, thumbnail & deskripsi YouTube). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, rekaman bicara). Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
+description: Agent content-creator otomatis — dari ide sampai MP4 siap upload: vertikal 1080×1920 (Reels/TikTok), feed 4:5/1:1, atau YouTube 16:9 pendek maupun panjang (2-20 menit, bab opsional, thumbnail & deskripsi YouTube). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, podcast/wawancara 2-4 orang dengan satu kamera lebar atau beberapa kamera) dan memotong klip pendek 9:16 otomatis dari video panjang. Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
 argument-hint: "[ide atau topik video]"
 ---
 
@@ -16,7 +16,8 @@ Prinsip:
    kontennya sendiri, dan memilih suara dari audio yang didengarnya, bukan dari deskripsi.
 2. **Bertanya hanya di penyamaan persepsi.** Topik, hook, CTA, brand pojok, gaya, voice, musik, dan perkiraan kredit
    disepakati di awal (tahap 1-3). Setelah itu naskah → voice → visual → SFX → render → QA → posting berjalan **otomatis
-   tanpa izin atau pertanyaan tambahan**; satu-satunya titik tanya berikutnya adalah **sebelum unggah Google Drive**.
+   tanpa izin atau pertanyaan tambahan**; titik tanya berikutnya hanya **sebelum unggah Google Drive** (dan, bila klip
+   pendek disepakati, **memilih klip** dari usulan setelah analisis footage).
 3. **Satu brand = satu suara.** Voice, model, pengaturan, dan seed yang sama di semua video brand itu.
 4. **Style = rasa, brand = identitas.** Style (`Styles/<slug>/`, bawaan `Engine/styles/<slug>/`) menentukan jalur, tata
    letak, huruf, peran warna, gerak, subtitle, musik, aturan edit. Brand menentukan nama, brand pojok, logo/watermark,
@@ -64,8 +65,13 @@ Yang sudah didukung sekarang (sampaikan jujur saat grill-me):
 - **Durasi** 20 dtk sampai ±20 mnt; video panjang biasanya 16:9 untuk YouTube, dengan **bab opsional** (tanpa / label /
   kartu), thumbnail YouTube 1280×720, dan deskripsi YouTube (timestamp bab otomatis bila memenuhi syarat YouTube).
 - Edit footage **talking-head satu orang**, vertikal atau horizontal.
-Belum: podcast multi-pembicara, rekaman layar, vlog/montase, klip pendek otomatis dari video panjang (rencana v0.9;
-lihat `docs/ROADMAP.md` plugin). Permintaan di luar itu → tawarkan cara terdekat yang sudah bisa, jangan berjanji.
+- **Podcast / wawancara 2-4 orang** (style Siniar, 16:9): satu kamera lebar, kamera per orang, atau rekaman online
+  (Zoom/Meet, satu file). Episode penuh: jeda mati dan salah ucap dibuang, kamera selalu pada orang yang bicara
+  (tanpa layar terbagi), nama pembicara (lower-third), bab opsional. Bagian "Mode podcast" di bawah.
+- **Klip pendek otomatis** (30-60 dtk, 9:16) dari video panjang apa pun yang sudah diedit/dianalisis: AI mengusulkan
+  3-5 klip, pengguna memilih. Bagian "Klip pendek" di bawah.
+Belum: rekaman layar/tutorial, vlog/montase (rencana v0.10), podcast lebih dari 4 orang. Permintaan di luar itu →
+tawarkan cara terdekat yang sudah bisa, jangan berjanji.
 
 ## Mode: lengkap atau cepat
 
@@ -94,7 +100,7 @@ dengan rekomendasi di opsi pertama "(Rekomendasi)". Tanyakan hanya cabang yang b
 Urutan hulu ke hilir: **jenis pekerjaan → format → style → brand → sisanya**. Keputusan hulu mengubah cabang hilir.
 
 1. **Jenis pekerjaan** — video baru dari ide, atau edit footage milik pengguna (bagian sebelumnya)? Footage: jenisnya
-   (talking-head, podcast, rekaman layar, vlog) dan file-nya.
+   (talking-head, podcast, rekaman layar, vlog) dan file-nya. Podcast → cabang tambahan di "Mode podcast".
 2. **Format** — tempat posting utama menentukan **kanvas asli** (Reels/TikTok/Shorts 9:16, feed 4:5 atau 1:1, YouTube
    16:9; format lain = ekspor dari kanvas utama), durasi (default 30-45 dtk, ±2,5 kata/dtk; video panjang 2-20 mnt),
    subtitle ditanam atau file SRT saja. **Bab** ditanyakan per video, jangan diasumsikan (banyak video tidak butuh bab):
@@ -396,6 +402,47 @@ Format rencana, daftar objek, dan aturannya: `Engine/styles/README.md` (baca dul
    `broll`; kata tidak diucapkan → ganti teks), pertimbangkan peringatan, **lihat sendiri** `preview/board.png`.
 6. `npm run edit -- <nama>` → render + QA (grading dikalibrasi otomatis dan dilaporkan terhadap target). Lalu
    `posting/caption.md` + `posting/thumbnail.json` → `npm run posting -- <nama>`. Drive hanya setelah disetujui.
+
+## Mode podcast / wawancara (2-4 orang)
+
+Mesin edit yang sama dengan style **Siniar** (`siniar`, 16:9, warna netral, tanpa subtitle tertanam, tanpa SFX). Isi
+`edit.json` per kalimat tetap seperti "Mode edit footage"; yang berbeda:
+
+1. **Grill-me podcast** (bersama cabang lain, tetap satu sesi): jumlah orang (2-4) · **nama + jabatan** tiap orang
+   untuk lower-third (atau tanpa nama) · bentuk rekaman: **satu kamera lebar** (semua orang di satu frame), **kamera per
+   orang** (beberapa file + file mana yang suaranya paling bersih), atau **rekaman online** (satu file) · bab (bawaan
+   tanpa) · **klip pendek** dari episode ini (ya/tidak, berapa) · style (bawaan Siniar; episode 9:16 hanya bila diminta).
+2. `npm run edit -- <nama> --new --style=siniar --speakers=<2-4> --input=<lebar.mp4>[,<kamA.mp4>,...] [--multicam --audio-src=<N>]`
+   (`--multicam` bila beberapa kamera merekam momen yang sama; `--audio-src` = nomor footage dengan suara terbaik,
+   bawaan 1). Lalu **perkiraan kuota** `npm run edit -- <nama> --analyze --estimate` (gratis: menit audio untuk Speech
+   to Text ElevenLabs; sebut di ringkasan grill-me) → `npm run edit -- <nama> --analyze`.
+   - Transkrip membawa pembicara per kata (Scribe diarize); bila tidak, cadangan lokal (sidik suara, tanpa kredit).
+   - Multikamera: kamera disinkronkan otomatis dari suara (`sources[].offset`, skor di konteks.md; `--resync` untuk mengulang).
+   - Posisi tiap orang di rekaman lebar (kursi) dan pasangan pembicara ↔ kamera/kursi ditebak dari gerak mulut.
+3. **Baca `edit/konteks.md`** bagian Pembicara + lembar kontak. Tetapkan per pembicara di `edit.json` → `speakers`:
+   `name`, `title`, dan tampilan bila tebakan otomatis kosong/salah: `cam` (nomor footage kamera dekat) > `seat` (nomor
+   kursi di rekaman lebar, `wide` = nomor footage lebar) > `box` [x, y, w, h] 0-1 manual. Salah pembicara di satu kalimat
+   → `"speaker": "B"` di kalimat itu. Episode panjang: buang basa-basi/ambil ulang dengan `keep: false`, objek grafis
+   hanya seperlunya (style Siniar: porsi B-roll ≤ 15%).
+4. `--draft` → periksa board (kamera pada orang yang bicara, nama tidak menutup wajah) → render + QA → posting
+   (deskripsi YouTube dengan bab bila ada). Kamera pindah hanya bila giliran ≥ `pace.minTurnSec` dan bidikan sebelumnya
+   cukup lama (`pace.minShotSec`); sahutan pendek tidak memindah kamera.
+
+## Klip pendek dari video panjang
+
+Untuk proyek edit mana pun yang sudah `--analyze` (podcast, talking-head panjang). Klip = proyek edit anak
+`<nama>-<id>` (9:16, style klip bawaan Ngobrol: subtitle karaoke, kamera pada pembicara) yang memakai footage induk
+sebagian (tanpa salin, tanpa transkrip ulang, tanpa kredit).
+
+1. `npm run clips -- <nama>` → `Projects/<nama>/klip/kandidat.md` (jendela kalimat utuh 30-60 dtk berperingkat: pembuka
+   kuat, akhir tuntas, padat, angka, dialog). Baca bersama konteks.md, lalu tulis **3-5 usulan** di
+   `Projects/<nama>/klip.json` → `"clips": [{"id": "k1", "title", "hook", "why", "from": "s12", "to": "s19"}]`
+   (`from`/`to` = id kalimat; boleh menggeser batas kandidat agar hook ada di kalimat pertama).
+2. `npm run clips -- <nama> --check` lalu **satu-satunya pertanyaan tambahan setelah analisis**: `AskUserQuestion`
+   multiSelect berisi usulan (judul · hook · durasi · alasan), semua pilihan bawaan tercentang.
+3. `npm run clips -- <nama> --make=k1,k3` → isi objek/judul per kalimat anak bila perlu (`Projects/<nama>-k1/edit.json`)
+   → `npm run edit -- <nama>-k1` (atau `--make=... --render` langsung). Tiap klip mendapat `posting/caption.md` +
+   `thumbnail.json` sendiri → `npm run posting -- <nama>-k1`. Hasil di `Result/<brand>/<nama>-k1/`.
 
 ## Aset AI dengan Higgsfield (opsional, memakai kredit Higgsfield)
 

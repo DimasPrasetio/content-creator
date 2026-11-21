@@ -3,13 +3,18 @@
 //
 //   npm run edit -- <nama> --new --style=ngobrol --input=/path/a.mov[,b.mov] [--brand=<slug>]
 //        proyek baru: footage disalin ke Projects/<nama>/assets/raw/, dibuat Projects/<nama>/edit.json
-//   npm run edit -- <nama> --analyze
+//   npm run edit -- <nama> --analyze [--estimate]   (--estimate: hanya perkiraan menit Speech to Text, gratis)
 //        normalisasi (30 fps tetap, HDR->SDR, audio 48 kHz) + transkrip per kata (ElevenLabs Scribe) + analisis wajah,
 //        gerak, cahaya, noise -> Projects/<nama>/edit/konteks.md (dibaca agent) + kerangka "sentences" di edit.json
 //   (agent mengisi edit.json: keputusan per kalimat -> maksud, buang/A-roll/B-roll, objek visual, alasan)
 //   npm run edit -- <nama> --draft      validasi rencana -> potong + grading + audio -> preview tiap kalimat (+ cek)
 //   npm run edit -- <nama>              ... + render akhir -> Result/<brand>/<nama>/<nama>.mp4 + cek edit + QA (+ posting)
 //   --from=cut|sound|preview|render     mulai dari langkah tertentu (cache langkah sebelumnya dipakai)
+//
+// Podcast/wawancara (v0.9): --new ... --speakers=2..4 [--multicam [--audio-src=N]] -> transkrip dengan pembicara per kata
+// (Scribe diarize; cadangan lokal resemblyzer), posisi tiap orang di frame (YuNet + gerak mulut), sinkron kamera dari
+// suara, kamera selalu pada orang yang bicara (tahan minimal pace.minShotSec), nama pembicara (lower-third).
+// Klip pendek dari video panjang: npm run clips (scripts/clips.mjs) membuat proyek edit anak dengan sources[].range.
 //
 // Style: Styles/<slug>/style.json di workspace (hasil analisis referensi pengguna) > Engine/styles/<slug>/ (bawaan plugin).
 // Brand (--brand) hanya identitas: brand pojok & kamus; rasa video dari style.
@@ -45,7 +50,7 @@ const editStyle = (name) => {
 
 // ---------------------------------------------------------------- proyek baru
 if (has("new")) {
-  const style = editStyle(opt("style") ?? "ngobrol").slug;
+  const est = editStyle(opt("style") ?? "ngobrol"), style = est.slug;
   const inputs = (opt("input") ?? "").split(",").filter(Boolean);
   if (!inputs.length) throw new Error("--input=<footage.mp4>[,<footage2.mov>] wajib");
   const raw = path.join(paths.dir, "assets", "raw");
@@ -61,9 +66,19 @@ if (has("new")) {
   });
   if (existsSync(planFile) && !has("force")) throw new Error(`${path.relative(ROOT, planFile)} sudah ada (--force untuk menimpa)`);
   const brandSlug = opt("brand");
-  const format = normFormat(opt("format") ?? "9:16");
-  writeFileSync(planFile, JSON.stringify({ style, ...(format !== "9:16" ? { format } : {}), ...(brandSlug ? { profile: brandSlug } : {}), brand: { left: "", right: "" }, sources, glossary: {}, sentences: [] }, null, 2) + "\n");
-  console.log(`Proyek edit: ${path.relative(ROOT, paths.dir)}/ (style ${style}, ${sources.length} footage). Lanjut: npm run edit -- ${name} --analyze`);
+  // kanvas: --format, atau bawaan style (Siniar = 16:9), atau 9:16
+  const format = normFormat(opt("format") ?? (est.canvas?.width > est.canvas?.height ? "16:9" : "9:16"));
+  // podcast/wawancara: jumlah pembicara (2-4) dan kamera dari sesi yang sama (multicam: disinkron dari suara)
+  const nSpk = Number(opt("speakers") ?? 0);
+  if (nSpk && !(nSpk >= 2 && nSpk <= 4)) throw new Error("--speakers=2..4 (podcast/wawancara, maksimal 4 orang)");
+  const multicam = has("multicam");
+  if (multicam && sources.length < 2) throw new Error("--multicam butuh minimal 2 footage (kamera dari sesi rekaman yang sama)");
+  const audioSrc = Number(opt("audio-src") ?? 1);
+  if (multicam && !(audioSrc >= 1 && audioSrc <= sources.length)) throw new Error(`--audio-src=1..${sources.length} (footage yang suaranya dipakai)`);
+  writeFileSync(planFile, JSON.stringify({ style, ...(format !== "9:16" ? { format } : {}), ...(brandSlug ? { profile: brandSlug } : {}), brand: { left: "", right: "" },
+    ...(nSpk ? { speakers: Array.from({ length: nSpk }, (_, k) => ({ id: "ABCD"[k], name: "", title: "" })) } : {}),
+    ...(multicam ? { multicam: true, audio: audioSrc } : {}), sources, glossary: {}, sentences: [] }, null, 2) + "\n");
+  console.log(`Proyek edit: ${path.relative(ROOT, paths.dir)}/ (style ${style}, ${sources.length} footage${nSpk ? `, ${nSpk} pembicara` : ""}${multicam ? `, multikamera (suara src${audioSrc})` : ""}). Lanjut: npm run edit -- ${name} --analyze`);
   process.exit(0);
 }
 
@@ -74,6 +89,11 @@ const S = editStyle(plan.style ?? "ngobrol");
 const CV = FORMATS[normFormat(plan.format)], CW = CV.w, CH = CV.h, ASP = CW / CH, LAND = CW > CH, V916 = CV.format === "9:16";
 const SUB_Y0 = V916 ? S.type?.subtitle?.zoneY?.[0] ?? 1244 : CV.safe.b - (LAND ? 150 : 170);
 const pace = S.pace ?? {};
+// podcast (v0.9): pembicara, multikamera, sumber suara (nomor footage 1..n di edit.json, indeks 0.. di sini)
+const NSPK = plan.speakers?.length ?? 0, DIAR = NSPK >= 2;
+const MC = !!plan.multicam && plan.sources.length > 1;
+const AUD = MC ? Math.max(0, (plan.audio ?? 1) - 1) : -1;
+const PODPY = path.join(ENGINE, "scripts", "edit_podcast.py");
 
 // ---------------------------------------------------------------- 1. normalisasi + analisis
 const ffFilters = (() => { try { return run("ffmpeg", ["-hide_banner", "-filters"]); } catch { return ""; } })();
@@ -86,7 +106,9 @@ const normalize = (i) => {
   const src = path.join(paths.dir, plan.sources[i].file);
   if (!existsSync(src)) throw new Error(`Footage hilang: ${plan.sources[i].file}`);
   const st = statSync(src);
-  const key = sha([src, st.size, st.mtimeMs, 2, ...(V916 ? [] : [CV.format])]);
+  const R = plan.sources[i].range; // klip dari proyek induk: hanya rentang [a, b] detik
+  const key0 = [src, st.size, st.mtimeMs, 2, ...(V916 ? [] : [CV.format]), ...(R ? [R] : []), ...(DIAR ? ["keep"] : [])];
+  const key = sha(key0);
   const info = readJson(srcInfo(i), {});
   if (info.key === key && existsSync(srcNorm(i)) && existsSync(srcWav(i))) return info;
   const pr = probeJson(src);
@@ -98,9 +120,12 @@ const normalize = (i) => {
   // "vertical" = sumber sudah sebentuk kanvas (9:16: tinggi/lebar > 1,6; format lain: rasio selisih < 4%)
   const vertical = V916 ? h / w > 1.6 : Math.abs(w / h - ASP) / ASP < 0.04;
   // ukuran kerja: sebentuk kanvas -> ukuran kanvas (isi penuh); lainnya -> tinggi 1920 bila sumber >= 1440, selain itu 1080
-  const outH = vertical ? CH : h >= 1440 ? 1920 : 1080;
-  const outW = vertical ? CW : Math.round((w * outH) / h / 2) * 2;
-  const pre = [];
+  // podcast: sumber sebentuk kanvas yang lebih tajam dari kanvas disimpan tajam (maks 2160p) agar potongan dekat ke satu
+  // orang dari rekaman lebar tetap jernih
+  const keepRes = DIAR && vertical && h > CH;
+  const outH = keepRes ? Math.min(h, 2160) - (Math.min(h, 2160) % 2) : vertical ? CH : h >= 1440 ? 1920 : 1080;
+  const outW = keepRes ? Math.round((outH * ASP) / 2) * 2 : vertical ? CW : Math.round((w * outH) / h / 2) * 2;
+  const pre = R ? ["-ss", String(R[0]), "-to", String(R[1])] : [];
   const vf = [];
   let hdrHow = "";
   if (hdr) {
@@ -119,9 +144,9 @@ const normalize = (i) => {
   vf.push(`fps=${FPS}`, vertical ? `scale=${outW}:${outH}:force_original_aspect_ratio=increase,crop=${outW}:${outH}` : `scale=${outW}:${outH}`, "setsar=1", "format=yuv420p");
   process.stdout.write(`  normalisasi ${plan.sources[i].file} (${w}x${h}${hdr ? `, HDR -> SDR lewat ${hdrHow}` : ""}) ... `);
   run("ffmpeg", ["-v", "error", "-y", ...pre, "-i", src, "-map", "0:v:0", "-vf", vf.join(","), "-c:v", "libx264", "-preset", "veryfast", "-crf", "14", "-color_range", "tv", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-an", srcNorm(i)]);
-  run("ffmpeg", ["-v", "error", "-y", "-i", src, "-map", "0:a:0", "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", srcWav(i)]);
+  run("ffmpeg", ["-v", "error", "-y", ...(R ? ["-ss", String(R[0]), "-to", String(R[1])] : []), "-i", src, "-map", "0:a:0", "-ac", "1", "-ar", "48000", "-c:a", "pcm_s16le", srcWav(i)]);
   console.log("OK");
-  const out = { key, file: plan.sources[i].file, w: outW, h: outH, srcW: w, srcH: h, hdr, hdrHow, vertical, duration: duration(srcNorm(i)) };
+  const out = { key, file: plan.sources[i].file, w: outW, h: outH, srcW: w, srcH: h, hdr, hdrHow, vertical, duration: duration(srcNorm(i)), ...(R ? { range: R } : {}) };
   writeFileSync(srcInfo(i), JSON.stringify(out, null, 2));
   return out;
 };
@@ -137,6 +162,60 @@ const fix = (w) => {
   return g ? m[1] + g + m[3] : w;
 };
 
+/** Label pembicara mentah (speaker_0, S1, ...) -> A, B, C, D menurut kemunculan pertama; label A-Z dibiarkan (proyek induk/sidecar). */
+const relabel = (words) => {
+  const map = new Map();
+  for (const w of words) if (w.spk && !/^[A-Z]$/.test(w.spk) && !map.has(w.spk)) map.set(w.spk, null);
+  const used = new Set(words.map((w) => w.spk).filter((x) => /^[A-Z]$/.test(x ?? "")));
+  let k = 0;
+  for (const raw of map.keys()) { while (used.has("ABCDEFGHIJKLMNOPQRSTUVWXYZ"[k])) k++; map.set(raw, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"[k]); used.add(map.get(raw)); }
+  return words.map((w) => (w.spk && map.has(w.spk) ? { ...w, spk: map.get(w.spk) } : w));
+};
+
+/**
+ * Pasangkan pembicara dengan tampilan kamera dari gerak mulut: skor = rata-rata gerak mulut di kursi itu saat pembicara bicara
+ * dikurangi saat orang lain bicara. Kamera dekat (multikamera, satu wajah) dulu, lalu kursi di rekaman lebar.
+ */
+const assignViews = (analysisArr, wordsArr) => {
+  const score = (i, j, id) => {
+    const a = analysisArr[i], m = a?.seatMouth?.[j];
+    if (!m?.length) return 0;
+    const off = MC ? plan.sources[i].offset ?? 0 : 0;
+    const ws = MC ? wordsArr[AUD] : wordsArr[i];
+    let on = 0, nOn = 0, oth = 0, nOth = 0;
+    for (const w of ws) {
+      if (!w.spk) continue;
+      for (let t = w.s; t < w.e; t += 0.1) {
+        const k = Math.round((t - off) * a.fps);
+        if (k < 0 || k >= m.length) continue;
+        if (w.spk === id) (on += m[k]), nOn++;
+        else (oth += m[k]), nOth++;
+      }
+    }
+    return nOn ? on / nOn - (nOth ? oth / nOth : 0) : 0;
+  };
+  // pasangan terbaik (brute force, <= 4 pembicara): tiap slot paling banyak satu pembicara
+  const best = (ids, slots) => {
+    let top = { sum: -1e9, pick: [] };
+    const rec = (k, used, sum, pick) => {
+      if (k === ids.length) { if (sum > top.sum) top = { sum, pick: [...pick] }; return; }
+      rec(k + 1, used, sum, [...pick, null]);
+      slots.forEach((sl, q) => { if (!used.has(q)) { const sc = score(sl.i, sl.j, ids[k]); if (sc > 0.3) rec(k + 1, new Set([...used, q]), sum + sc, [...pick, { ...sl, sc }]); } });
+    };
+    rec(0, new Set(), 0, []);
+    return top.pick;
+  };
+  const ids = plan.speakers.map((x) => x.id);
+  const close = MC ? analysisArr.map((a, i) => ({ i, j: 0, n: a?.seats?.length ?? 0 })).filter((x) => x.n === 1) : [];
+  const wideIdx = plan.wide ? plan.wide - 1 : analysisArr.map((a, i) => ({ i, n: a?.seats?.length ?? 0 })).filter((x) => x.n >= 2).sort((a, b) => b.n - a.n)[0]?.i;
+  const pc = best(ids, close);
+  const pw = wideIdx !== undefined ? best(ids, (analysisArr[wideIdx]?.seats ?? []).map((_, j) => ({ i: wideIdx, j }))) : [];
+  plan.speakers.forEach((sp, k) => {
+    sp.auto = { cam: pc[k] ? pc[k].i + 1 : null, wide: pw[k] ? wideIdx + 1 : null, seat: pw[k] ? pw[k].j + 1 : null,
+      skor: { cam: pc[k] ? +pc[k].sc.toFixed(2) : null, seat: pw[k] ? +pw[k].sc.toFixed(2) : null } };
+  });
+};
+
 const analyze = async () => {
   say("1/2 Normalisasi + transkrip + analisis footage");
   const { transcribe } = await import("./eleven.mjs");
@@ -144,61 +223,108 @@ const analyze = async () => {
   for (let i = 0; i < plan.sources.length; i++) {
     const info = normalize(i);
     const wf = path.join(edir, `src${i + 1}.words.json`);
-    // transkrip sidecar (mis. dari editor lain / selftest): <footage>.words.json berisi [{w, s, e}] -> tanpa kredit
+    // transkrip sidecar (mis. dari editor lain / selftest): <footage>.words.json berisi [{w, s, e, spk?}] -> tanpa kredit
     const side = path.join(paths.dir, plan.sources[i].file).replace(/\.[^./]+$/, ".words.json");
-    if (!existsSync(wf) || readJson(wf, {}).key !== info.key) {
-      const viaSide = existsSync(side);
-      process.stdout.write(`  transkrip src${i + 1} (${viaSide ? `file ${path.basename(side)}` : `Speech to Text ElevenLabs, ${info.duration.toFixed(0)} dtk audio`}) ... `);
-      const words = viaSide ? readJson(side).map((w) => ({ w: w.w, s: w.s, e: w.e, p: w.p ?? 1 })) : await transcribe(srcWav(i), plan.language ?? "id");
-      writeFileSync(wf, JSON.stringify({ key: info.key, words }));
-      console.log(`${words.length} kata`);
+    const from = plan.sources[i].from; // klip: transkrip diambil dari proyek induk (tanpa kredit)
+    const wkey = DIAR || from ? sha([info.key, NSPK, from ?? null]) : info.key;
+    if (!existsSync(wf) || readJson(wf, {}).key !== wkey) {
+      const extraCam = MC && i !== AUD;
+      const viaSide = !from && existsSync(side);
+      process.stdout.write(`  transkrip src${i + 1} (${extraCam ? `kamera tambahan: suara memakai src${AUD + 1}` : from ? `dari proyek ${from.project}` : viaSide ? `file ${path.basename(side)}` : `Speech to Text ElevenLabs, ${(info.duration / 60).toFixed(1)} menit audio${DIAR ? `, ${NSPK} pembicara` : ""}`}) ... `);
+      let words, diar = null;
+      if (extraCam) words = [];
+      else if (from) {
+        const R = plan.sources[i].range;
+        const pw = readJson(path.join(P(from.project).work, "edit", `src${from.src + 1}.words.json`), null);
+        if (!pw) throw new Error(`Transkrip proyek induk ${from.project} tidak ada: jalankan npm run edit -- ${from.project} --analyze`);
+        words = pw.words.filter((w) => w.s >= R[0] && w.e <= R[1]).map((w) => ({ ...w, s: +(w.s - R[0]).toFixed(3), e: +(w.e - R[0]).toFixed(3) }));
+        diar = pw.diar ?? null;
+      } else if (viaSide) words = readJson(side).map((w) => ({ w: w.w, s: w.s, e: w.e, p: w.p ?? 1, ...(w.spk ? { spk: String(w.spk) } : {}) }));
+      else {
+        // audio panjang dikirim terkompresi (unggah lebih cepat; ditagih per durasi, bukan ukuran)
+        let f = srcWav(i);
+        if (info.duration > 120) {
+          f = srcWav(i).replace(/\.wav$/, ".stt.m4a");
+          run("ffmpeg", ["-v", "error", "-y", "-i", srcWav(i), "-c:a", "aac", "-b:a", "64k", f]);
+        }
+        words = await transcribe(f, plan.language ?? "id", { diarize: DIAR, speakers: DIAR ? NSPK : undefined });
+        if (DIAR && words.some((w) => w.spk)) diar = "scribe";
+      }
+      if (DIAR && words.length && words.some((w) => !w.spk)) {
+        // cadangan lokal: sidik suara (resemblyzer) dikelompokkan jadi NSPK pembicara
+        const tmp = path.join(edir, `src${i + 1}.diar.json`);
+        writeFileSync(tmp, JSON.stringify(words));
+        execFileSync(PY, [PODPY, "diarize", "--audio", srcWav(i), "--words", tmp, "--n", String(NSPK), "--out", tmp], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+        words = readJson(tmp);
+        diar = "lokal";
+      }
+      if (DIAR) words = relabel(words);
+      writeFileSync(wf, JSON.stringify({ key: wkey, words, ...(diar ? { diar } : {}) }));
+      console.log(`${words.length} kata${diar ? ` · pembicara: ${diar === "lokal" ? "dikenali lokal (resemblyzer)" : diar}` : ""}`);
     }
     const af = path.join(edir, `src${i + 1}.analysis.json`);
-    if (!existsSync(af) || readJson(af, {}).key !== info.key) {
+    const seatsN = DIAR ? NSPK : 0, centers = plan.sources[i].seatCenters ?? null;
+    const akey = seatsN || centers ? sha([info.key, seatsN, centers]) : info.key;
+    if (!existsSync(af) || readJson(af, {}).key !== akey) {
       process.stdout.write(`  analisis wajah/gerak/warna/suara src${i + 1} ... `);
-      const r = JSON.parse(execFileSync(PY, [path.join(ENGINE, "scripts", "edit_analyze.py"), "--src", srcNorm(i), "--audio", srcWav(i), "--out", af], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
+      const r = JSON.parse(execFileSync(PY, [path.join(ENGINE, "scripts", "edit_analyze.py"), "--src", srcNorm(i), "--audio", srcWav(i), "--out", af,
+        ...(info.duration > 900 ? ["--fps", "5"] : []), ...(seatsN ? ["--seats", String(seatsN)] : []), ...(centers ? ["--centers", JSON.stringify(centers)] : [])], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], maxBuffer: 64 << 20 }));
       const a = readJson(af);
-      writeFileSync(af, JSON.stringify({ key: info.key, ...a }));
-      console.log(`wajah ${Math.round(r.faceRate * 100)}% sampel`);
+      writeFileSync(af, JSON.stringify({ key: akey, ...a }));
+      console.log(`wajah ${Math.round(r.faceRate * 100)}% sampel${seatsN ? ` · ${r.seats.length} posisi orang` : ""}`);
     }
-    // lembar kontak 1 frame / 2 dtk untuk dilihat agent
+    // lembar kontak (maks ±24 baris x 8 frame) untuk dilihat agent
     const sheet = path.join(pdir, `kontak-src${i + 1}.jpg`);
     mkdirSync(pdir, { recursive: true });
+    const every = Math.max(2, Math.ceil(info.duration / 192));
     if (!existsSync(sheet) || statSync(sheet).mtimeMs < statSync(srcNorm(i)).mtimeMs)
-      run("ffmpeg", ["-v", "error", "-y", "-i", srcNorm(i), "-vf", `fps=1/2,scale=180:-2,tile=8x${Math.ceil(info.duration / 16)}`, "-frames:v", "1", "-q:v", "4", sheet]);
+      run("ffmpeg", ["-v", "error", "-y", "-i", srcNorm(i), "-vf", `fps=1/${every},scale=180:-2,tile=8x${Math.max(1, Math.ceil(info.duration / every / 8))}`, "-frames:v", "1", "-q:v", "4", sheet]);
     infos.push(info);
   }
-  // kalimat: dari tanda baca Scribe, jeda > 0,6 dtk, atau 16 kata
+  // multikamera: geser waktu tiap kamera terhadap sumber suara (korelasi suara); disimpan di edit.json, boleh dikoreksi
+  if (MC)
+    for (let i = 0; i < plan.sources.length; i++) {
+      if (i === AUD) { delete plan.sources[i].offset; continue; }
+      const src = plan.sources[i];
+      if (src.offset !== undefined && !has("resync")) continue;
+      const r = JSON.parse(execFileSync(PY, [PODPY, "sync", "--ref", srcWav(AUD), "--other", srcWav(i)], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
+      Object.assign(src, { offset: r.offset, syncScore: r.score });
+      console.log(`  sinkron src${i + 1} ke suara src${AUD + 1}: geser ${r.offset.toFixed(3)} dtk (keyakinan ${r.score})${r.score < 0.3 ? "  ! rendah: cek apakah rekaman dari sesi yang sama, atau isi offset manual" : ""}`);
+    }
+  const allWords = plan.sources.map((_, i) => readJson(path.join(edir, `src${i + 1}.words.json`)).words.map((w) => ({ ...w, w: fix(w.w) })));
+  // kalimat: dari tanda baca Scribe, jeda > 0,6 dtk, 22 kata, atau pergantian pembicara
   const sentences = [];
+  const major = (ws) => { const c = {}; for (const w of ws) if (w.spk) c[w.spk] = (c[w.spk] ?? 0) + (w.e - w.s); return Object.entries(c).sort((a, b) => b[1] - a[1])[0]?.[0]; };
   plan.sources.forEach((_, i) => {
-    const words = readJson(path.join(edir, `src${i + 1}.words.json`)).words.map((w) => ({ ...w, w: fix(w.w) }));
+    const words = allWords[i];
     let cur = [];
     const flush = () => {
       if (!cur.length) return;
-      sentences.push({ src: i, t: [+cur[0].s.toFixed(2), +cur.at(-1).e.toFixed(2)], text: cur.map((w) => w.w).join(" ") });
+      sentences.push({ src: i, t: [+cur[0].s.toFixed(2), +cur.at(-1).e.toFixed(2)], text: cur.map((w) => w.w).join(" "), ...(DIAR ? { spk: major(cur) } : {}) });
       cur = [];
     };
-    words.forEach((w, k) => {
-      if (cur.length && (w.s - cur.at(-1).e > 0.6 || cur.length >= 22)) flush();
+    words.forEach((w) => {
+      if (cur.length && (w.s - cur.at(-1).e > 0.6 || cur.length >= 22 || (DIAR && w.spk !== cur.at(-1).spk))) flush();
       cur.push(w);
       if (/[.!?]$/.test(w.w) || (/,$/.test(w.w) && cur.length >= 10)) flush();
     });
     flush();
   });
-  // potongan sangat pendek (< 3 kata) digabung ke kalimat sebelumnya bila sambung (sumber sama, jeda < 0,6 dtk)
+  // potongan sangat pendek (< 3 kata) digabung ke kalimat sebelumnya bila sambung (sumber & pembicara sama, jeda < 0,6 dtk)
   for (let k = sentences.length - 1; k > 0; k--) {
     const a = sentences[k], b = sentences[k - 1];
-    if (a.src === b.src && a.text.split(/\s+/).length < 3 && a.t[0] - b.t[1] < 0.6 && !/[.!?]$/.test(b.text)) {
+    if (a.src === b.src && a.spk === b.spk && a.text.split(/\s+/).length < 3 && a.t[0] - b.t[1] < 0.6 && !/[.!?]$/.test(b.text)) {
       b.t[1] = a.t[1];
       b.text += " " + a.text;
       sentences.splice(k, 1);
     }
   }
-  // tandai ambil ulang: kalimat yang sangat mirip dengan 1-3 kalimat sesudahnya (yang terakhir biasanya yang benar)
+  // tandai ambil ulang: kalimat (pembicara sama) yang sangat mirip dengan 1-3 kalimat sesudahnya (yang terakhir biasanya yang benar)
   const toks = sentences.map((s) => new Set(normTokens(s.text)));
   sentences.forEach((s, k) => {
     s.flags = [];
     for (let j = k + 1; j <= k + 3 && j < sentences.length; j++) {
+      if (sentences[j].spk !== s.spk) continue;
       const a = toks[k], b = toks[j];
       const inter = [...a].filter((x) => b.has(x)).length;
       if (a.size >= 3 && inter / Math.min(a.size, b.size) >= 0.6) s.flags.push(`mirip kalimat berikut (ambil ulang?)`);
@@ -212,29 +338,69 @@ const analyze = async () => {
   const old = plan.sentences ?? [];
   plan.sentences = sentences.map((s, k) => {
     const prev = old.find((o) => o.src === s.src && Math.abs(o.t[0] - s.t[0]) < 0.3);
-    return { id: prev?.id ?? `s${k + 1}`, src: s.src, t: s.t, text: s.text, flags: s.flags,
+    return { id: prev?.id ?? `s${k + 1}`, src: s.src, t: s.t, text: s.text, ...(s.spk ? { spk: s.spk } : {}), ...(prev?.speaker ? { speaker: prev.speaker } : {}), flags: s.flags,
       keep: prev?.keep ?? !s.flags.some((f) => f.startsWith("mirip") || f.startsWith("terpotong")), intent: prev?.intent ?? null, mode: prev?.mode ?? "aroll",
-      ...(prev?.punch ? { punch: prev.punch } : {}), objects: prev?.objects ?? [], why: prev?.why ?? "" };
+      ...(prev?.punch ? { punch: prev.punch } : {}), ...(prev?.chapter ? { chapter: prev.chapter } : {}), objects: prev?.objects ?? [], why: prev?.why ?? "" };
   });
+  // pembicara: daftar (nama diisi agent dari konteks/brief) + tampilan kamera otomatis
+  const analysisArr = plan.sources.map((_, i) => readJson(path.join(edir, `src${i + 1}.analysis.json`)));
+  const talk = {};
+  if (DIAR) {
+    for (const ws of allWords) for (const w of ws) if (w.spk) talk[w.spk] = (talk[w.spk] ?? 0) + (w.e - w.s);
+    const found = Object.keys(talk).sort();
+    const have = new Map(plan.speakers.map((x) => [x.id, x]));
+    for (const id of found) if (!have.has(id)) have.set(id, { id, name: "", title: "" });
+    plan.speakers = [...have.values()].sort((a, b) => a.id.localeCompare(b.id));
+    if (found.length !== NSPK) console.log(`  ! terdeteksi ${found.length} pembicara (${found.join(", ")}), rencana ${NSPK}: periksa konteks.md`);
+    assignViews(analysisArr, allWords);
+  }
   writeFileSync(planFile, JSON.stringify(plan, null, 2) + "\n");
   // ringkasan konteks untuk agent
-  const lines = [`# Konteks footage: ${name}`, "", `Style: **${plan.style}** · ${plan.sources.length} footage`, ""];
+  const lines = [`# Konteks footage: ${name}`, "", `Style: **${plan.style}** · ${plan.sources.length} footage${DIAR ? ` · ${plan.speakers.length} pembicara` : ""}${MC ? ` · multikamera, suara dari src${AUD + 1}` : ""}`, ""];
   infos.forEach((inf, i) => {
-    const a = readJson(path.join(edir, `src${i + 1}.analysis.json`));
+    const a = analysisArr[i];
     const c = a.color, au = a.audio ?? {};
     lines.push(`## src${i + 1}: ${inf.file}`,
-      `- ${inf.srcW}x${inf.srcH}${inf.vertical ? (V916 ? " vertikal" : ` sebentuk ${CV.format}`) : ` -> perlu dipotong ke ${CV.format} mengikuti wajah`} · ${inf.duration.toFixed(1)} dtk${inf.hdr ? ` · HDR (${inf.hdrHow})` : ""}`,
+      `- ${inf.srcW}x${inf.srcH}${inf.vertical ? (V916 ? " vertikal" : ` sebentuk ${CV.format}`) : ` -> perlu dipotong ke ${CV.format} mengikuti wajah`} · ${inf.duration.toFixed(1)} dtk${inf.range ? ` (rentang ${inf.range[0]}-${inf.range[1]} dtk dari proyek induk)` : ""}${inf.hdr ? ` · HDR (${inf.hdrHow})` : ""}`,
       `- wajah terdeteksi ${Math.round(a.faceRate * 100)}% sampel${a.faceRate < 0.5 ? " (rendah: PiP/anotasi wajah dinonaktifkan otomatis)" : ""}`,
+      ...(a.seats ? [`- posisi orang di frame: ${a.seats.length ? a.seats.map((x, j) => `kursi ${j + 1} (x ${Math.round(x.cx * 100)}%, wajah tampak ${Math.round(x.rate * 100)}%)`).join(" · ") : "tidak ada wajah terdeteksi"}`] : []),
+      ...(MC ? [i === AUD ? "- sumber suara & transkrip (waktu acuan)" : `- kamera tambahan: geser ${plan.sources[i].offset?.toFixed(3)} dtk terhadap src${AUD + 1} (keyakinan ${plan.sources[i].syncScore ?? "manual"})`] : []),
       `- cahaya: luma p1 ${c.lumaP1} · p50 ${c.lumaP50} · p99 ${c.lumaP99} · saturasi ${c.sat} · putih Lab ${JSON.stringify(c.whiteLab)} · kulit [L, chroma, hue] ${JSON.stringify(c.skin)}`,
       `- suara: noise floor ${au.noiseFloorDb} dBFS, bicara ${au.speechDb} dBFS${au.noiseFloorDb > -50 ? " (berisik: pembersih noise aktif)" : ""}`,
       `- lembar kontak: edit/kontak-src${i + 1}.jpg`, "");
   });
-  lines.push("## Kalimat", "", "| id | src | waktu | teks | tanda |", "|---|---|---|---|---|");
-  for (const s of plan.sentences) lines.push(`| ${s.id} | ${s.src + 1} | ${s.t[0].toFixed(1)}-${s.t[1].toFixed(1)} | ${s.text.replace(/\|/g, "/")} | ${s.flags.join("; ")} |`);
+  if (DIAR) {
+    lines.push(`## Pembicara`, "", "Isi `name` (+ `title`, mis. jabatan) di edit.json `speakers` dari brief/perkenalan di transkrip; nama tampil sebagai lower-third saat orang itu pertama kali muncul.",
+      "Tampilan: kamera dekat (`cam`: nomor footage) > kursi di rekaman lebar (`seat`: nomor kursi, `wide`: nomor footage) > `box` [x, y, w, h] 0-1 manual. Kolom otomatis di bawah boleh ditimpa; koreksi pembicara satu kalimat dengan `\"speaker\": \"B\"`.", "",
+      "| id | nama | bicara | kamera dekat (skor) | kursi rekaman lebar (skor) |", "|---|---|---|---|---|");
+    for (const sp of plan.speakers) {
+      const au = sp.auto ?? {};
+      lines.push(`| ${sp.id} | ${sp.name || "(isi)"} | ${Math.round(talk[sp.id] ?? 0)} dtk | ${au.cam ? `src${au.cam} (${au.skor.cam})` : "-"} | ${au.seat ? `src${au.wide} kursi ${au.seat} (${au.skor.seat})` : "-"} |`);
+    }
+    if (plan.speakers.every((sp) => !sp.auto?.cam && !sp.auto?.seat)) lines.push("", "Tidak ada pasangan wajah-pembicara yang yakin (wajah tidak terdeteksi atau mulut tertutup): isi `cam`/`seat`/`box` manual dari lembar kontak.");
+    lines.push("");
+  }
+  lines.push("## Kalimat", "", `| id | src | waktu |${DIAR ? " pembicara |" : ""} teks | tanda |`, `|---|---|---|${DIAR ? "---|" : ""}---|---|`);
+  for (const s of plan.sentences) lines.push(`| ${s.id} | ${s.src + 1} | ${s.t[0].toFixed(1)}-${s.t[1].toFixed(1)} |${DIAR ? ` ${s.speaker ?? s.spk ?? "-"} |` : ""} ${s.text.replace(/\|/g, "/")} | ${s.flags.join("; ")} |`);
   writeFileSync(path.join(pdir, "konteks.md"), lines.join("\n") + "\n");
-  console.log(`\nKonteks: ${path.relative(ROOT, path.join(pdir, "konteks.md"))} (${plan.sentences.length} kalimat). Isi keputusan per kalimat di edit.json, lalu: npm run edit -- ${name} --draft`);
+  console.log(`\nKonteks: ${path.relative(ROOT, path.join(pdir, "konteks.md"))} (${plan.sentences.length} kalimat${DIAR ? `, ${plan.speakers.length} pembicara` : ""}). Isi keputusan per kalimat${DIAR ? " + nama pembicara" : ""} di edit.json, lalu: npm run edit -- ${name} --draft`);
 };
 
+if (has("analyze") && has("estimate")) {
+  // perkiraan kuota Speech to Text sebelum analisis (gratis): menit audio yang akan dikirim ke ElevenLabs
+  let total = 0;
+  plan.sources.forEach((src, i) => {
+    const f = path.join(paths.dir, src.file);
+    const side = f.replace(/\.[^./]+$/, ".words.json");
+    const cached = existsSync(path.join(edir, `src${i + 1}.words.json`));
+    const how = MC && i !== AUD ? "kamera tambahan (suara dari footage audio)" : src.from ? `dari proyek ${src.from.project}` : existsSync(side) ? "file transkrip sidecar" : cached ? "sudah ada (cache; dikirim ulang hanya bila footage/jumlah pembicara berubah)" : null;
+    const d = src.range ? src.range[1] - src.range[0] : existsSync(f) ? duration(f) : 0;
+    if (!how) total += d;
+    console.log(`  src${i + 1} ${path.basename(src.file)} · ${(d / 60).toFixed(1)} mnt · ${how ?? `Speech to Text ElevenLabs${DIAR ? ` + ${NSPK} pembicara` : ""}`}`);
+  });
+  console.log(`\nPerkiraan Speech to Text: ${(total / 60).toFixed(1)} menit audio (kuota STT ElevenLabs dihitung per durasi; sisa paket: npm run akun).`);
+  process.exit(0);
+}
 if (has("analyze")) {
   await analyze();
   process.exit(0);
@@ -288,6 +454,36 @@ for (const s of kept) {
   }
 }
 
+// podcast: pembicara per kalimat ("speaker" dari agent > "spk" hasil analisis) + tampilan kamera per pembicara
+const spkOf = (s) => (DIAR ? s.speaker ?? s.spk ?? plan.speakers[0]?.id : null);
+const spById = new Map((plan.speakers ?? []).map((x) => [x.id, x]));
+const seatsOf = (i) => analysis[i]?.seats ?? [];
+if (DIAR) {
+  for (const sp of plan.speakers) {
+    if (!sp.name) warn(`pembicara ${sp.id}: nama belum diisi (lower-third tidak tampil)`);
+    for (const k of ["cam", "wide", "boxSrc"]) if (sp[k] !== undefined && sp[k] !== null && !(sp[k] >= 1 && sp[k] <= plan.sources.length)) err(`pembicara ${sp.id}: ${k} ${sp[k]} bukan nomor footage (1-${plan.sources.length})`);
+    if (sp.box && !(Array.isArray(sp.box) && sp.box.length === 4 && sp.box.every((v) => v >= 0 && v <= 1))) err(`pembicara ${sp.id}: box harus [x, y, w, h] bernilai 0-1`);
+  }
+  for (const s of kept) if (s.speaker && !spById.has(s.speaker)) err(`${s.id}: speaker "${s.speaker}" tidak ada di speakers`);
+  if (MC) for (const [i, src] of plan.sources.entries()) if (i !== AUD && typeof src.offset !== "number") err(`src${i + 1}: offset multikamera belum ada (jalankan --analyze)`);
+}
+/** Tampilan per pembicara: {cam: indeks footage, seat?: indeks kursi, box?: [x,y,w,h]} | {cam: null} (bingkai bawaan). */
+const viewOf = (id) => {
+  const sp = spById.get(id);
+  if (!sp) return null;
+  const wideOf = (w) => (w ?? plan.wide ?? sp.auto?.wide ?? (MC ? AUD + 1 : 1)) - 1;
+  let v = { cam: null };
+  if (sp.box) v = { cam: wideOf(sp.boxSrc), box: sp.box };
+  else if (sp.cam) v = { cam: sp.cam - 1 };
+  else if (sp.seat) v = { cam: wideOf(sp.wide), seat: sp.seat - 1 };
+  else if (sp.auto?.cam) v = { cam: sp.auto.cam - 1 };
+  else if (sp.auto?.seat) v = { cam: sp.auto.wide - 1, seat: sp.auto.seat - 1 };
+  if (v.seat !== undefined && v.seat >= seatsOf(v.cam).length) { err(`pembicara ${id}: kursi ${v.seat + 1} tidak ada di src${v.cam + 1} (${seatsOf(v.cam).length} kursi)`); v = { cam: null }; }
+  return { ...v, spk: id };
+};
+const VIEWS = new Map(DIAR ? plan.speakers.map((sp) => [sp.id, viewOf(sp.id)]) : []);
+for (const [id, v] of VIEWS) if (v.cam === null) warn(`pembicara ${id}: belum ada kamera/kursi (bingkai mengikuti wajah terbesar); isi cam/seat/box di edit.json bila perlu`);
+
 // ---------------------------------------------------------------- 3. potong (rentang tiap kata) + peta waktu
 const snap = (t) => Math.round(t * FPS) / FPS;
 const maxGap = pace.maxGapSec ?? 0.15;
@@ -296,6 +492,24 @@ const segs = []; // {src, in, out, outStart}
 const wordMap = []; // per kalimat: [{w, s, e}] di linimasa baru
 let cursor = 0;
 const order = plan.sentences.filter((s) => s.keep !== false);
+// podcast: kamera selalu pada SATU orang (yang bicara); pindah bila giliran pembicara baru >= minTurnSec (sahutan pendek
+// "iya", "betul" tidak memindah kamera) dan bidikan sekarang sudah >= minShotSec, atau giliran baru itu sendiri panjang
+// (>= minShotSec: orang yang bicara lama selalu tampil, bidikan sebelumnya minimal minTurnSec)
+const viewFor = new Map();
+if (DIAR) {
+  const minShot = pace.minShotSec ?? 2.5, minTurn = pace.minTurnSec ?? 1.0;
+  let cur = null, held = 0;
+  order.forEach((s, k) => {
+    const want = VIEWS.get(spkOf(s)) ?? { cam: null, spk: spkOf(s) };
+    let run = 0;
+    for (let j = k; j < order.length && spkOf(order[j]) === want.spk; j++) run += order[j].t[1] - order[j].t[0];
+    if (!cur || (want.spk !== cur.spk && run >= minTurn && (held >= minShot || (run >= minShot && held >= minTurn)))) { cur = want; held = 0; }
+    viewFor.set(s, cur);
+    held += s.t[1] - s.t[0];
+  });
+}
+const turnGap = pace.sentenceGapSec ?? 0;
+let camMiss = 0;
 for (const s of order) {
   const ws = wordsOf(s).filter((w) => !(FILLER.has(norm(w.w)) && s.keepFillers !== true));
   if (!ws.length) continue;
@@ -306,26 +520,48 @@ for (const s of order) {
     if (ranges.length && a - ranges.at(-1)[1] <= maxGap) ranges.at(-1)[1] = b;
     else ranges.push([a, b]);
   }
+  // jeda antar-kalimat alami (podcast): sisakan hening sebelum kalimat, maks sentenceGapSec
+  if (turnGap > 0) {
+    const all = srcWords[s.src], k0 = all.indexOf(ws[0]);
+    const prevE = k0 > 0 ? all[k0 - 1].e : 0;
+    ranges[0][0] -= Math.max(0, Math.min(turnGap, ws[0].s - keepGap / 2 - prevE - keepGap / 2));
+  }
+  // kamera kalimat ini: multikamera = footage lain pada waktu yang sama (digeser offset); selain itu footage kalimat itu
+  const vw = viewFor.get(s);
+  let cam = s.src, seat = null, box = null;
+  if (vw && vw.cam !== null && (MC || vw.cam === s.src)) ({ cam, seat = null, box = null } = vw);
+  const off = MC ? (plan.sources[cam].offset ?? 0) - (plan.sources[s.src].offset ?? 0) : 0;
   // jeda napas khusus (punchline): "pause": detik
   if (s.pause) ranges.at(-1)[1] += s.pause;
   const mapped = [];
+  // rentang waktu master yang terekam kamera pilihan; di luarnya (kamera mulai belakangan / berhenti duluan) bagian itu
+  // memakai kamera sumber suara, sisanya tetap kamera pilihan
+  const lo = cam !== s.src ? off : -Infinity, hi = cam !== s.src ? off + infos[cam].duration - 0.05 : Infinity;
   for (const [a0, b0] of ranges) {
     const a = snap(Math.max(0, a0)), b = snap(Math.min(infos[s.src].duration, b0));
     if (b - a < 1 / FPS) continue;
-    const last = segs.at(-1);
-    if (last && last.src === s.src && Math.abs(last.out - a) < 1e-6) last.out = b;
-    else segs.push({ src: s.src, in: a, out: b, outStart: cursor });
+    const parts = cam === s.src || (a >= lo && b <= hi) ? [[a, b, true]]
+      : [[a, Math.min(b, snap(lo)), false], [Math.max(a, snap(lo)), Math.min(b, snap(hi)), true], [Math.max(a, snap(hi)), b, false]].filter(([x, y]) => y - x >= 1 / FPS);
+    for (const [pa, pb, inCam] of parts) {
+      const c = inCam ? cam : s.src, vin = inCam ? +(pa - off).toFixed(4) : pa, st = inCam ? seat : null, bx = inCam ? box : null;
+      if (!inCam) camMiss++;
+      const vk = JSON.stringify([c, st, bx]);
+      const last = segs.at(-1);
+      if (last && last.src === s.src && last.vk === vk && Math.abs(last.out - pa) < 1e-6) last.out = pb;
+      else segs.push({ src: s.src, in: pa, out: pb, outStart: cursor + (pa - a), cam: c, vin, seat: st, box: bx, vk, on: inCam ? vw?.spk ?? null : null });
+    }
     for (const w of ws) if (w.s >= a0 - 1e-6 && w.e <= b0 + 1e-6) mapped.push({ w: w.w, s: cursor + (w.s - a), e: cursor + (w.e - a) });
     cursor += b - a;
   }
   wordMap.push({ s, words: mapped });
 }
+if (camMiss) warn(`${camMiss} potongan di luar rekaman kamera pilihan (multikamera): memakai kamera sumber suara`);
 const total = cursor;
 const totalFrames = Math.round(total * FPS);
 const rawDur = order.reduce((t, s) => t + (s.t[1] - s.t[0]), 0);
 const nWords = wordMap.reduce((t, x) => t + x.words.length, 0);
 console.log(`  ${order.length} kalimat dipakai dari ${plan.sentences.length} · ${segs.length} potongan · durasi ${total.toFixed(1)} dtk · tempo ${(nWords / total).toFixed(2)} kata/dtk (target ${pace.targetWordsPerSec ?? "-"})`);
-const [d0, d1] = pace.duration ?? [0, 1e9];
+const [d0, d1] = plan.duration ?? pace.duration ?? [0, 1e9]; // klip pendek: edit.json "duration" (mis. [30, 60])
 if (total < d0 || total > d1) warn(`durasi ${total.toFixed(0)} dtk di luar rentang style ${d0}-${d1} dtk`);
 
 // timing.json (kompatibel dengan QA, sound, posting): satu scene per kalimat
@@ -343,7 +579,7 @@ const timing = {
   scenes: scenes.map(({ s, words, start }, k) => {
     const sf = Math.round(start * FPS);
     const ef = k < scenes.length - 1 ? Math.round(scenes[k + 1].start * FPS) : totalFrames;
-    return { index: k, id: s.id, text: words.map((w) => w.w).join(" "), style: "normal", startFrame: sf, durationFrames: Math.max(1, ef - sf), ...(chapterOf.has(s) ? { chapter: chapterOf.get(s) } : {}),
+    return { index: k, id: s.id, text: words.map((w) => w.w).join(" "), style: "normal", startFrame: sf, durationFrames: Math.max(1, ef - sf), ...(chapterOf.has(s) ? { chapter: chapterOf.get(s) } : {}), ...(DIAR ? { spk: spkOf(s) } : {}),
       words: words.map((w) => ({ w: w.w, f: Math.round(w.s * FPS) - sf, e: Math.round(w.e * FPS) - sf })) };
   }),
 };
@@ -369,8 +605,9 @@ const calibrate = (i) => {
   if (S.grade?.applyTo === "none") return { chain: "null", measured: null, iters: 0 };
   const c = analysis[i].color;
   const tb = G.lumaP1 ?? 0.075, tm = G.lumaP50 ?? 0.3, tw = G.lumaP99 ?? 0.64;
-  const mine = segs.filter((s) => s.src === i);
-  const all = mine.map((s) => (s.in + s.out) / 2);
+  const mine = segs.filter((s) => s.cam === i);
+  if (!mine.length) return { chain: "null", measured: null, iters: 0 }; // footage tidak dipakai di potongan mana pun
+  const all = mine.map((s) => s.vin + (s.out - s.in) / 2);
   const times = all.length <= 6 ? all : Array.from({ length: 6 }, (_, k) => all[Math.round((k * (all.length - 1)) / 5)]);
   const faces = times.map((t) => { const f = faceAt(i, t); return f ? [f[1], f[2], f[3], f[4]] : null; });
   const inf = infos[i];
@@ -412,11 +649,41 @@ const faceAt = (i, t) => {
   const k = clamp(Math.round(t * analysis[i].fps), 0, f.length - 1);
   return f[k];
 };
+/** Wajah orang di kursi j footage i pada detik t (podcast). */
+const seatAt = (i, j, t) => {
+  const f = analysis[i].seatFace?.[j];
+  if (!f?.length) return null;
+  return f[clamp(Math.round(t * analysis[i].fps), 0, f.length - 1)];
+};
+/** Potongan dekat ke satu orang (kursi atau box manual) dari rekaman lebar; zoom maks ±2,4x (kanvas mendatar). */
+const tightCrop = (seg) => {
+  const inf = infos[seg.cam];
+  const minH = inf.h * (LAND ? 0.42 : 0.9);
+  let cx, cy, ch;
+  if (seg.box) {
+    const [x, y, w, h] = seg.box;
+    cx = x + w / 2; cy = y + h / 2;
+    ch = clamp(Math.max(h * inf.h, (w * inf.w) / ASP), minH, inf.h);
+  } else {
+    const fs = [];
+    for (let t = seg.vin; t < seg.vin + (seg.out - seg.in); t += 0.2) { const f = seatAt(seg.cam, seg.seat, t); if (f) fs.push(f); }
+    const st = seatsOf(seg.cam)[seg.seat];
+    const med = (g, d) => (fs.length ? fs.map(g).sort((a, b) => a - b)[fs.length >> 1] : d);
+    cx = med((f) => f[1] + f[3] / 2, st.cx); const fcy = med((f) => f[2] + f[4] / 2, st.cy), fh = med((f) => f[4], st.h || 0.2);
+    ch = clamp(fh * inf.h * (LAND ? 3.4 : 2.6), minH, inf.h);
+    cy = fcy + (ch / inf.h) * 0.1; // wajah di ±40% tinggi bingkai
+  }
+  let cw = ch * ASP;
+  if (cw > inf.w) { cw = inf.w; ch = cw / ASP; }
+  cw = Math.round(cw / 2) * 2; ch = Math.round(ch / 2) * 2;
+  return { w: cw, h: ch, x: clamp(Math.round(cx * inf.w - cw / 2), 0, inf.w - cw), y: clamp(Math.round(cy * inf.h - ch / 2), 0, inf.h - ch), srcW: inf.w };
+};
 const cropFor = (seg) => {
-  const inf = infos[seg.src];
+  const inf = infos[seg.cam];
+  if (seg.box || (seg.seat !== null && seg.seat !== undefined)) return tightCrop(seg);
   if (inf.vertical) return null;
   const fs = [];
-  for (let t = seg.in; t < seg.out; t += 0.2) { const f = faceAt(seg.src, t); if (f) fs.push(f); }
+  for (let t = seg.vin; t < seg.vin + (seg.out - seg.in); t += 0.2) { const f = faceAt(seg.cam, t); if (f) fs.push(f); }
   const med = (g, d) => (fs.length ? fs.map(g).sort((a, b) => a - b)[fs.length >> 1] : d);
   if (inf.w / inf.h >= ASP) {
     // sumber lebih lebar dari kanvas: potong kiri-kanan, wajah di tengah
@@ -442,11 +709,11 @@ if (startAt <= 0 && (readJson(path.join(edir, "cut.json"), {}).key !== cutKey ||
   const parts = [];
   for (let g = 0; g < segs.length; g += 30) {
     const group = segs.slice(g, g + 30);
-    const inV = group.flatMap((s) => ["-ss", s.in.toFixed(4), "-t", (s.out - s.in).toFixed(4), "-i", srcNorm(s.src)]);
+    const inV = group.flatMap((s) => ["-ss", s.vin.toFixed(4), "-t", (s.out - s.in).toFixed(4), "-i", srcNorm(s.cam)]);
     const fc = group.map((s, k) => {
-      const cr = cropFor(s);
-      const geo = cr ? `crop=${cr.w}:${cr.h}:${cr.x}:${cr.y},scale=${CW}:${CH},` : "";
-      return `[${k}:v]${geo}${chains[s.src]},setsar=1,fps=${FPS},trim=end_frame=${Math.round((s.out - s.in) * FPS)},setpts=PTS-STARTPTS[v${k}]`;
+      const cr = cropFor(s), inf = infos[s.cam];
+      const geo = cr ? `crop=${cr.w}:${cr.h}:${cr.x}:${cr.y},scale=${CW}:${CH},` : inf.w !== CW || inf.h !== CH ? `scale=${CW}:${CH},` : "";
+      return `[${k}:v]${geo}${chains[s.cam]},setsar=1,fps=${FPS},trim=end_frame=${Math.round((s.out - s.in) * FPS)},setpts=PTS-STARTPTS[v${k}]`;
     });
     fc.push(`${group.map((_, k) => `[v${k}]`).join("")}concat=n=${group.length}:v=1:a=0[v]`);
     const part = path.join(edir, `aroll-${g / 30}.mp4`);
@@ -500,14 +767,18 @@ const resolveAt = (sid, ref, fallback) => {
 };
 // wajah di linimasa baru (koordinat kanvas, setelah dipotong sebentuk kanvas), tiap 2 frame
 const faceTrack = [];
+const cropCache = new Map();
+let segP = 0;
 for (let f = 0; f < totalFrames; f += 2) {
   const t = f / FPS;
-  const seg = segs.find((s) => t >= s.outStart - 1e-6 && t < s.outStart + (s.out - s.in) + 1e-6) ?? segs.at(-1);
-  const st = seg.in + (t - seg.outStart);
-  const ff = faceAt(seg.src, st);
+  while (segP < segs.length - 1 && t >= segs[segP].outStart + (segs[segP].out - segs[segP].in) - 1e-6) segP++;
+  const seg = segs[segP];
+  const st = seg.vin + (t - seg.outStart);
+  const ff = seg.box ? null : seg.seat !== null && seg.seat !== undefined ? seatAt(seg.cam, seg.seat, st) : faceAt(seg.cam, st);
   if (!ff) { faceTrack.push(null); continue; }
-  const inf = infos[seg.src];
-  const cr = cropFor(seg);
+  const inf = infos[seg.cam];
+  if (!cropCache.has(seg)) cropCache.set(seg, cropFor(seg));
+  const cr = cropCache.get(seg);
   const X = (x) => (cr ? ((x * inf.w - cr.x) / cr.w) * CW : x * CW);
   const Y = (y) => (cr ? ((y * inf.h - cr.y) / cr.h) * CH : y * CH);
   const Wd = (w) => (cr ? ((w * inf.w) / cr.w) * CW : w * CW);
@@ -525,8 +796,8 @@ const motionSide = (sid) => {
   const x = sceneOf.get(sid);
   const seg = segs.find((s) => x.start >= s.outStart - 1e-6 && x.start < s.outStart + (s.out - s.in));
   if (!seg) return 0;
-  const m = analysis[seg.src].motion;
-  const t0 = Math.floor(seg.in), t1 = Math.ceil(seg.in + (x.words.at(-1).e - x.start));
+  const m = analysis[seg.cam].motion;
+  const t0 = Math.floor(seg.vin), t1 = Math.ceil(seg.vin + (x.words.at(-1).e - x.start));
   let l = 0, r = 0;
   for (let t = t0; t <= t1 && t < m.sec.length; t++) for (let row = 2; row < m.rows; row++) { l += m.sec[t][row * m.cols] + m.sec[t][row * m.cols + 1]; r += m.sec[t][row * m.cols + 2] + m.sec[t][row * m.cols + 3]; }
   return l - r; // > 0: kiri lebih ramai
@@ -543,6 +814,24 @@ segs.forEach((s, k) => {
   const fm = faceMid(f0, f1);
   cuts.push({ f0, f1, scale, ox: fm ? fm.cx : CW / 2, oy: fm ? fm.cy : Math.round(CH * 0.4) });
 });
+
+// podcast: bidikan per orang yang tampil + nama (lower-third) saat pertama tampil di bidikan >= 2 dtk
+const shots = [];
+for (const sg of segs) {
+  const f0 = fr(sg.outStart), f1 = fr(sg.outStart + (sg.out - sg.in)), last = shots.at(-1);
+  if (last && last.on === sg.on && last.cam === sg.cam) last.f1 = f1;
+  else shots.push({ f0, f1, on: sg.on, cam: sg.cam });
+}
+const names = [];
+if (DIAR && S.names !== false && plan.names !== false) {
+  const seen = new Set();
+  for (const sh of shots) {
+    if (!sh.on || seen.has(sh.on) || sh.f1 - sh.f0 < 60) continue;
+    seen.add(sh.on);
+    const sp = spById.get(sh.on);
+    if (sp?.name && sp.lowerThird !== false) names.push({ f0: sh.f0 + 9, f1: Math.min(sh.f1 - 6, sh.f0 + 9 + 135), name: sp.name, title: sp.title ?? "" });
+  }
+}
 
 // objek visual -> frame
 const visuals = [];
@@ -600,9 +889,11 @@ for (const { words } of scenes) {
   flush();
 }
 subs.forEach((c, k) => { if (subs[k + 1]) c.f1 = Math.min(c.f1, subs[k + 1].f0); });
+// subtitle ditanam atau tidak: edit.json "subtitle" > style type.subtitle.burn (episode podcast: SRT saja)
+if ((plan.subtitle ?? S.type?.subtitle?.burn ?? true) === false) subs.length = 0;
 
 const editProps = {
-  video: `media/edit/${name}.mp4`, totalFrames, cuts, face: faceTrack, visuals, objects, subs,
+  video: `media/edit/${name}.mp4`, totalFrames, cuts, face: faceTrack, visuals, objects, subs, names, shots: shots.map(({ f0, f1, on, cam }) => ({ f0, f1, on, cam })),
   canvas: { format: CV.format, w: CW, h: CH, safe: CV.safe, ui: CV.ui, brand: CV.brand, subY: SUB_Y0 },
   bab: BAB, chapters: scenes.filter((x) => chapterOf.has(x.s)).map((x) => ({ f0: fr(x.start), title: chapterOf.get(x.s) })),
   style: { palette: S.palette, type: S.type, broll: S.broll, aroll: S.aroll },
@@ -635,7 +926,8 @@ for (const v of visuals.filter((x) => x.mode === "broll")) {
 const typing = objects.filter((o) => o.type === "prompt").flatMap((o) => Array.from({ length: Math.max(0, Math.floor((o.until - o.at) / FPS)) }, (_, i) => o.at + i * FPS));
 const events = [...typing, ...cuts.map((c) => c.f0), ...objects.map((o) => o.at), ...objects.filter((o) => o.type === "clip").flatMap((o) => Array.from({ length: Math.floor((o.until - o.at) / FPS) }, (_, i) => o.at + (i + 1) * FPS)), ...objects.flatMap((o) => [...(o.items ?? []), ...(o.rows ?? []), ...(o.bubbles ?? [])].map((x) => x.at)), ...visuals.map((v) => v.f0)].sort((a, b) => a - b);
 let lastEv = 0;
-for (const e of [...events, totalFrames]) { if (e - lastEv > 2.2 * FPS) warn(`layar tanpa perubahan ${((e - lastEv) / FPS).toFixed(1)} dtk (${(lastEv / FPS).toFixed(1)}-${(e / FPS).toFixed(1)})`); lastEv = Math.max(lastEv, e); }
+const still = pace.maxStillSec ?? 2.2;
+for (const e of [...events, ...shots.map((x) => x.f0), totalFrames].sort((a, b) => a - b)) { if (e - lastEv > still * FPS) warn(`layar tanpa perubahan ${((e - lastEv) / FPS).toFixed(1)} dtk (${(lastEv / FPS).toFixed(1)}-${(e / FPS).toFixed(1)})`); lastEv = Math.max(lastEv, e); }
 
 // ---------------------------------------------------------------- 7. audio (SFX) -> mix
 if (startAt <= 1) {

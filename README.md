@@ -19,6 +19,11 @@ Docs and prompts are in Indonesian.*
   yang ditempatkan sadar wajah, subtitle per kata. Agent memutuskan isi visual dari konteks tiap kalimat. Style bawaan
   `ngobrol` (dulu `narration`); style baru bisa dibedah dari video referensi Anda (`Styles/<slug>/`). Lihat
   [engine/styles/README.md](engine/styles/README.md).
+- **Podcast / wawancara 2-4 orang** (style `siniar`, 16:9): satu kamera lebar, kamera per orang (disinkronkan otomatis
+  dari suara), atau rekaman Zoom/Meet. Pembicara dikenali dari transkrip (atau sidik suara lokal, tanpa kredit), kamera
+  selalu pada orang yang bicara, nama pembicara muncul otomatis, jeda mati dan salah ucap dibuang, bab opsional.
+- **Klip pendek otomatis**: dari video panjang mana pun, AI mengusulkan 3-5 klip 30-60 dtk (hook, alasan, durasi),
+  Anda memilih, lalu tiap klip dirender 9:16 dengan subtitle dan kamera pada pembicara (`npm run clips`).
 - **Tiga jalur visual**, dipilih dari contoh frame naskah Anda:
   - **A · Pop cinematic** (Remotion): poster komik-pop, transisi grafis, grain, scene khusus per video.
   - **B · Motion graphics v4**: 5 gaya explainer teks (butuh skill Anthropic `motion-graphics-v4` terpasang terpisah).

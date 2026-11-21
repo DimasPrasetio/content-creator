@@ -5,15 +5,18 @@
 //   npm run selftest -- --real-voice   suara dibuat ElevenLabs (voice default, ±120 karakter kredit) untuk menguji
 //                                   jalur API sungguhan; hanya setelah pengguna setuju
 //   --keep                          proyek uji tidak dihapus (untuk diperiksa)
+//   --only=podcast                  hanya bagian podcast + klip (v0.9)
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DIRS, ENGINE, P, ROOT, kitTheme, mg4Skill, resolveStyle, run, youtubeChapters } from "./lib.mjs";
+import { podcastTest } from "./selftest_podcast.mjs";
 
 const args = process.argv.slice(2);
 const full = args.includes("--full");
 const real = args.includes("--real-voice");
 const keep = args.includes("--keep");
+const only = args.find((a) => a.startsWith("--only="))?.slice(7);
 const NAME = "00000000-00-selftest";
 const p = P(NAME);
 // sampel bawaan plugin: naskah 3 scene + suara (selftest/sample.mp3), jadi tidak bergantung pada video di workspace
@@ -33,6 +36,17 @@ const step = (label, cmd, a, { allowFail = false } = {}) => {
   return okk;
 };
 const npm = (label, script, a = [], o) => step(label, "npm", ["run", "-s", script, "--", ...a], o);
+const finish = () => {
+  console.table(rows);
+  const failed = rows.filter((r) => r.hasil === "GAGAL").length;
+  console.log(failed ? `\n${failed} langkah GAGAL.` : "\nSemua langkah lulus.");
+  process.exit(failed ? 1 : 0);
+};
+if (only === "podcast") {
+  console.log("Selftest podcast + klip (tanpa kredit)\n");
+  podcastTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO });
+  finish();
+}
 
 const clean = () => {
   rmSync(p.dir, { recursive: true, force: true });
@@ -259,9 +273,9 @@ ${lines.map((l, i) => `scene(${i});\n{ const s = ${i}; big(540, 420, "${l.key.to
   if (!keep) cleanF();
 }
 
-console.table(rows);
-const failed = rows.filter((r) => r.hasil === "GAGAL").length;
+// 9) podcast multi-kamera + identifikasi pembicara + klip pendek (v0.9)
+podcastTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO });
+
 if (keep) console.log(`Proyek uji disimpan: ${path.relative(ROOT, p.dir)}`);
 else clean();
-console.log(failed ? `\n${failed} langkah GAGAL.` : "\nSemua langkah lulus.");
-process.exit(failed ? 1 : 0);
+finish();

@@ -93,9 +93,14 @@ export const forcedAlign = async (file, text) => {
 };
 
 /** Speech to Text (Scribe) -> kata [{w, s, e, p}], p = peluang kata (exp logprob). Memakai kuota STT. */
-export const transcribe = async (file, languageCode = "id") => {
-  const r = await eleven().speechToText.convert({ file: createReadStream(file), modelId: "scribe_v2", languageCode, timestampsGranularity: "word", tagAudioEvents: false });
-  return (r.words ?? []).filter((w) => w.type === "word").map((w) => ({ w: w.text, s: w.start ?? 0, e: w.end ?? 0, p: +Math.exp(w.logprob ?? 0).toFixed(3) }));
+/**
+ * Transkrip per kata (Scribe). diarize = tandai pembicara per kata ("spk": speaker_0, speaker_1, ...), speakers = jumlah
+ * pembicara bila diketahui (maks 32; podcast v0.9 maks 4). Ditagih per durasi audio (diarisasi tanpa biaya tambahan).
+ */
+export const transcribe = async (file, languageCode = "id", { diarize = false, speakers } = {}) => {
+  const r = await eleven().speechToText.convert({ file: createReadStream(file), modelId: "scribe_v2", languageCode, timestampsGranularity: "word", tagAudioEvents: false,
+    ...(diarize ? { diarize: true, ...(speakers ? { numSpeakers: speakers } : {}) } : {}) });
+  return (r.words ?? []).filter((w) => w.type === "word").map((w) => ({ w: w.text, s: w.start ?? 0, e: w.end ?? 0, p: +Math.exp(w.logprob ?? 0).toFixed(3), ...(diarize && w.speakerId ? { spk: w.speakerId } : {}) }));
 };
 
 export { ElevenLabsError };

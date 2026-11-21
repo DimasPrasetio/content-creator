@@ -41,9 +41,17 @@ Kesepakatan v0.8 (grill-me 2026-11-21): jalur yang dibuat asli multi-format = "H
 mau seperti bab bab seperti itu" → bab opsional, ditanyakan per video (tanpa / label / kartu + label), timestamp deskripsi
 hanya bila ada bab; edit talking-head landscape panjang: "Masuk v0.8"; ringkasan: "Sepakat, jalankan".
 
-### v0.9 · Jenis footage baru
-- Podcast/wawancara multi-pembicara (pindah ke yang bicara, label nama), rekaman layar (zoom ke area aktif, buang loading),
-  vlog/montase (pilih momen, potong mengikuti ketukan musik).
-- Video panjang → 3-5 klip pendek potret ditawarkan otomatis.
+### v0.9 · Podcast/wawancara + klip pendek otomatis (selesai, 0.9.0)
+- Rekaman 2-4 pembicara: satu kamera lebar (crop ke yang bicara), kamera per orang (diselaraskan lewat suara), rekaman
+  Zoom/Meet. Hasil: episode penuh 16:9 yang rapi (jeda mati & salah ucap dibuang, kamera selalu pada satu orang yang
+  bicara dengan jeda minimal, nama pembicara, bab opsional) + klip pendek 9:16.
+- Video panjang mana pun → AI mengusulkan 3-5 klip 30-60 dtk (hook, alasan, durasi), pengguna memilih, lalu dirender.
+
+Kesepakatan v0.9 (grill-me 2026-11-21): rilis "Dua gelombang"; bentuk rekaman "Satu kamera lebar, Kamera per orang,
+Rekaman online (Zoom/Meet)"; klip "AI usulkan, Anda pilih"; hasil "Episode penuh + klip"; saling menimpali "Selalu satu
+orang"; durasi klip "30-60 detik"; uji "Pakai rekaman buatan saja"; pembicara "Sampai 4 orang"; ringkasan "Sepakat, jalankan".
+
+### v0.10 · Rekaman layar + vlog/montase
+- Rekaman layar (zoom ke area aktif, buang loading), vlog/montase (pilih momen, potong mengikuti ketukan musik).
 
 Bukan lingkup: setup Windows asli tanpa WSL, posting otomatis ke platform.

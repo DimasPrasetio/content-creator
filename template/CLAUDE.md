@@ -4,12 +4,14 @@ Workspace ini membuat video (Reels/TikTok 9:16, feed 4:5/1:1, YouTube 16:9 pende
 dan edit footage milik pengguna. **Style = rasa** (`Styles/`, dipakai brand mana pun), **brand = identitas + suara** (`Brands/`).
 Mulai video baru dengan `/content-creator <ide video>`; skill itu memuat alur lengkapnya (wawancara grill-me → contoh frame
 gaya + audisi suara → lalu otomatis tanpa pertanyaan: naskah → voice over ElevenLabs → visual → SFX → preview → render → QA → posting;
-satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `npm run new` + `npm run produce` (kit `Engine/kit/html/`).
+satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?; untuk klip pendek dari video panjang juga: klip mana yang dibuat).
+Jalur C: `npm run new` + `npm run produce` (kit `Engine/kit/html/`). Edit footage: `npm run edit` (talking-head; podcast 2-4 orang dengan
+style Siniar, `--speakers=N [--multicam]`); klip pendek 9:16 dari video panjang: `npm run clips`.
 
 ## Struktur folder
 | Folder | Isi |
 |---|---|
-| `Projects/<nama>/` | satu folder per video: `brief.md`, `script.md`, `script.txt`, `storyboard.json`, `voice.wav`, `preview/`, `html/`, `assets/`, `posting/`, `versions/`; proyek edit footage: `edit.json`, `edit/konteks.md`, `assets/raw/` |
+| `Projects/<nama>/` | satu folder per video: `brief.md`, `script.md`, `script.txt`, `storyboard.json`, `voice.wav`, `preview/`, `html/`, `assets/`, `posting/`, `versions/`; proyek edit footage: `edit.json`, `edit/konteks.md`, `assets/raw/`, `klip.json` + `klip/` (usulan klip); klip = proyek anak `<nama>-<id>/` |
 | `Styles/<slug>/` | style bernama (rasa video): `style.json`, `STYLE.md`, `selera.md` (selera visual), `examples/`; bawaan plugin di `Engine/styles/` (`npm run style -- list`) |
 | `Brands/<slug>/` | satu folder per brand (identitas + suara): `profile.json`, `theme.json`, `brand.md`, `MOTION.md`, `logo/`, `examples/`; `Brands/_selera.md` = riwayat brand, suara, isi |
 | `References/` | contoh gaya (video/gambar) |

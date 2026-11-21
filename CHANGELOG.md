@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.9.0
+Tahap ketiga roadmap (`docs/ROADMAP.md`, gelombang pertama "jenis footage baru"): podcast/wawancara + klip pendek.
+- **Podcast / wawancara 2-4 orang** lewat mesin edit: `npm run edit -- <nama> --new --style=siniar --speakers=N
+  --input=lebar.mp4[,kamA.mp4,...] [--multicam --audio-src=N]`. Satu kamera lebar, kamera per orang, atau rekaman online.
+- **Pembicara per kata**: ElevenLabs Scribe dengan diarisasi; cadangan lokal tanpa kredit (sidik suara resemblyzer +
+  pengelompokan). Kalimat dipecah saat pembicara berganti; koreksi per kalimat lewat `"speaker"`.
+- **Multikamera**: kamera disinkronkan otomatis dari suara (korelasi selubung energi, akurat ±1 frame);
+  bagian di luar rekaman suatu kamera memakai footage suara.
+- **Kursi di rekaman lebar**: posisi tiap orang (YuNet + KMeans) dan gerak mulut per kursi; pasangan pembicara ↔
+  kamera/kursi ditebak otomatis (`speakers[].auto`), bisa ditimpa `cam` / `seat` / `box`. Potongan dekat maks ±2,4x.
+- **Kamera selalu pada yang bicara**: pindah bila giliran ≥ `pace.minTurnSec` dan bidikan sebelumnya ≥
+  `pace.minShotSec` (atau giliran baru itu panjang); tanpa layar terbagi. **Nama pembicara** (lower-third) saat
+  pertama tampil.
+- **Style Siniar** (`siniar`): 16:9, grading netral, tanpa subtitle tertanam dan SFX, jeda alami antar-kalimat,
+  rentang 2 mnt-2 jam. Analisis footage panjang lebih hemat (5 fps, lembar kontak dibatasi), audio panjang dikirim
+  terkompresi ke Speech to Text. `--analyze --estimate` = perkiraan menit transkrip sebelum memakai kuota.
+- **Klip pendek otomatis** `npm run clips`: kandidat 30-60 dtk berperingkat (pembuka kuat, akhir tuntas, padat, angka,
+  dialog) → agent mengusulkan 3-5 di `klip.json` → pengguna memilih → `--make` membuat proyek anak 9:16 (style klip
+  bawaan Ngobrol) yang memakai footage induk sebagian (`sources[].range`) tanpa salin dan tanpa transkrip ulang.
+- `edit.json` baru: `speakers`, `multicam`, `audio`, `wide`, `sources[].offset/range/from`, `subtitle`, `names`,
+  `duration`; footage podcast yang sudah sesuai bentuk kanvas dinormalisasi sampai 2160p.
+- Selftest bagian 9 (rekaman buatan, tanpa kredit): sinkron kamera, urutan pembicara, kamera ikut pembicara, nama,
+  diarisasi lokal ≥ 90%, kandidat klip, klip 9:16. `npm run selftest -- --only=podcast`.
+- Belum (v0.10): rekaman layar/tutorial, vlog/montase.
+
 ## 0.8.0
 Tahap kedua roadmap (`docs/ROADMAP.md`): kanvas fleksibel + video panjang.
 - **Kanvas asli 9:16, 16:9, 4:5, 1:1** untuk jalur HTML (kit standar) dan edit footage, bukan sekadar ekspor dengan sisi

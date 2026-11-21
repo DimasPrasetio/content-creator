@@ -67,6 +67,10 @@ export type EditProps = {
     /** bab opsional: tanpa | label (judul kecil ±2,5 dtk) | kartu (kartu judul ±1,6 dtk) */
     bab?: string;
     chapters?: { f0: number; title: string }[];
+    /** podcast (v0.9): nama pembicara (lower-third) saat pertama tampil */
+    names?: { f0: number; f1: number; name: string; title?: string }[];
+    /** podcast: bidikan per orang yang tampil (untuk cek) */
+    shots?: { f0: number; f1: number; on: string | null; cam: number }[];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     style: { palette: Record<string, string>; type: any; broll: any; aroll: any };
     brand?: { left?: string; right?: string };

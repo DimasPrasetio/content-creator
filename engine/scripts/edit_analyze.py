@@ -1,6 +1,7 @@
 """Analisis footage untuk mesin edit (dipanggil scripts/edit.mjs).
 
 Pemakaian: python edit_analyze.py --src <footage ternormalisasi.mp4> --audio <audio.wav> --out <analysis.json> [--fps 10]
+            [--seats N] [--centers '[[cx, cy], ...]']
 
 Keluaran JSON:
   face   : [[t, x, y, w, h, mx, my, ex, ey, score], ...]  wajah terbesar per sampel (koordinat 0-1 frame sumber):
@@ -10,6 +11,10 @@ Keluaran JSON:
   color  : statistik untuk kalibrasi grading (luma p1/p50/p99, saturasi, L* putih-netral & hitam, white balance a/b,
            kulit: L*, chroma, hue)
   audio  : noise floor & level bicara (dBFS)
+  seats  : (--seats N, podcast v0.9) posisi duduk tiap orang di frame: [{cx, cy, w, h, rate}] urut kiri -> kanan; jumlahnya
+           = jumlah wajah yang lazim terlihat bersamaan (maks N; --centers = pakai posisi tetap, mis. dari proyek induk)
+  seatFace : per kursi, format sama dengan face (wajah orang di kursi itu per sampel)
+  seatMouth: per kursi, gerak mulut per sampel (dikurangi gerak mata = gerak kepala), untuk mencocokkan pembicara
 Deteksi wajah: OpenCV FaceDetectorYN + model YuNet (engine/models/, MIT), berjalan di CPU.
 """
 
@@ -56,6 +61,8 @@ def main():
     ap.add_argument("--audio")
     ap.add_argument("--out", required=True)
     ap.add_argument("--fps", type=float, default=10)
+    ap.add_argument("--seats", type=int, default=0)
+    ap.add_argument("--centers")
     a = ap.parse_args()
     import cv2
 
@@ -63,6 +70,7 @@ def main():
     det = None
     faces, motion_sec, prev, cells = [], [], None, []
     color_samples = []
+    dets = []  # per sampel: [[cx, cy, x, y, w, h, mx, my, ex, ey, score, mulut], ...] (hanya bila --seats)
     k = 0
     for img in frames(a.src, a.fps, W):
         h, w, _ = img.shape
@@ -81,6 +89,21 @@ def main():
             faces.append([t] + [None] * 9)
         # gerak: selisih abu-abu per sel 4x6 terhadap sampel sebelumnya
         g = img.mean(axis=2)
+        if a.seats:
+            row = []
+            for f in (found if found is not None else []):
+                x, y, fw, fh = [float(v) for v in f[:4]]
+                ex, ey = (f[4] + f[6]) / 2, (f[5] + f[7]) / 2
+                mx, my = (f[10] + f[12]) / 2, (f[11] + f[13]) / 2
+                act = 0.0
+                if prev is not None:
+                    def box(cx, cy, hw, hh):
+                        x0, x1 = int(max(0, cx - hw)), int(min(w, cx + hw))
+                        y0, y1 = int(max(0, cy - hh)), int(min(h, cy + hh))
+                        return float(np.abs(g[y0:y1, x0:x1] - prev[y0:y1, x0:x1]).mean()) if x1 > x0 + 1 and y1 > y0 + 1 else 0.0
+                    act = max(0.0, box(mx, my, fw * 0.22, fh * 0.12) - 0.8 * box(ex, ey, fw * 0.3, fh * 0.1))
+                row.append([(x + fw / 2) / w, (y + fh / 2) / h, x / w, y / h, fw / w, fh / h, mx / w, my / h, ex / w, ey / h, float(f[14]), act])
+            dets.append(row)
         if prev is not None:
             d = np.abs(g - prev)
             cells.append([float(d[r * h // 6:(r + 1) * h // 6, c * w // 4:(c + 1) * w // 4].mean()) for r in range(6) for c in range(4)])
@@ -106,6 +129,57 @@ def main():
         for c in range(1, 9):
             arr[:, c] = median_filter(arr[:, c], size=5, mode="nearest")
     face = [[round(float(v), 4) for v in r] for r in arr] if rate > 0 else []
+
+    seats, seat_face, seat_mouth = [], [], []
+    if a.seats and dets:
+        from scipy.ndimage import median_filter, uniform_filter1d
+        counts = np.array([len(r) for r in dets])
+        allp = np.array([[d[0], d[1]] for r in dets for d in r]) if counts.sum() else np.zeros((0, 2))
+        if a.centers:
+            cents = np.array(json.loads(a.centers), dtype=float).reshape(-1, 2)
+        elif len(allp):
+            seen = counts[counts > 0]
+            kk = int(min(a.seats, max(1, round(float(np.percentile(seen, 70))))))
+            if kk >= 2:
+                from sklearn.cluster import KMeans
+                cents = KMeans(n_clusters=kk, n_init=10, random_state=0).fit(allp * [1, 0.5]).cluster_centers_ * [1, 2]
+            else:
+                cents = np.median(allp, axis=0, keepdims=True)
+        else:
+            cents = np.zeros((0, 2))
+        cents = cents[np.argsort(cents[:, 0])] if len(cents) else cents
+        n = len(cents)
+        tracks = np.full((n, len(dets), 10), np.nan)
+        mouth = np.zeros((n, len(dets)))
+        for i, row in enumerate(dets):
+            tracks[:, i, 0] = i / a.fps
+            # pasangan wajah-kursi terdekat lebih dulu (satu wajah satu kursi)
+            pairs = sorted(((np.hypot(d[0] - cents[j][0], (d[1] - cents[j][1]) * 0.5), j, q) for q, d in enumerate(row) for j in range(n)))
+            used_s, used_d = set(), set()
+            for dist, j, q in pairs:
+                if j in used_s or q in used_d or dist > 0.22:
+                    continue
+                used_s.add(j)
+                used_d.add(q)
+                d = row[q]
+                tracks[j, i, 1:] = d[2:11]
+                mouth[j, i] = d[11]
+        for j in range(n):
+            arr2 = tracks[j]
+            ok_rate = float(np.mean(~np.isnan(arr2[:, 1])))
+            if ok_rate > 0:
+                idx = np.arange(len(arr2))
+                for c in range(1, 10):
+                    ok = ~np.isnan(arr2[:, c])
+                    arr2[:, c] = np.interp(idx, idx[ok], arr2[ok, c])
+                for c in range(1, 9):
+                    arr2[:, c] = median_filter(arr2[:, c], size=5, mode="nearest")
+            sel = arr2[~np.isnan(arr2[:, 1])]
+            seats.append({"cx": round(float(cents[j][0]), 4), "cy": round(float(cents[j][1]), 4),
+                          "w": round(float(np.median(sel[:, 3])), 4) if len(sel) else 0, "h": round(float(np.median(sel[:, 4])), 4) if len(sel) else 0,
+                          "rate": round(ok_rate, 3)})
+            seat_face.append([[round(float(v), 4) for v in r] for r in arr2] if ok_rate > 0 else [])
+            seat_mouth.append(np.round(uniform_filter1d(mouth[j], size=max(1, int(a.fps / 2))), 3).tolist())
 
     # warna: luma, saturasi, putih-netral (L* tinggi, chroma rendah), hitam, kulit (di kotak wajah)
     # sumber tidak vertikal: statistik warna hanya di jendela 9:16 yang akan dipakai (mengikuti wajah), bukan latar di luar potongan
@@ -166,9 +240,10 @@ def main():
         db = 20 * np.log10(rms)
         audio = {"noiseFloorDb": round(float(np.percentile(db, 10)), 1), "speechDb": round(float(np.percentile(db, 90)), 1)}
 
+    extra = {"seats": seats, "seatFace": seat_face, "seatMouth": seat_mouth} if a.seats else {}
     Path(a.out).write_text(json.dumps({"fps": a.fps, "faceRate": round(rate, 3), "face": face,
-                                       "motion": {"cols": 4, "rows": 6, "sec": motion_sec}, "color": color, "audio": audio}))
-    print(json.dumps({"faceRate": round(rate, 3), "samples": len(faces), "color": color, "audio": audio}))
+                                       "motion": {"cols": 4, "rows": 6, "sec": motion_sec}, "color": color, "audio": audio, **extra}))
+    print(json.dumps({"faceRate": round(rate, 3), "samples": len(faces), "color": color, "audio": audio, **({"seats": seats} if a.seats else {})}))
 
 
 if __name__ == "__main__":

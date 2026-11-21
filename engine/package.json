@@ -28,6 +28,7 @@
     "produce": "node scripts/produce.mjs",
     "thumbnail": "node scripts/thumbnail.mjs",
     "edit": "node scripts/edit.mjs",
+    "clips": "node scripts/clips.mjs",
     "style": "node scripts/style.mjs",
     "akun": "node scripts/akun.mjs"
   },
