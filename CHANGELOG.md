@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1
+- Higgsfield (diuji dengan akun sungguhan): akun dengan satu workspace dipilih otomatis setelah login (sebelumnya
+  "No workspace selected" dikira belum login); lebih dari satu workspace → instruksi `higgsfield workspace list/set`.
+- Status menampilkan paket dari `subscription_plan_type`; `gen --yes` berhenti bila status akun tidak terbaca.
+
 ## 0.6.0
 - **Aset AI Higgsfield** (`npm run gen`): gambar, klip video, dan audio dari model Higgsfield lewat CLI resmi
   `higgsfield` (OAuth `higgsfield auth login`, tanpa API key di workspace). `Projects/<nama>/gen.json` → perkiraan kredit

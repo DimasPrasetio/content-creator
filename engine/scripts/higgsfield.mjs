@@ -12,14 +12,31 @@ export const bin = () => process.env.HIGGSFIELD_BIN || config().higgsfield?.bin 
 export class HiggsError extends Error {}
 
 /** Jalankan CLI dengan --json; kembalikan objek JSON (atau teks bila bukan JSON). */
-export const hf = (args, { timeoutMs = 30 * 60 * 1000 } = {}) => {
+export const hf = (args, opts = {}) => {
+  try {
+    return hf1(args, opts);
+  } catch (e) {
+    // Login sudah, tetapi belum ada workspace terpilih: akun dengan tepat satu workspace dipilih otomatis (pengaturan lokal CLI).
+    if (!(e instanceof NoWorkspace) || opts.noAutoWs) throw e;
+    const ws = (() => { try { return hf1(["workspace", "list"], { timeoutMs: 30000 }); } catch { return null; } })();
+    if (!Array.isArray(ws) || ws.length !== 1 || !ws[0]?.id)
+      throw new HiggsError(`workspace Higgsfield belum dipilih (${Array.isArray(ws) ? ws.length : "?"} tersedia): jalankan \`higgsfield workspace list\` lalu \`higgsfield workspace set <id>\``);
+    hf1(["workspace", "set", ws[0].id], { timeoutMs: 30000 });
+    console.log(`  ..   workspace Higgsfield dipilih otomatis (${ws[0].plan_type ?? "?"}): ${ws[0].id}`);
+    return hf1(args, opts);
+  }
+};
+class NoWorkspace extends HiggsError {}
+
+const hf1 = (args, { timeoutMs = 30 * 60 * 1000 } = {}) => {
   let out;
   try {
     out = execFileSync(bin(), [...args, "--json", "--no-color"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: timeoutMs, maxBuffer: 64 << 20 });
   } catch (e) {
     if (e.code === "ENOENT") throw new HiggsError("CLI higgsfield belum terpasang: jalankan ulang /content-creator:setup");
     const msg = `${e.stderr ?? ""}${e.stdout ?? ""}`.trim() || e.message;
-    if (/not authenticated|session expired|unauthori[sz]ed|no workspace selected|401/i.test(msg))
+    if (/no workspace selected/i.test(msg)) throw new NoWorkspace(msg.split("\n")[0]);
+    if (/not authenticated|not logged in|session expired|unauthori[sz]ed|401/i.test(msg))
       throw new HiggsError(`belum login Higgsfield (${msg.split("\n")[0]}): jalankan sekali di terminal \`higgsfield auth login\``);
     if (/insufficient|not enough credits|balance/i.test(msg)) throw new HiggsError(`kredit Higgsfield tidak cukup: ${msg.split("\n")[0]}`);
     throw new HiggsError(msg.split("\n").slice(0, 4).join(" | "));
@@ -96,7 +113,7 @@ export const account = () => {
       const m = a.match(/(\S+@\S+)\s*[—-]\s*(.+?)\s+plan,\s*([\d.,]+)\s*credits/i);
       return { ok: true, email: m?.[1], plan: m?.[2], credits: m ? Number(m[3].replace(/,/g, "")) : creditsOf(a) };
     }
-    return { ok: true, email: find(a, (v, k) => k === "email"), plan: find(a, (v, k) => /^plan(_name)?$/i.test(k) && typeof v === "string"), credits: creditsOf(a) };
+    return { ok: true, email: find(a, (v, k) => k === "email"), plan: find(a, (v, k) => /plan(_type|_name)?$/i.test(k) && typeof v === "string"), credits: creditsOf(a) };
   } catch (e) {
     return { ok: false, error: e.message };
   }

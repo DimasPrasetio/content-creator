@@ -132,7 +132,7 @@ try {
   else {
     const a = hfm.account();
     if (a.ok) ok(`Higgsfield CLI ${v} (${a.email ?? "akun"}${a.plan ? `, paket ${a.plan}` : ""}${Number.isFinite(a.credits) ? `, ${a.credits} kredit` : ""}) · aset AI: npm run gen`);
-    else console.log(`  -    Higgsfield CLI ${v} belum login (opsional, aset AI): higgsfield auth login`);
+    else console.log(`  -    Higgsfield CLI ${v} belum siap (opsional, aset AI): ${a.error.replace(/^.*?: (?=jalankan)/, "")}`);
   }
 }
 

@@ -124,7 +124,10 @@ memotong kredit, dan paket "unlimited" tidak berlaku untuk pemakaian otomatis.
    ```bash
    higgsfield auth login
    ```
-2. `npm run check` menampilkan `Higgsfield CLI ... (email, paket, N kredit)`. Daftar model: `npm run gen -- --models`.
+   Di terminal yang sudah terbuka sebelum setup, muat PATH alat dulu: `. ~/.config/content-creator/env.sh`.
+   Akun dengan satu workspace dipilih otomatis; lebih dari satu: `higgsfield workspace list` lalu `higgsfield workspace set <id>`.
+2. `npm run check` menampilkan `Higgsfield CLI ... (email, paket, N kredit)`. Paket free berisi 0 kredit (perkiraan
+   biaya tetap bisa, generate tidak). Daftar model: `npm run gen -- --models`.
 3. Pemakaian per video diatur agent: batas kredit disepakati di awal, `npm run gen -- <nama> --estimate` (gratis) lalu
    `--yes`. Klip/gambar AI yang tampak nyata wajib diberi label konten AI saat posting.
 4. *(Opsional)* MCP Higgsfield di Claude Code: jalankan setup dengan `--with-higgsfield-mcp` (atau

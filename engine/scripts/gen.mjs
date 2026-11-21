@@ -149,7 +149,8 @@ if (!flag("yes")) die("belum dijalankan: perintah ini memakai kredit Higgsfield.
 if (!(budget > 0)) die('batas kredit belum ada: isi "budget" di gen.json (angka yang disepakati pengguna) atau --budget=N');
 if (unknown) die("biaya sebagian item tidak bisa diperkirakan: periksa parameter dengan `higgsfield model get <model> --json`");
 if (spent + total > budget) die(`melebihi batas: terpakai ${spent} + baru ${total} > batas ${budget}. Kurangi item / model lebih murah, atau minta pengguna menaikkan batas.`, 2);
-if (acc.ok && Number.isFinite(acc.credits) && total > acc.credits) die(`kredit akun tidak cukup (${acc.credits} < ${total})`, 2);
+if (!acc.ok) die(`status akun Higgsfield tidak terbaca, generate dibatalkan: ${acc.error}`);
+if (Number.isFinite(acc.credits) && total > acc.credits) die(`kredit akun tidak cukup (${acc.credits} < ${total})`, 2);
 
 // ---------- generate (memakai kredit)
 mkdirSync(outDir, { recursive: true });
