@@ -187,10 +187,19 @@ profil yang sama lewat `npm run brand -- pack <slug>` → kirim → `npm run bra
 2. `Projects/<nama>/script.txt`: kata-kata **identik** dengan `.md` + tag ekspresi secukupnya (`[excited]`,
    `[curious]`, `[sighs]`, `[laughs]`, `[dramatic pause]`). Hindari banyak `[whispers]`/`[shouting]` (mengubah warna
    suara). Eleven v4 tidak memakai speed/style: tempo dan emosi lewat tanda baca, `...`, dan kata (Nah, Eh, beneran!).
-3. Tunjukkan: tabel scene (no · narasi · visual), perkiraan durasi (kata ÷ 2,5), karakter `.txt` vs sisa kuota.
+3. **Daftar istilah (wajib sebelum voice).** Untuk setiap singkatan, istilah asing, dan nama di narasi: pahami dulu
+   **artinya dalam kalimat** (IPO di kalimat soal saham = *Initial Public Offering*), tentukan **bahasa asalnya**, baru
+   **cara bacanya**: singkatan Inggris → nama huruf Inggris (IPO = "ay-pi-o", IT = "ay-tee", AI = "é-ai"); singkatan
+   Indonesia → nama huruf Indonesia (SOP = "es-o-pe"); singkatan yang dibaca sebagai kata (NASA) → petakan ke dirinya
+   sendiri. Jangan menebak dari tulisannya saja ("ai" pada IPO terbaca gaya Indonesia). Tulis ke `pronounce` profil brand;
+   ejaan yang divalidasi pengguna disalin ke `Engine/config.local.json` → `pronounce` agar sama di semua brand. Cantumkan
+   tabel `istilah · arti · bahasa · ejaan` di brief. Periksa dengan `npm run istilah -- <nama>` (juga otomatis di
+   `produce --draft`; voice menolak jalan bila ada singkatan tanpa cara baca). Istilah baru yang belum pernah divalidasi
+   dan meragukan → audisi kalimat aslinya (`npm run voices -- --sample=<Voice> --text="..."`, sebut kreditnya) sebelum voice penuh.
+4. Tunjukkan: tabel scene (no · narasi · visual), perkiraan durasi (kata ÷ 2,5), karakter `.txt` vs sisa kuota.
    Periksa sendiri contoh frame draf (`npm run produce -- <nama> --draft` → `preview/draft/board.png`) sebelum voice:
    timing, keterbacaan, satu fokus per scene. Tabel ini masuk laporan akhir; jangan berhenti menunggu persetujuan.
-4. `Projects/<nama>/brief.md`: tujuan · penonton · pesan · hook · CTA · durasi · rasa visual → jalur/skill/gaya/palet +
+5. `Projects/<nama>/brief.md`: tujuan · penonton · pesan · hook · CTA · durasi · rasa visual → jalur/skill/gaya/palet +
    path contoh frame yang disetujui · rasa suara → voice/model/profil · brand · fakta & sumber · batasan · asumsi ·
    kutipan kesepakatan persepsi pengguna.
 
@@ -216,7 +225,8 @@ Semua perintah dari `<workspace>/Engine/`.
    seed tetap, cache per hash teks.
    - Durasi (`ffprobe Projects/<nama>/voice.wav`) meleset > ±15% → ubah narasi `.md` + `.txt`, ulangi. Jangan memperlambat suara.
    - Peringatan "berbeda dengan voice profil" → kembalikan ke voice profil, kecuali pengguna memutuskan lain.
-   - Salah baca → `config.json` → `pronounce` (atau di profil brand); ejaan ASR → `asrAlias` (hanya bila sinkron memakai whisper); `--force` hanya bila perlu.
+   - Voice berhenti "singkatan belum punya cara baca" → isi kamus (lihat **Daftar istilah** di tahap 4), jangan `--skip-istilah`.
+   - Salah baca → `pronounce` di profil brand (atau `Engine/config.local.json` agar berlaku di semua brand), putuskan ulang lewat arti → bahasa → ejaan, audisi bila ragu; ejaan ASR → `asrAlias` (hanya bila sinkron memakai whisper); `--force` hanya bila perlu.
    - Sinkron kata otomatis dari timestamps ElevenLabs (`timing.json` → `"sync"`). QA kejelasan kata: whisper bila
      terpasang; tanpa whisper tawarkan `npm run qa -- <nama> --asr=eleven` (kuota Speech to Text) atau dengarkan sendiri.
    - Pemakaian pertama voice+model membuat jangkar suara (`Engine/voices/elevenlabs/anchor/`) untuk QA.

@@ -82,6 +82,7 @@ html, body { margin: 0; padding: 0; }
   // brand / mark (bagian berwarna dari tema)
   const mk = document.getElementById("mark");
   for (const [t, c] of T.mark || []) { const s = document.createElement("span"); s.textContent = t; s.style.color = col(c); mk.append(s); }
+  if (th.watermark?.size) mk.style.fontSize = Math.round(46 * th.watermark.size / 36) + "px"; // ikut skala watermark video (bawaan 36)
 
   if (T.visual) { const img = document.getElementById("vimg"); img.src = T.visual; await img.decode().catch(() => {}); }
 

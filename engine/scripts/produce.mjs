@@ -13,6 +13,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ENGINE, P, ROOT, brandProfile, duration, parseScript, readJson, resolveName, run } from "./lib.mjs";
+import { checkProject } from "./istilah.mjs";
 
 const argv = process.argv.slice(2);
 const opt = (k, d) => { const a = argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.split("=")[1] : d; };
@@ -91,6 +92,10 @@ function checkCues() {
 }
 
 if (flag("draft")) {
+  await step(null, "Cek istilah (cara baca singkatan, sebelum voice)", () => {
+    const missing = checkProject(name);
+    if (missing.length) console.log(`    ! ${missing.length} singkatan belum punya cara baca: voice akan berhenti sampai kamus pelafalan diisi.`);
+  });
   await step(null, "Contoh frame (timing perkiraan)", () => {
     const r = sh("npm", ["run", "html", "--", name, "--preview", "--draft"], layoutLine);
     if (!r.ok) die("Preview draft gagal", r.out);

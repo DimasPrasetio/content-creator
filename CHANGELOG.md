@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.1
+- **Cek istilah sebelum voice** (`npm run istilah -- <nama>`): setiap singkatan di narasi (IPO, AOL, SOP, ...) wajib
+  punya cara baca di kamus `pronounce` (plugin < `config.local.json` < profil brand). Tanpa itu `voice` berhenti
+  **sebelum kredit terpakai**; `produce --draft` sudah menampilkannya lebih awal. Laporan memuat kalimat konteks dan
+  usulan ejaan Inggris / Indonesia / dibaca sebagai kata (tabel nama huruf dari ejaan yang divalidasi pengguna).
+  Lewati hanya dengan `--skip-istilah` (atau otomatis untuk `--audio`).
+- Skill: langkah **Daftar istilah** di tahap naskah — pahami arti istilah dalam kalimat → bahasa asal → ejaan; tabel
+  `istilah · arti · bahasa · ejaan` di brief; ejaan tervalidasi disalin ke `config.local.json` agar sama di semua brand.
+- Kamus bawaan: `AI` = "é-ai" (menggantikan "E Ai" yang ditolak), `IT` = "ay-tee", `IPO` = "ay-pi-o".
+- Voice: scene yang berakhir koma tidak lagi dibacakan sebagai ",." (kalimat bersambung antar-scene).
+- Tema: `watermark.size` (px, bawaan 36) untuk watermark pojok yang lebih kecil; thumbnail ikut diskalakan.
+
 ## 0.5.0
 - **Mesin edit footage berbasis style** (`npm run edit`): footage talking-head yang sudah ada → video 1080×1920 sesuai
   style. Normalisasi (30 fps tetap, HDR → SDR lewat zscale / VideoToolbox, potong 9:16 mengikuti wajah untuk footage

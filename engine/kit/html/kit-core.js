@@ -20,7 +20,7 @@ const tint = (hex, a) => { const h = col(hex).replace("#", ""); const n = parseI
   r.setProperty("--glow1", tint(THEME_.glow?.[0] || "accent", 0.09)); r.setProperty("--glow2", tint(THEME_.glow?.[1] || "accent2", 0.035));
   const hl = THEME_.highlight || {}; r.setProperty("--hl-bg", col(hl.bg || "accent")); r.setProperty("--hl-fg", col(hl.fg || "bg")); r.setProperty("--hl-glow", tint(hl.bg || "accent", 0.35));
   const wm = document.getElementById("wm"), W = THEME_.watermark;
-  if (W && W.parts) { W.parts.forEach(([t, c]) => { const s = document.createElement("span"); s.textContent = t; s.style.color = col(c); wm.appendChild(s); }); wm.style.opacity = W.opacity ?? 1; }
+  if (W && W.parts) { W.parts.forEach(([t, c]) => { const s = document.createElement("span"); s.textContent = t; s.style.color = col(c); wm.appendChild(s); }); wm.style.opacity = W.opacity ?? 1; if (W.size) wm.style.fontSize = W.size + "px"; }
   else wm.remove();
 })();
 const TM = window.__TIMING__;

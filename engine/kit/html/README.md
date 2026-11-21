@@ -80,7 +80,7 @@ Jangan pakai `blink` pada elemen ber-atribut `opacity` (ditimpa jadi penuh) — 
 
 ## Tema (`Brands/<slug>/theme.json`, digabung dengan `theme.default.json`)
 `layout` ("aman" bawaan = zona aman TikTok, "penuh" = tata letak lama) · `timing` {lead, crossfade} · `colors` (bg, grid, panel, track, text, dim, accent, accent2, info, ok, warn, bad, extra) · `fonts` (head, body, mono) · `stroke` ·
-`progress` · `label.text` · `glow` · `highlight` {bg, fg} · `subtitle` {said, unsaid, key} · `watermark` {parts: [[teks, warna]], opacity}
+`progress` · `label.text` · `glow` · `highlight` {bg, fg} · `subtitle` {said, unsaid, key} · `watermark` {parts: [[teks, warna]], opacity, size (px, bawaan 36; thumbnail ikut diskalakan)}
 (null = tanpa) · `mark` · `cta.label` · `closing` {wordmark, descriptor, lines: [[kata, kata disorot, cue]]} (null = tanpa) ·
 `storyboard` {skill, brandOverlay, music, closingSfx}. Nilai warna boleh nama warna tema atau hex.
 

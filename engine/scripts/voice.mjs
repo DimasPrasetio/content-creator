@@ -25,6 +25,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import path from "node:path";
 import { ENGINE, NAME_RE, P, alignTokens, brandProfile, config, duration, normTokens, parseScript, resolveName, run, whisperReady } from "./lib.mjs";
 import { alignmentWords, errText, forcedAlign, isPaidPlanError, quota, ttsWithTimestamps } from "./eleven.mjs";
+import { checkProject } from "./istilah.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -61,6 +62,7 @@ const refText = existsSync(refTextPath) ? readFileSync(refTextPath, "utf8").trim
 const styles = cfg.styles ?? { normal: { lufs: -16 } };
 for (const sc of scenes) {
   if (!styles[sc.style]) throw new Error(`Gaya "${sc.style}" tidak dikenal. Pilihan: ${Object.keys(styles).join(", ")}`);
+  sc.text = sc.text.replace(/\s*[,;:]+$/, ""); // scene yang berakhir koma (kalimat bersambung ke scene berikutnya): jangan jadi ",."
   if (!/[.!?…]$/.test(sc.text)) sc.text += ".";
 }
 
@@ -97,7 +99,16 @@ const profile = brandProfile(profileName);
 if (profileName && !profile) throw new Error(`Profil tidak ditemukan: Brands/${profileName}/profile.json`);
 if (profile) console.log(`Profil brand: ${profileName}`);
 
-// Pelafalan: ganti istilah sesuai kamus (mis. AI -> "E Ai") hanya untuk teks yang dibacakan.
+// Cek istilah SEBELUM kredit terpakai: setiap singkatan di narasi wajib punya cara baca di kamus pelafalan
+// (arti dalam kalimat → bahasa asal → ejaan). Audio luar (--audio) dan --skip-istilah melewati cek ini.
+if (!userAudio && !args.includes("--skip-istilah")) {
+  console.log("Cek istilah (singkatan & cara bacanya):");
+  const missing = checkProject(name, { profileName });
+  if (missing.length)
+    throw new Error(`${missing.length} singkatan belum punya cara baca: ${missing.map((m) => m.term).join(", ")}. Tulis ke "pronounce" (profil brand atau config.local.json) lalu ulangi; voice belum dibuat, kredit tidak terpakai.`);
+}
+
+// Pelafalan: ganti istilah sesuai kamus (mis. IPO -> "ay-pi-o") hanya untuk teks yang dibacakan.
 const lexicon = Object.entries({ ...(cfg.pronounce ?? {}), ...(profile?.pronounce ?? {}) }).sort((a, b) => b[0].length - a[0].length);
 const esc = (t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const speak = (t) => lexicon.reduce((acc, [k, v]) => acc.replace(new RegExp(`(?<![\\p{L}\\p{N}])${esc(k)}(?![\\p{L}\\p{N}])`, "gu"), v), t);
