@@ -1,0 +1,12 @@
+{
+  "_doc": "Style bawaan plugin 'Komik': iklan/promo pop cinematic ala komik (komposisi Remotion Pop). Warna & gerak ada di Engine/src/pop/ (token K di lib.tsx); rincian di STYLE.md.",
+  "name": "komik",
+  "title": "Komik",
+  "aliases": ["pop", "pop-cinematic"],
+  "kind": "animasi",
+  "jalur": "Pop",
+  "skill": "pop-cinematic-motion",
+  "warna": "style",
+  "cocok": ["promo", "jualan", "iklan layanan", "reveal brand", "lucu", "berani"],
+  "palette": { "navy": "#141235", "cream": "#F7EEDB", "brand": "#FFD21F", "red": "#FF3B30" }
+}

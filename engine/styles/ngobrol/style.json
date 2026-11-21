@@ -1,7 +1,12 @@
 {
-  "_doc": "Style bawaan plugin 'narration': talking-head edukatif dipotong rapat + panel motion graphic hijau gelap + subtitle per kata + grading muted cinematic. Workspace boleh menimpa lewat Styles/narration/style.json. Rincian: STYLE.md.",
-  "name": "narration",
+  "_doc": "Style bawaan plugin 'Ngobrol' (dulu 'narration'): talking-head edukatif dipotong rapat + panel motion graphic hijau gelap + subtitle per kata + grading muted cinematic. Workspace boleh menimpa lewat Styles/ngobrol/style.json. Rincian: STYLE.md.",
+  "name": "ngobrol",
+  "title": "Ngobrol",
+  "aliases": [
+    "narration"
+  ],
   "kind": "edit",
+  "jalur": "edit",
   "canvas": {
     "width": 1080,
     "height": 1920,

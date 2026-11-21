@@ -1,6 +1,6 @@
-// Mesin edit footage berbasis STYLE (bukan brand): footage talking-head -> video 1080x1920 sesuai gaya (mis. narration).
+// Mesin edit footage berbasis STYLE (bukan brand): footage talking-head -> video 1080x1920 sesuai style (mis. ngobrol).
 //
-//   npm run edit -- <nama> --new --style=narration --input=/path/a.mov[,b.mov] [--brand=<slug>]
+//   npm run edit -- <nama> --new --style=ngobrol --input=/path/a.mov[,b.mov] [--brand=<slug>]
 //        proyek baru: footage disalin ke Projects/<nama>/assets/raw/, dibuat Projects/<nama>/edit.json
 //   npm run edit -- <nama> --analyze
 //        normalisasi (30 fps tetap, HDR->SDR, audio 48 kHz) + transkrip per kata (ElevenLabs Scribe) + analisis wajah,
@@ -11,13 +11,14 @@
 //   --from=cut|sound|preview|render     mulai dari langkah tertentu (cache langkah sebelumnya dipakai)
 //
 // Style: Styles/<slug>/style.json di workspace (hasil analisis referensi pengguna) > Engine/styles/<slug>/ (bawaan plugin).
+// Brand (--brand) hanya identitas: brand pojok & kamus; rasa video dari style.
 // Format edit.json & tata bahasa visual: Engine/styles/README.md.
 import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DIRS, ENGINE, P, ROOT, archiveResult, bps, deepMerge, duration, encodeFor, normTokens, readJson, resolveName, run, writeLayout } from "./lib.mjs";
+import { DIRS, ENGINE, P, ROOT, archiveResult, bps, deepMerge, duration, encodeFor, listStyles, loadStyle, normTokens, readJson, resolveName, run, writeLayout } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -34,18 +35,16 @@ const sha = (x) => createHash("sha1").update(typeof x === "string" ? x : JSON.st
 const say = (m) => console.log(`\n== ${m}`);
 const probeJson = (f) => JSON.parse(run("ffprobe", ["-v", "error", "-show_entries", "stream=index,codec_type,width,height,r_frame_rate,color_transfer,color_primaries:stream_side_data=rotation:format=duration", "-of", "json", f]));
 
-/** Style: workspace Styles/<slug>/style.json menimpa bawaan plugin Engine/styles/<slug>/style.json. */
-export const loadStyle = (slug) => {
-  const base = readJson(path.join(ENGINE, "styles", slug, "style.json"), null);
-  const ws = readJson(path.join(ROOT, "Styles", slug, "style.json"), null);
-  if (!base && !ws) throw new Error(`Style "${slug}" tidak ada (Styles/${slug}/style.json atau Engine/styles/${slug}/style.json)`);
-  return deepMerge(base ?? {}, ws ?? {});
+/** Style edit (kind "edit"): Styles/<slug>/ milik pengguna menimpa bawaan Engine/styles/<slug>/; nama lama (alias) dikenali. */
+const editStyle = (name) => {
+  const st = loadStyle(name);
+  if (st.kind !== "edit") throw new Error(`Style "${st.slug}" adalah style animasi (jalur ${st.jalur ?? "html"}), bukan style edit footage. Style edit: ${listStyles().filter((x) => x.kind === "edit").map((x) => x.slug).join(", ")}`);
+  return st;
 };
 
 // ---------------------------------------------------------------- proyek baru
 if (has("new")) {
-  const style = opt("style") ?? "narration";
-  loadStyle(style);
+  const style = editStyle(opt("style") ?? "ngobrol").slug;
   const inputs = (opt("input") ?? "").split(",").filter(Boolean);
   if (!inputs.length) throw new Error("--input=<footage.mp4>[,<footage2.mov>] wajib");
   const raw = path.join(paths.dir, "assets", "raw");
@@ -68,7 +67,7 @@ if (has("new")) {
 
 const plan = readJson(planFile, null);
 if (!plan) throw new Error(`Belum ada ${path.relative(ROOT, planFile)}: npm run edit -- ${name} --new --style=<style> --input=<footage>`);
-const S = loadStyle(plan.style ?? "narration");
+const S = editStyle(plan.style ?? "ngobrol");
 const pace = S.pace ?? {};
 
 // ---------------------------------------------------------------- 1. normalisasi + analisis

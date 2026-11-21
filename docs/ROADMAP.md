@@ -1,0 +1,44 @@
+# Roadmap: dari "pembuat video animasi" ke content creator lengkap
+
+Disepakati lewat grill-me pada 2026-11-21 (jawaban pengguna dikutip apa adanya):
+
+| Cabang | Keputusan |
+|---|---|
+| Jenis footage | "Talking-head / bicara ke kamera, Podcast / wawancara 2+ orang, Rekaman layar / tutorial, Vlog / montase B-roll + musik" |
+| Video panjang | "YouTube 5-20 menit, Podcast / webinar 30-90 menit, Explainer animasi landscape, Presentasi / kelas online" |
+| Rilis | "Bertahap" |
+| Style vs brand | "Style = rasa, brand = identitas" |
+| Voice | "Ikut brand" |
+| Sumber style | "Dari video referensi, Dari video yang sudah jadi, Dari obrolan + contoh frame, Dari gambar / moodboard / website" |
+| Gaya lama | "jadikan style bernama, namun gunakan nama yang mudah diingat dan di hafal" |
+| Windows | "Lewat WSL2 dipandu" |
+| Transkrip | "Otomatis pilih" (whisper lokal bila ada, selain itu ElevenLabs dengan perkiraan biaya) |
+| Ringkasan | "Sepakat, jalankan" |
+
+## Tahapan
+
+### v0.7 · Style lepas dari brand + setup terpandu
+- **Style** (`Styles/<slug>/` di workspace, bawaan di `engine/styles/<slug>/`) = rasa: jalur & skill, tema (huruf, palet
+  bawaan, subtitle, glow, sorotan, progress, label), tempo, musik/SFX, grading & aturan edit, `STYLE.md` (cara menyusun),
+  `selera.md` (riwayat selera per style), `examples/`. Opsi `warna`: `brand` (pakai warna brand bila ada) atau `style`.
+- **Brand** (`Brands/<slug>/`) = identitas: nama, brand pojok, logo/watermark, warna brand, CTA, penutup, kamus
+  pelafalan, **voice**, style bawaan (rekomendasi, bukan kunci).
+- Style bisa dipakai brand mana pun dan jenis video apa pun; dibuat dari video referensi, video yang sudah jadi
+  (`npm run style -- save`), obrolan + contoh frame, atau gambar/moodboard/website.
+- Gaya lama → style bernama mudah diingat: **Papan Tulis**, **Bara**, **Arsip**, **Komik**, **Ngobrol** (Papan Tulis,
+  Bara, Arsip tetap di workspace pengguna; Komik & Ngobrol ikut plugin).
+- Grill-me baru: jenis pekerjaan → format → style → brand → sisanya.
+- Setup: `npm run akun` (status & langkah login ElevenLabs, Higgsfield, Google Drive), skill setup memandu satu per satu;
+  panduan Windows lewat WSL2.
+
+### v0.8 · Kanvas fleksibel + video panjang
+- Kanvas 16:9 / 9:16 / 4:5 / 1:1 di semua jalur animasi dan edit (bukan sekadar ekspor dengan sisi blur), zona aman per
+  platform.
+- Video panjang 2-20 menit: bab (chapter), thumbnail YouTube 1280×720, deskripsi + timestamp; explainer & kelas online landscape.
+
+### v0.9 · Jenis footage baru
+- Podcast/wawancara multi-pembicara (pindah ke yang bicara, label nama), rekaman layar (zoom ke area aktif, buang loading),
+  vlog/montase (pilih momen, potong mengikuti ketukan musik).
+- Video panjang → 3-5 klip pendek potret ditawarkan otomatis.
+
+Bukan lingkup: setup Windows asli tanpa WSL, posting otomatis ke platform.

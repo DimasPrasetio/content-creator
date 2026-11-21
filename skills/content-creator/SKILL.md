@@ -1,6 +1,6 @@
 ---
 name: content-creator
-description: Agent generator video pendek otomatis — dari ide sampai MP4 vertikal 1080×1920 siap upload (Reels/TikTok). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, rekaman bicara) berbasis style (mis. narration). Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
+description: Agent generator video pendek otomatis — dari ide sampai MP4 vertikal 1080×1920 siap upload (Reels/TikTok). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, rekaman bicara). Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
 argument-hint: "[ide atau topik video]"
 ---
 
@@ -18,14 +18,19 @@ Prinsip:
    disepakati di awal (tahap 1-3). Setelah itu naskah → voice → visual → SFX → render → QA → posting berjalan **otomatis
    tanpa izin atau pertanyaan tambahan**; satu-satunya titik tanya berikutnya adalah **sebelum unggah Google Drive**.
 3. **Satu brand = satu suara.** Voice, model, pengaturan, dan seed yang sama di semua video brand itu.
+4. **Style = rasa, brand = identitas.** Style (`Styles/<slug>/`, bawaan `Engine/styles/<slug>/`) menentukan jalur, tata
+   letak, huruf, peran warna, gerak, subtitle, musik, aturan edit. Brand menentukan nama, brand pojok, logo/watermark,
+   warna brand, CTA, penutup, voice, kamus pelafalan. Brand mana pun boleh memakai style mana pun; `style` di profil brand
+   hanya rekomendasi. Selera visual dicatat per style, bukan per brand.
 
 ## Peta folder (semua path relatif ke root project)
 
 | Lokasi | Isi |
 |---|---|
 | `Projects/<nama>/` | `brief.md` · `script.md` · `script.txt` · `storyboard.json` · `voice.wav` · `preview/` (+ `layout.json`) · `html/` (jalur C) · `assets/` · `posting/` (subtitle, cover, caption) · `versions/` (render lama) |
-| `Brands/<slug>/` | `profile.json` (voice, visual, kamus) · `brand.md` + `MOTION.md` (dari brand-intake) · `logo/` · `examples/` |
-| `Brands/_selera.md` | riwayat gaya & suara yang disukai/ditolak pengguna |
+| `Styles/<slug>/` | **style** (rasa): `style.json` (mesin) · `STYLE.md` (cara menyusun) · `selera.md` (riwayat selera visual) · `examples/`. Bawaan plugin di `Engine/styles/<slug>/` (Komik, Ngobrol); `npm run style -- list` |
+| `Brands/<slug>/` | **identitas**: `profile.json` (voice, style bawaan, kamus) · `theme.json` (warna brand, watermark, CTA, penutup) · `brand.md` + `MOTION.md` (aturan identitas) · `logo/` · `examples/` |
+| `Brands/_selera.md` | riwayat brand, suara, pelafalan, dan isi yang disukai/ditolak (selera visual ada di `Styles/<slug>/selera.md`) |
 | `References/` | video/gambar referensi gaya |
 | Google Drive `<folder tujuan>/<brand>/<nama>/` | salinan hasil jadi yang **sudah disetujui** (`npm run drive`; folder diatur di `Engine/config.local.json` → `drive`) |
 | `Result/<brand>/<nama>/` | **hasil jadi saja**: `<nama>.mp4` · `thumbnail.jpg` · `caption.txt` (+ `.4x5.mp4`, `.16x9.mp4`, `.sub.mp4` bila dibuat). Brand = `profile:` naskah / brand pojok; tanpa brand = `umum` |
@@ -39,31 +44,40 @@ Prinsip:
   Bila `node`/`npm`/`ffmpeg` tidak dikenali (alat dipasang setup ke folder pengguna), awali dengan `. ~/.config/content-creator/env.sh &&`.
   Setelah perubahan besar pada mesin atau pertama kali setelah upgrade paket: `npm run selftest` (tanpa kredit) dan,
   dengan izin pengguna, `npm run selftest -- --real-voice` (±120 karakter kredit) untuk menguji jalur API sungguhan.
+- `npm run style -- list` → style yang ada; untuk kandidat yang relevan baca `STYLE.md`, `selera.md`, dan lihat `examples/`
+  (`npm run style -- show <style>`).
 - Baca `Brands/_selera.md` dan `Brands/*/profile.json` (+ `brand.md`/`MOTION.md` bila ada). Brand yang sudah punya
-  profil → profil itu menjadi rekomendasi utama.
+  profil → voice dan style bawaannya menjadi rekomendasi utama.
 - Lihat `Projects/` dan `Result/` untuk video sejenis.
 
-## Dua jenis pekerjaan: buat video baru atau EDIT footage
+## Jenis pekerjaan: video baru atau EDIT footage
 
-Tentukan di awal (tanyakan bila tidak jelas):
-- **Video baru dari ide** (naskah → suara ElevenLabs → animasi): tahap 1-6 di bawah.
-- **Edit footage yang sudah ada** (pengguna memberi rekaman talking-head / bicara ke kamera, mp4/mov, bisa beberapa
-  file, vertikal atau horizontal, termasuk HDR iPhone): ikuti bagian **"Mode edit footage"** di bawah. Gaya ditentukan
-  **style** (`narration`, atau style lain di `Styles/<slug>/`), bukan brand.
+Cabang pertama grill-me (tanyakan bila tidak jelas dari permintaan):
+- **Video baru dari ide** (naskah → suara ElevenLabs → animasi): tahap 1-6 di bawah, dengan style animasi
+  (`kind: animasi`, mis. Papan Tulis, Komik).
+- **Edit footage yang sudah ada** (pengguna memberi rekaman, mp4/mov, bisa beberapa file, vertikal atau horizontal,
+  termasuk HDR iPhone): ikuti bagian **"Mode edit footage"** di bawah dengan style edit (`kind: edit`, mis. Ngobrol).
+
+Yang sudah didukung sekarang (sampaikan jujur saat grill-me): hasil **9:16 vertikal** 20 dtk - ±2 mnt; versi 4:5/16:9
+lewat `npm run export` (video utuh dikecilkan dengan sisi blur bila teks tidak muat); edit footage **talking-head satu
+orang**. Belum: kanvas landscape asli & video panjang 5-20 mnt (rencana v0.8), podcast multi-pembicara, rekaman layar,
+vlog/montase, klip pendek otomatis dari video panjang (rencana v0.9; lihat `docs/ROADMAP.md` plugin). Permintaan di luar
+itu → tawarkan cara terdekat yang sudah bisa, jangan berjanji.
 
 ## Mode: lengkap atau cepat
 
 Tentukan diam-diam setelah tahap 0, lalu sebutkan ke pengguna dalam satu kalimat ("Saya pakai jalur cepat karena …").
 
-- **Cepat** bila semua benar: brand sudah punya `Brands/<slug>/profile.json` dengan `visual.jalur` terisi, sudah ada
-  video brand itu yang disetujui (lihat `Brands/_selera.md`), dan pengguna tidak meminta gaya/suara baru. Juga bila
+- **Cepat** bila semua benar: brand sudah punya `Brands/<slug>/profile.json` dengan `style` bawaan (lihat
+  `npm run brand -- list`), style itu sudah pernah disetujui (`Styles/<slug>/selera.md`), dan pengguna tidak meminta
+  style/suara baru. Juga bila
   pengguna berkata "langsung"/"cepat". Alurnya:
   1. Satu `AskUserQuestion` berisi ≤ 3 pertanyaan ringan & independen: topik/pesan + pilihan 2-3 hook, CTA (bila
      berbeda dari biasanya), dan **brand pojok** (wajib, rekomendasi dari profil). Fakta lain diambil dari profil.
-  2. Gaya, palet, voice, musik dari profil (tanpa contoh frame/audisi). Tulis naskah, bangun halaman, periksa sendiri
+  2. Style + warna dari profil brand, voice dan musik dari profil/style (tanpa contoh frame/audisi). Tulis naskah, bangun halaman, periksa sendiri
      contoh frame draf, lalu produksi otomatis sampai paket posting (tanpa menunggu persetujuan naskah).
   3. Laporan akhir berisi tabel storyboard naskah + board frame + hasil QA; tanyakan hanya: simpan ke Google Drive?
-- **Lengkap**: selain itu (brand baru, gaya/suara baru, video pertama setelah perubahan besar). Jalankan tahap 1-4 penuh.
+- **Lengkap**: selain itu (brand baru, style/suara baru, video pertama setelah perubahan besar). Jalankan tahap 1-4 penuh.
 
 Di **kedua** mode: setelah persepsi disepakati (ringkasan grill-me menyebut perkiraan kredit), tidak ada pertanyaan atau
 izin lagi sampai video jadi, kecuali terhambat (kuota habis, voice ditolak, render gagal berulang). Tanya lagi hanya untuk Drive.
@@ -74,22 +88,28 @@ Muat skill `grill-me` dari plugin ini lewat Skill tool dan jalankan wawancaranya
 jalankan prosedurnya langsung: fakta dicari sendiri, satu cabang per giliran lewat `AskUserQuestion`, selalu
 dengan rekomendasi di opsi pertama "(Rekomendasi)". Tanyakan hanya cabang yang belum jelas, hulu ke hilir.
 
-1. **Tujuan & pesan** — untuk apa (jualan, launch produk, edukasi, branding, rekrutmen, pengumuman, milestone)?
+Urutan hulu ke hilir: **jenis pekerjaan → format → style → brand → sisanya**. Keputusan hulu mengubah cabang hilir.
+
+1. **Jenis pekerjaan** — video baru dari ide, atau edit footage milik pengguna (bagian sebelumnya)? Footage: jenisnya
+   (talking-head, podcast, rekaman layar, vlog) dan file-nya.
+2. **Format** — tempat posting (Reels/TikTok, feed 4:5, YouTube 16:9), durasi (default 30-45 dtk, ±2,5 kata/dtk),
+   subtitle ditanam atau file SRT saja. Sampaikan batas yang belum didukung (bagian "Jenis pekerjaan").
+3. **Style (rasa)** — tunjukkan style yang ada (`npm run style -- list`, gambar dari `examples/` style itu, rekomendasi
+   = style bawaan brand atau yang paling cocok dengan rasa yang diminta) atau **buat style baru** (tahap 2). Minta
+   **2-3 kata rasa** ("lucu, berani", "tenang, premium", "gelap, tegas") dan **referensi** bila ada (video, akun,
+   gambar/moodboard, website → `References/`). Jangan menanyakan nama mesin/jalur.
+4. **Brand (identitas)** — brand mana (profil di `Brands/`), atau tanpa brand / brand baru? **Brand pojok atas** (wajib
+   setiap video, `CLAUDE.md` langkah 0) kiri/kanan, boleh kosong; nilai profil hanya rekomendasi. Warna: ikut **warna
+   brand** atau **warna style** (`--warna=brand|style`; rekomendasi = `warna` di style). Voice ikut brand.
+5. **Tujuan & pesan** — untuk apa (jualan, launch produk, edukasi, branding, rekrutmen, pengumuman, milestone)?
    Satu pesan yang harus diingat?
-2. **Penonton** — siapa (umur, profesi, masalahnya)? Ini menentukan bahasa, contoh, hook, dan suara.
-3. **Hook 3 detik pertama** — tawarkan 2-3 kalimat hook konkret, rekomendasikan satu.
-4. **CTA penutup** — follow, DM, link, beli? Handle/link/logo yang ditampilkan.
-5. **Durasi** — default 30-45 dtk (±2,5 kata/dtk).
-6. **Rasa visual** — minta **2-3 kata rasa** (mis. "lucu, berani", "tenang, premium", "futuristik"),
-   **referensi** (link/video/akun yang disukai; isi `References/`), warna brand, dan apakah perlu
-   **foto produk / tangkapan layar / angka & grafik**. Jangan menanyakan nama mesin. Lanjut ke tahap 2.
-7. **Rasa suara** — perempuan/laki-laki, kesan umur, energi (tenang ↔ semangat), gaya (ngobrol, pencerita,
-   penyiar, iklan), logat. Lanjut ke tahap 3.
-8. **Brand pojok atas** (wajib setiap video, `CLAUDE.md` langkah 0) — kiri/kanan, boleh kosong. Nilai dari profil
-   brand hanya rekomendasi.
-9. **Batasan & fakta** — klaim/angka yang boleh beserta sumbernya, kata wajib/terlarang, ejaan nama khusus, tenggat.
-10. **Tempat posting & musik** — Reels/TikTok saja, atau juga feed (4:5) / YouTube (16:9)? Subtitle ditanam atau
-    file SRT saja? Musik sintetis (gratis, default) atau musik ElevenLabs (lebih natural, memakai kredit)?
+6. **Penonton** — siapa (umur, profesi, masalahnya)? Ini menentukan bahasa, contoh, hook, dan suara.
+7. **Hook 3 detik pertama** — tawarkan 2-3 kalimat hook konkret, rekomendasikan satu.
+8. **CTA penutup** — follow, DM, link, beli? Handle/link/logo yang ditampilkan.
+9. **Rasa suara** — hanya bila brand belum punya voice (atau pengguna ingin suara lain): perempuan/laki-laki, kesan
+   umur, energi (tenang ↔ semangat), gaya (ngobrol, pencerita, penyiar, iklan), logat. Lanjut ke tahap 3.
+10. **Batasan, fakta & musik** — klaim/angka yang boleh beserta sumbernya, kata wajib/terlarang, ejaan nama khusus,
+    tenggat; musik sintetis (gratis, default) atau musik ElevenLabs (lebih natural, memakai kredit)?
 11. **Aset AI (opsional, Higgsfield)** — hanya bila `npm run check` menunjukkan Higgsfield sudah login dan visualnya
     benar-benar butuh gambar/klip yang tidak bisa dibuat kode (suasana sinematik, B-roll benda/tempat, latar thumbnail).
     Usulkan daftar aset konkret (3-6 item: apa, di scene mana), perkiraan kredit dari `npm run gen -- <nama> --estimate`
@@ -97,8 +117,25 @@ dengan rekomendasi di opsi pertama "(Rekomendasi)". Tanyakan hanya cabang yang b
 
 Gali kata kabur ("viral", "keren", "profesional") menjadi contoh konkret. "Terserah" → pakai rekomendasimu dan catat
 sebagai asumsi. **Brand baru yang akan dipakai berulang** → tawarkan sesi singkat `brand-intake` (tahap 2e).
+**Style baru yang disukai** → tawarkan menyimpannya dengan nama yang mudah diingat (1-2 kata Indonesia, mis. "Papan
+Tulis", "Bara", "Arsip") agar bisa dipakai brand lain.
 
-## 2 · Memilih gaya visual — dari contoh frame naskah pengguna
+## 2 · Memilih style — dari style bernama atau contoh frame naskah pengguna
+
+**Pakai style yang ada** bila cocok: tunjukkan `examples/` style kandidat (board/scene) dan isi `selera.md`-nya, lalu
+(mode lengkap) buat contoh frame dari naskah pengguna dengan style itu + warna pilihan:
+`npm run new -- <nama> --style=<style> [--warna=brand|style]` → tulis scene hook + satu scene isi di `html/scenes.js` →
+`npm run produce -- <nama> --draft`. Style jalur Pop/mg4 → contoh frame jalur itu (b). Style edit → Mode edit footage.
+
+**Buat style baru** (setiap jalan berakhir di `Styles/<slug>/`: `style.json` + `STYLE.md` + `examples/` + `selera.md`):
+- *Dari video referensi* (video/akun yang disukai) → `reference-to-motion` mengurai gerak & tampilan → bangun contoh
+  frame jalur C → setelah disetujui `npm run style -- new <slug> --title="Nama" [--dari=<style terdekat>]`, isi `theme`
+  dan `STYLE.md` dari hasil bedah (untuk footage: bedah seperti Ngobrol, termasuk color grading).
+- *Dari video yang sudah jadi* (proyek di `Projects/`) → `npm run style -- save <proyek> <slug> --title="Nama"`, lalu
+  lengkapi `STYLE.md` dari halaman/storyboard proyek itu.
+- *Dari obrolan + contoh frame* → kandidat jalur di bawah (a-c), pengguna memilih dari gambar → simpan seperti di atas.
+- *Dari gambar / moodboard / website* → ambil palet, huruf, tekstur, dan kesan (`reference-to-motion` bagian look) →
+  `npm run style -- new` → contoh frame → setujui.
 
 Visual selalu dibuat dengan **salah satu dari tiga jalur**. Muat skill jalurnya (Skill tool) sebelum menulis
 storyboard/halaman; skill yang tidak muncul di daftar sesi dibaca langsung dari `.claude/skills/<nama>/SKILL.md`.
@@ -144,8 +181,9 @@ Batasan yang wajib disampaikan: **B** = hanya teks + grafis gambar-kode, teks la
 - Gabungkan kandidat: `.venv/bin/python scripts/board_png.py <out.png> "Label=path.png" ...`, **lihat sendiri**
   (Read tool), kirim ke pengguna (SendUserFile), minta pilihan. Timing contoh = perkiraan, tanpa kredit.
 
-**c. Setel di dalam gaya** bila hampir cocok: palet (B `"palette"`; A token `K` di `src/pop/lib.tsx`; C warna dari
-`Brands/<slug>/MOTION.md`), variasi `layout` B, ritme/transisi A, susunan beat C. Render ulang contoh, tunjukkan lagi.
+**c. Setel di dalam style** bila hampir cocok: warna (`--warna=brand|style`; B `"palette"`; A token `K` di scene khusus;
+C `theme.colors` style atau warna brand), variasi `layout` B, ritme/transisi A, susunan beat C. Render ulang contoh,
+tunjukkan lagi. Penyetelan yang disukai dan ingin dipakai lagi → simpan ke style (atau style turunan `--dari=`).
 
 **d. Tetap tidak cocok → naik bertahap, setiap tahap minta persetujuan:**
 1. **`reference-to-motion`** — pengguna memberi video/akun/website yang disukai → urai gerakan & tampilannya menjadi
@@ -155,10 +193,13 @@ Batasan yang wajib disampaikan: **B** = hanya teks + grafis gambar-kode, teks la
 
 **e. Brand berulang → `brand-intake`.** Jalankan wawancaranya, tetapi tulis hasilnya ke `Brands/<slug>/brand.md`,
 `Brands/<slug>/MOTION.md`, frame referensi ke `Brands/<slug>/examples/`, logo ke `Brands/<slug>/logo/` (bukan root),
-dan **jangan** menempel blok CLAUDE.md-nya (aturan "baca MOTION.md brand sebelum menganimasikan" sudah ada di
-`CLAUDE.md` project). Semua jalur membaca `MOTION.md` brand itu sebelum mendesain.
+dan **jangan** menempel blok CLAUDE.md-nya. Pisahkan hasilnya: **identitas** (logo, watermark, warna brand, CTA,
+penutup, kata wajib/terlarang) → `brand.md`/`MOTION.md` + `theme.json` brand; **rasa** (tata letak, gerak, huruf,
+subtitle, musik) → style bernama (`npm run style -- new`), agar bisa dipakai brand lain. Semua jalur membaca
+`MOTION.md` brand dan `STYLE.md` style sebelum mendesain; bila bertentangan, identitas brand menang untuk logo/warna
+wajib, style menang untuk susunan & gerak.
 
-Catat pilihan (jalur, skill/gaya, palet, contoh frame yang disetujui) di brief.
+Catat pilihan (style, warna brand/style, jalur, skill, contoh frame yang disetujui) di brief.
 
 ## 3 · Memilih suara — ElevenLabs diutamakan, lewat audisi
 
@@ -209,12 +250,13 @@ profil yang sama lewat `npm run brand -- pack <slug>` → kirim → `npm run bra
 
 ## 5 · Produksi otomatis (tanpa pertanyaan; berhenti hanya bila terhambat)
 
-**Jalur C standar (semua brand):** `npm run new -- <nama>` (kit HTML + tema `Brands/<slug>/theme.json` + kerangka
-`scenes.js`/storyboard dari naskah) → tulis **hanya** `html/scenes.js` mengikuti aturan timing & kejelasan di
+**Jalur C standar (semua brand):** `npm run new -- <nama> --style=<style> [--warna=brand|style]` (kit HTML + tema
+style + identitas brand + kerangka `scenes.js`/storyboard dari naskah; tanpa `--style` = style bawaan brand) → tulis **hanya** `html/scenes.js` mengikuti aturan timing & kejelasan di
 `Engine/kit/html/README.md` (setiap elemen muncul tepat pada katanya, satu fokus per scene, subtitle karaoke) + isi `sfx`
 storyboard + `posting/caption.md` + `posting/thumbnail.json` → `npm run produce -- <nama> --draft` (periksa board) → `npm run produce -- <nama>`
 (voice → cek cue → sound → preview + board → render paralel GPU → QA ‖ posting dalam satu perintah). Brand tanpa
-`theme.json` → buat dari `brand.md`/`MOTION.md` dulu (format di README kit). Langkah di bawah adalah rincian yang
+`theme.json` tetap bisa (identitas kosong, warna dari style); untuk watermark/penutup brand buat `theme.json`
+identitas dari `brand.md`/`MOTION.md` (format di README kit). Langkah di bawah adalah rincian yang
 dijalankan `produce`; pakai satu per satu hanya untuk revisi atau jalur A/B.
 
 **Gaya produk-kamera (jalur C, kit kamera):** untuk iklan/demo produk dan aplikasi (UI sebagai bintang, seperti video
@@ -309,7 +351,7 @@ beri pilihan + rekomendasi. Jangan pindah provider, jalur, atau gaya diam-diam.
 
 Format rencana, daftar objek, dan aturannya: `Engine/styles/README.md` (baca dulu). Detail gaya: `STYLE.md` style itu.
 
-1. **Grill-me singkat** (satu-satunya sesi tanya): tujuan & penonton, style (bawaan `narration`), CTA, brand pojok
+1. **Grill-me singkat** (satu-satunya sesi tanya): tujuan & penonton, style edit (bawaan `ngobrol`), CTA, brand pojok
    (boleh kosong), nama/istilah khusus yang sering salah dengar (→ `glossary`), aset pendukung (tangkapan layar, foto
    produk → `Projects/<nama>/assets/`). Pengguna memberi video **referensi** gaya baru? Bedah dulu menjadi
    `Styles/<slug>/` (STYLE.md + style.json, angka terukur termasuk color grading), lalu pakai slug itu.
@@ -386,8 +428,11 @@ Sebutkan biaya kredit sebelum mengerjakan revisi yang membuat suara ulang. Setel
    `Projects/<nama>/drive.json` dan disebutkan ke pengguna. Revisi yang disetujui belakangan → `npm run drive` lagi
    (file yang berubah ditimpa, yang sama dilewati). Tanpa rclone: `--manifest` + konektor Google Drive (maks 10 MB per
    file, video biasanya tidak muat).
-3. Setelah pengguna menilai, tambahkan baris bertanggal ke `Brands/_selera.md` (brand · jalur/gaya dipilih/ditolak +
-   alasan · voice dipilih/ditolak + alasan · koreksi), dan perbarui `catatan` di `Brands/<slug>/profile.json`.
+3. Setelah pengguna menilai, catat selera di dua tempat:
+   - **visual** (tata letak, gerak, warna, subtitle, musik, koreksi tampilan) → `npm run style -- selera <style> "<proyek> · <disukai/ditolak> · <alasan>"`;
+     penyetelan yang disetujui dan berlaku untuk seterusnya → ubah `Styles/<slug>/style.json`/`STYLE.md`;
+   - **brand, suara, pelafalan, isi** → baris bertanggal di `Brands/_selera.md` + `catatan` di `Brands/<slug>/profile.json`.
+   Style baru yang disukai pengguna dan belum bernama → tawarkan `npm run style -- save <proyek> <slug> --title="Nama"`.
 
 ## Skill pendukung (motion-graphics-skills, `.claude/skills/`)
 
@@ -411,5 +456,6 @@ lokasi file (peta folder di atas), ekspor `npm run html`, brand pojok, dan voice
 - Tidak mengubah naskah setelah voice over dibuat tanpa menjalankan `voice` lagi.
 - Tidak menyerahkan video yang belum lewat preview dan QA.
 - Tidak membuat visual di luar tiga jalur tanpa keputusan tegas pengguna.
+- Tidak mencatat selera visual sebagai milik brand, dan tidak mengunci brand pada satu style.
 - Tidak memakai kredit Higgsfield tanpa batas kredit yang disepakati di grill-me, dan tidak meminta kode/token login.
 - Tidak membuat aset AI berisi orang nyata, testimoni palsu, atau teks/angka (teks layar selalu dari mesin).

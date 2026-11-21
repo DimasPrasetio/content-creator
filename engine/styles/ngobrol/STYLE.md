@@ -1,9 +1,9 @@
-# Style: narration (bawaan plugin)
+# Style: Ngobrol (`ngobrol`, dulu `narration`, bawaan plugin)
 
 Gaya edit **talking-head edukatif**: satu orang bicara ke kamera (A-roll), dipotong rapat, diselingi panel motion
 graphic hijau gelap (B-roll) yang menjelaskan apa yang sedang diucapkan, dengan subtitle per kata dan color grading
 *muted cinematic*. Angka di bawah diukur dari video acuan bergaya ini; mesin mengejarnya lewat `style.json`.
-Format rencana & objek: `../README.md`. Salin ke `Styles/narration/` di workspace untuk menyesuaikan.
+Format rencana & objek: `../README.md`. Salin ke `Styles/ngobrol/` di workspace untuk menyesuaikan.
 
 ## 1. Struktur & ritme
 

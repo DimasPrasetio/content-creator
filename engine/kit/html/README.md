@@ -1,10 +1,11 @@
 # Kit HTML standar (jalur C) — semua brand
 
-Kit ini membuat video explainer "papan tulis" 1080×1920 yang sinkron kata per kata dengan voice over. Tampilan brand diatur
-**tema** (`Brands/<slug>/theme.json`); per video cukup menulis `html/scenes.js`.
+Kit ini membuat video explainer "papan tulis" 1080×1920 yang sinkron kata per kata dengan voice over. Tampilan diatur
+**style** (rasa: `Styles/<slug>/style.json` → `theme`) + **identitas brand** (`Brands/<slug>/theme.json`); per video cukup
+menulis `html/scenes.js`.
 
 ```
-npm run new -- <nama>            # folder + kit + theme.js + kerangka scenes.js & storyboard.json (dari script.md)
+npm run new -- <nama> [--style=<style>] [--warna=brand|style]   # folder + kit + theme.js + kerangka scenes.js & storyboard.json
 npm run produce -- <nama> --draft  # contoh frame (tanpa kredit) -> preview/draft/board.png
 npm run produce -- <nama>          # voice -> cek cue -> sound -> preview -> render paralel -> QA ‖ posting
 npm run new -- <nama> --refresh-kit  # salin ulang kit + tema (setelah kit/tema diubah)
@@ -84,7 +85,12 @@ Jangan pakai `blink` pada elemen ber-atribut `opacity` (ditimpa jadi penuh) — 
 | `ctaBio(s, [["baris 1", "kata awal", "kata akhir"], ...], {label, cue})` | CTA stabilo + chip (label `THEME.cta.label`) |
 | `closing(s)` | penutup dari `THEME.closing` |
 
-## Tema (`Brands/<slug>/theme.json`, digabung dengan `theme.default.json`)
+## Tema = kit < style < identitas brand (< warna brand)
+`html/theme.js` dibuat `npm run new` dari: `theme.default.json` → `theme` milik **style** (`--style`, `"style"` di storyboard,
+atau style bawaan brand di `profile.json`) → **identitas brand** dari `Brands/<slug>/theme.json` (`watermark`, `mark`,
+`cta`, `closing`, `ui`, `storyboard.closingSfx`) → `colors` brand bila `warna` = `brand` (bawaan dari style; `--warna=style`
+= palet style). Tanpa style: `theme.default.json` + seluruh `Brands/<slug>/theme.json` (cara lama). Kunci di bawah boleh
+ditulis di style maupun brand; brand idealnya hanya berisi identitas + `colors`.
 `layout` ("aman" bawaan = zona aman TikTok, "penuh" = tata letak lama) · `timing` {lead, crossfade} · `colors` (bg, grid, panel, track, text, dim, accent, accent2, info, ok, warn, bad, extra) · `fonts` (head, body, mono) · `stroke` ·
 `progress` · `label.text` · `glow` · `highlight` {bg, fg} · `subtitle` {said, unsaid, key} · `watermark` {parts: [[teks, warna]], opacity, size (px, bawaan 36; thumbnail ikut diskalakan)}
 (null = tanpa) · `mark` · `cta.label` · `closing` {wordmark, descriptor, lines: [[kata, kata disorot, cue]]} (null = tanpa) ·

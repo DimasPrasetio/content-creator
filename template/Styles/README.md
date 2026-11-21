@@ -1,15 +1,34 @@
-# Styles: gaya edit video (bukan per brand)
+# Styles: rasa video (bukan per brand)
 
-Style bawaan plugin ada di `Engine/styles/<slug>/`; folder ini untuk style milik Anda (menimpa bawaan dengan slug sama). Satu folder per **gaya edit** untuk mengolah footage yang sudah ada (talking-head, rekaman layar, dsb.). Brand tetap
-mengatur logo/handle bila diminta; style mengatur **cara bercerita, tampilan, color grading, dan audio**.
+**Style = rasa, brand = identitas.** Satu folder per style bernama (nama mudah diingat, mis. "Papan Tulis", "Bara",
+"Arsip"). Style mengatur **cara bercerita, tata letak, huruf, peran warna, gerak, subtitle, musik, color grading**; brand
+(`Brands/<slug>/`) mengatur nama, brand pojok, logo/watermark, warna brand, CTA, penutup, voice. Brand mana pun dan jenis
+video apa pun boleh memakai style mana pun. Style bawaan plugin ada di `Engine/styles/<slug>/` (Komik, Ngobrol); folder
+ini untuk style milik Anda (menimpa bawaan dengan slug/alias sama).
 
 ```
 Styles/<slug>/
-  STYLE.md        breakdown & aturan (manusia membaca)
-  style.json      angka target + tata bahasa visual (mesin membaca)
-  reference.mp4   video acuan (hanya acuan gaya, bukan konten)
-  examples/       frame kunci, lembar kontak, uji rencana
+  style.json      mesin: name, title, aliases, kind (animasi | edit), jalur, skill, warna (brand | style), theme / aturan edit
+  STYLE.md        cara menyusun (dibaca agent sebelum mendesain)
+  selera.md       riwayat yang disukai/ditolak untuk style ini
+  examples/       frame contoh (board, scene, thumbnail)
+  reference.mp4   video acuan (opsional; hanya acuan gaya, bukan konten)
 ```
+
+```bash
+npm run style -- list                                         # semua style
+npm run style -- show <style>                                 # isi, STYLE.md, selera terakhir
+npm run style -- new <slug> --title="Nama" [--dari=<style>]   # style baru (kosong / turunan)
+npm run style -- save <proyek> <slug> --title="Nama"          # simpan rasa video yang sudah jadi
+npm run style -- selera <style> "<catatan>"                   # catat selera
+npm run new -- <nama> --style=<style> [--warna=brand|style]   # pakai di video animasi (jalur HTML)
+npm run edit -- <nama> --new --style=<style> --input=<file>   # pakai di edit footage
+```
+
+Sumber style baru: video referensi (dibedah), video yang sudah jadi (`save`), obrolan + contoh frame, atau
+gambar/moodboard/website. `warna: brand` = warna brand dipakai bila brand punya; `style` = palet style apa adanya.
+
+## Style edit footage (`kind: edit`)
 
 ## Prinsip: style mengunci identitas, konteks menentukan isi
 
@@ -38,4 +57,7 @@ Topik, footage, cahaya, dan pembicara selalu berbeda. Karena itu tiap style memi
 ## Daftar style
 | Style | Untuk | Status |
 |---|---|---|
-| `narration` (bawaan, `Engine/styles/narration/`) | talking-head edukatif/tutorial + panel motion graphic hijau gelap | siap (`npm run edit`) |
+| `ngobrol` (bawaan, dulu `narration`) | edit talking-head edukatif/tutorial + panel motion graphic hijau gelap | siap (`npm run edit`) |
+| `komik` (bawaan) | animasi promo/iklan pop cinematic (jalur Pop) | siap (`npm run render`) |
+
+Style Anda sendiri muncul di `npm run style -- list`.

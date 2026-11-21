@@ -1,11 +1,12 @@
 # Mesin edit footage berbasis style
 
 Mengedit video yang **sudah ada** (talking-head, rekaman bicara) menjadi video vertikal 1080×1920 sesuai sebuah
-**style** (gaya edit), bukan sesuai brand. Style mengunci identitas (ritme, tampilan, grading, audio); isi visual
+**style** (gaya edit, `kind: "edit"`), bukan sesuai brand. Folder ini juga berisi style animasi bawaan (`komik`); semua
+style dikelola dengan `npm run style -- list|show|new|save|selera`. Style mengunci identitas (ritme, tampilan, grading, audio); isi visual
 diputuskan agent dari **konteks** tiap video.
 
 ```
-npm run edit -- <nama> --new --style=narration --input=/path/a.mov[,b.mp4]   # proyek + salin footage
+npm run edit -- <nama> --new --style=ngobrol --input=/path/a.mov[,b.mp4]   # proyek + salin footage
 npm run edit -- <nama> --analyze     # normalisasi, transkrip per kata, wajah/gerak/cahaya/noise -> edit/konteks.md
 #   (agent: baca edit/konteks.md + edit/kontak-srcN.jpg, isi keputusan per kalimat di Projects/<nama>/edit.json)
 npm run edit -- <nama> --draft       # validasi -> potong + grading terkalibrasi + suara -> preview tiap kalimat + cek
@@ -14,7 +15,8 @@ npm run edit -- <nama> --from=cut|sound|preview|render
 ```
 
 Style dicari di `Styles/<slug>/style.json` (workspace, mis. hasil analisis video referensi pengguna) lalu
-`Engine/styles/<slug>/style.json` (bawaan plugin). Bawaan: `narration`.
+`Engine/styles/<slug>/style.json` (bawaan plugin), digabung dalam. Bawaan: `ngobrol` (dulu `narration`, nama lama tetap dikenali
+lewat `aliases`) dan `komik` (animasi Pop).
 
 ## Alur pemahaman konteks
 1. **Isi**: transkrip per kata (ElevenLabs Scribe; atau sidecar `<footage>.words.json` = `[{w,s,e}]`, tanpa kredit) →
@@ -35,7 +37,7 @@ Style dicari di `Styles/<slug>/style.json` (workspace, mis. hasil analisis video
 ## edit.json
 ```json
 {
-  "style": "narration",
+  "style": "ngobrol",
   "brand": { "left": "", "right": "" },
   "sources": [{ "file": "assets/raw/01-a.mov" }],
   "glossary": { "cloud": "Claude" },

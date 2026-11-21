@@ -14,6 +14,11 @@ Panduan ini untuk orang yang baru memasang plugin, baik sendiri maupun sebagai a
 | 5. Google Drive (opsional) | Anda (klik di browser) | Dipandu |
 | 6. `npm run selftest` | Claude | Ya |
 
+Status semua akun kapan saja: `cd <workspace>/Engine && npm run akun` (ElevenLabs, Higgsfield, Google Drive, skill
+opsional, beserta perintah langkah berikutnya; tidak pernah menampilkan key).
+
+**Windows**: hanya lewat WSL2. Ikuti **[docs/WINDOWS.md](WINDOWS.md)** dulu, lalu lanjutkan panduan ini di dalam Ubuntu.
+
 Plugin **tidak pernah** membawa key atau token siapa pun. Semua akses dibuat per orang dan disimpan hanya di komputernya.
 
 ## 1. Pasang plugin
@@ -50,7 +55,8 @@ semua yang belum ada:
 Catatan per sistem:
 - **macOS**: butuh [Homebrew](https://brew.sh). Bila belum ada, setup berhenti dan menampilkan perintah pemasangannya;
   Homebrew meminta password Mac Anda, jadi langkah itu Anda jalankan sendiri, lalu jalankan setup lagi.
-- **Linux (VPS)**: paling mulus bila dijalankan sebagai **root** atau user dengan sudo tanpa password. Tanpa itu, semua
+- **Linux (VPS) / WSL2**: paling mulus bila dijalankan sebagai **root** atau user dengan sudo tanpa password. Bila setup
+  dijalankan sendiri di terminal (bukan oleh Claude di background), ia meminta password sudo satu kali. Tanpa sudo, semua
   tetap terpasang di folder pengguna, kecuali library sistem Chromium; setup mencetak satu perintah `sudo` untuk admin.
 - Alat yang dipasang ke folder pengguna (`~/.local/share/content-creator/tools`) ditambahkan ke PATH lewat profil shell.
   Buka terminal/sesi baru setelah setup bila perintah `node`/`ffmpeg` belum dikenali.
@@ -144,7 +150,7 @@ npm run selftest -- --real-voice                   # + suara ElevenLabs sungguha
 ## 7. Profil brand (sendiri atau dibagikan dalam tim)
 
 ```bash
-npm run brand -- new tokobaju --name="Toko Baju" --left="TOKO BAJU" --voice=NamaVoice
+npm run brand -- new tokobaju --name="Toko Baju" --left="TOKO BAJU" --voice=NamaVoice --style=komik
 npm run brand -- list
 ```
 Lengkapi `Brands/<slug>/brand.md` + `MOTION.md` lewat skill `brand-intake` (cukup minta ke Claude: "set up my brand").
@@ -154,7 +160,9 @@ Lengkapi `Brands/<slug>/brand.md` + `MOTION.md` lewat skill `brand-intake` (cuku
 npm run brand -- pack tokobaju --scenes=tokobaju.tsx      # -> Brands/_export/tokobaju.brand.tar.gz
 npm run brand -- unpack ~/Downloads/tokobaju.brand.tar.gz # di komputer anggota tim
 ```
-Dengan profil yang sama, video dari siapa pun memakai voice, gaya, dan brand pojok yang sama.
+Dengan profil yang sama, video dari siapa pun memakai voice, identitas, dan brand pojok yang sama. **Style** (rasa
+video) terpisah dari brand: `npm run style -- list`, dan style milik Anda di `Styles/<slug>/` bisa dibagikan dengan
+menyalin foldernya.
 
 ## 8. Jalur visual B (opsional)
 

@@ -18,7 +18,9 @@ export const hf = (args, opts = {}) => {
   } catch (e) {
     // Login sudah, tetapi belum ada workspace terpilih: akun dengan tepat satu workspace dipilih otomatis (pengaturan lokal CLI).
     if (!(e instanceof NoWorkspace) || opts.noAutoWs) throw e;
-    const ws = (() => { try { return hf1(["workspace", "list"], { timeoutMs: 30000 }); } catch { return null; } })();
+    // CLI yang belum pernah login juga menjawab "No workspace selected"; daftar workspace lalu gagal dengan petunjuk login.
+    const ws = (() => { try { return hf1(["workspace", "list"], { timeoutMs: 30000 }); } catch (e2) { return e2; } })();
+    if (ws instanceof Error) throw new HiggsError("belum login Higgsfield: jalankan sekali di terminal `higgsfield auth login`");
     if (!Array.isArray(ws) || ws.length !== 1 || !ws[0]?.id)
       throw new HiggsError(`workspace Higgsfield belum dipilih (${Array.isArray(ws) ? ws.length : "?"} tersedia): jalankan \`higgsfield workspace list\` lalu \`higgsfield workspace set <id>\``);
     hf1(["workspace", "set", ws[0].id], { timeoutMs: 30000 });

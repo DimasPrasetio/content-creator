@@ -9,10 +9,15 @@ voice-over, word-synced motion graphics, SFX, render, automatic QA, thumbnail + 
 Docs and prompts are in Indonesian.*
 
 ## Fitur
+- **Style bernama, lepas dari brand**: rasa video (tata letak, huruf, peran warna, gerak, subtitle, musik, color
+  grading) disimpan sebagai style dengan nama yang mudah diingat (bawaan **Komik** dan **Ngobrol**; buat sendiri dari
+  video referensi, video yang sudah jadi, obrolan + contoh frame, atau moodboard). Brand hanya identitas (logo,
+  watermark, warna brand, CTA, penutup) + suara, dan boleh memakai style mana pun dengan warna brand atau warna style
+  (`npm run style`, [template/Styles/README.md](template/Styles/README.md)). Arah berikutnya: [docs/ROADMAP.md](docs/ROADMAP.md).
 - **Edit footage yang sudah ada, berbasis style** (bukan brand): rekaman talking-head (vertikal/horizontal, termasuk HDR
   iPhone) → potong rapat per kata, grading dikalibrasi ke target style, suara dibersihkan, panel motion graphic & objek
   yang ditempatkan sadar wajah, subtitle per kata. Agent memutuskan isi visual dari konteks tiap kalimat. Style bawaan
-  `narration`; style baru bisa dibedah dari video referensi Anda (`Styles/<slug>/`). Lihat
+  `ngobrol` (dulu `narration`); style baru bisa dibedah dari video referensi Anda (`Styles/<slug>/`). Lihat
   [engine/styles/README.md](engine/styles/README.md).
 - **Tiga jalur visual**, dipilih dari contoh frame naskah Anda:
   - **A · Pop cinematic** (Remotion): poster komik-pop, transisi grafis, grain, scene khusus per video.
@@ -46,7 +51,8 @@ Docs and prompts are in Indonesian.*
   Drive (opsional), Higgsfield (opsional, paket berbayar untuk aset AI), dan skill Anthropic `motion-graphics-v4`
   (opsional, jalur B).
 
-Panduan lengkap, termasuk pola tim: **[docs/SETUP.md](docs/SETUP.md)**
+Panduan lengkap, termasuk pola tim: **[docs/SETUP.md](docs/SETUP.md)** · Windows (WSL2): **[docs/WINDOWS.md](docs/WINDOWS.md)** ·
+status akun kapan saja: `npm run akun`
 
 ## Pasang
 Di Claude Code:

@@ -27,7 +27,9 @@
     "new": "node scripts/new.mjs",
     "produce": "node scripts/produce.mjs",
     "thumbnail": "node scripts/thumbnail.mjs",
-    "edit": "node scripts/edit.mjs"
+    "edit": "node scripts/edit.mjs",
+    "style": "node scripts/style.mjs",
+    "akun": "node scripts/akun.mjs"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.77.0",

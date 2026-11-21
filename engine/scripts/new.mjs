@@ -1,42 +1,47 @@
-// Siapkan proyek jalur C (HTML) dari kit standar + tema brand, supaya per video cukup menulis html/scenes.js.
-// Pemakaian: npm run new -- <nama> [--brand=<slug>] [--scenes=N] [--refresh-kit]
-//   - tema: Engine/kit/html/theme.default.json digabung dengan Brands/<slug>/theme.json -> html/theme.js
-//   - kit:  index.html, kit.css, kit-core.js, kit-camera.js, kit-run.js (+ cap brand theme.ui.stamp) disalin ke Projects/<nama>/html/ (proyek tetap utuh walau kit berubah)
-//   - jumlah scene dari script.md (atau --scenes=N); scenes.js & storyboard.json yang sudah ada tidak ditimpa
-//   - --refresh-kit: hanya salin ulang file kit + theme.js (mis. setelah tema brand diubah)
+// Siapkan proyek jalur C (HTML) dari kit standar + STYLE (rasa) + identitas brand, supaya per video cukup menulis html/scenes.js.
+// Pemakaian: npm run new -- <nama> [--style=<slug>] [--warna=brand|style] [--brand=<slug>] [--scenes=N] [--refresh-kit]
+//   - style: --style, lalu "style" di storyboard.json, lalu style bawaan brand (profile.json "style"); daftar: npm run style -- list
+//   - tema:  kit bawaan < style.theme < identitas brand (watermark, mark, CTA, penutup, ui) < warna brand (bila warna = brand)
+//            tanpa style: kit bawaan < Brands/<slug>/theme.json (perilaku lama)
+//   - kit:   index.html, kit.css, kit-core.js, kit-camera.js, kit-run.js (+ cap brand theme.ui.stamp) disalin ke Projects/<nama>/html/ (proyek tetap utuh walau kit berubah)
+//   - jumlah scene dari script.md (atau --scenes=N); scenes.js & storyboard.json yang sudah ada tidak ditimpa (style/warna dicatat)
+//   - --refresh-kit: hanya salin ulang file kit + theme.js (mis. setelah tema brand/style diubah)
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DIRS, ENGINE, NAME_RE, P, ROOT, brandOf, parseScript, readJson } from "./lib.mjs";
+import { DIRS, ENGINE, NAME_RE, P, ROOT, brandOf, brandStyle, kitTheme, loadStyle, parseScript, readJson } from "./lib.mjs";
 
 const argv = process.argv.slice(2);
 const opt = (k, d) => { const a = argv.find((x) => x.startsWith(`--${k}=`)); return a ? a.split("=")[1] : d; };
 const name = argv.find((a) => !a.startsWith("--"));
-if (!name || !NAME_RE.test(name)) throw new Error("Pemakaian: npm run new -- YYYYMMDD-NN-slug [--brand=<slug>]");
+if (!name || !NAME_RE.test(name)) throw new Error("Pemakaian: npm run new -- YYYYMMDD-NN-slug [--style=<slug>] [--warna=brand|style] [--brand=<slug>]");
 const p = P(name);
 const brand = opt("brand", brandOf(name));
 const KIT = path.join(ENGINE, "kit", "html");
 for (const d of [p.html, path.join(p.dir, "posting"), p.assets]) mkdirSync(d, { recursive: true });
 
-// 1) tema = bawaan + tema brand (gabung dalam)
-const merge = (a, b) => {
-  if (Array.isArray(b) || typeof b !== "object" || b === null) return b === undefined ? a : b;
-  const o = { ...(a ?? {}) };
-  for (const k of Object.keys(b)) o[k] = merge(o[k], b[k]);
-  return o;
-};
+// 1) style + tema
+const sbOld = readJson(p.storyboard, null);
+const styleName = opt("style") ?? sbOld?.style ?? brandStyle(brand);
+if (styleName) {
+  const st = loadStyle(styleName);
+  if ((st.jalur ?? "html") !== "html")
+    throw new Error(`Style "${st.slug}" memakai jalur ${st.jalur} (bukan HTML): ${st.jalur === "Pop" ? "storyboard \"composition\": \"Pop\" lalu npm run render" : st.kind === "edit" ? "npm run edit" : "lihat STYLE.md style itu"}`);
+}
 const brandTheme = path.join(DIRS.brands, brand, "theme.json");
-if (!existsSync(brandTheme)) console.warn(`  !     ${path.relative(ROOT, brandTheme)} belum ada: pakai tema bawaan (buat dari Engine/kit/html/README.md)`);
-const theme = merge(readJson(path.join(KIT, "theme.default.json")), readJson(brandTheme, {}));
-delete theme._doc;
+if (!styleName && !existsSync(brandTheme)) console.warn(`  !     belum ada style maupun ${path.relative(ROOT, brandTheme)}: pakai tema bawaan kit (pilih style: npm run style -- list)`);
+const { theme, style, warna, sumber } = kitTheme({ brand, style: styleName, warna: opt("warna") ?? sbOld?.warna });
 // cap/segel brand untuk kit kamera (theme.ui.stamp = path relatif ke Brands/<slug>/) -> html/stamp.<ext>
 if (theme.ui?.stamp) {
   const src = path.join(DIRS.brands, brand, theme.ui.stamp);
   if (existsSync(src)) { const dst = `stamp${path.extname(src)}`; copyFileSync(src, path.join(p.html, dst)); theme.ui.stampSrc = dst; }
   else console.warn(`  !     ui.stamp ${path.relative(ROOT, src)} tidak ada: cap memakai lingkaran ✓ bawaan`);
 }
-writeFileSync(path.join(p.html, "theme.js"), `// tema ${brand} (dibuat npm run new dari ${existsSync(brandTheme) ? `Brands/${brand}/theme.json` : "tema bawaan"})\nconst THEME = ${JSON.stringify(theme, null, 2)};\n`);
+writeFileSync(path.join(p.html, "theme.js"), `// tema ${style ? `style ${style} · brand ${brand} · warna ${warna}` : brand} (dibuat npm run new dari ${sumber.join(" < ")})\nconst THEME = ${JSON.stringify(theme, null, 2)};\n`);
 for (const f of ["index.html", "kit.css", "kit-core.js", "kit-camera.js", "kit-run.js"]) copyFileSync(path.join(KIT, f), path.join(p.html, f));
-console.log(`  OK    kit + tema ${brand} -> ${path.relative(ROOT, p.html)}/`);
+console.log(`  OK    kit + ${style ? `style ${style} (warna ${warna}) + brand ${brand}` : `tema ${brand}`} -> ${path.relative(ROOT, p.html)}/`);
+// catat style di storyboard yang sudah ada (thumbnail & refresh memakai tema yang sama)
+if (sbOld && style && (sbOld.style !== style || sbOld.warna !== warna))
+  writeFileSync(p.storyboard, JSON.stringify({ ...sbOld, style, warna }, null, 2) + "\n");
 if (argv.includes("--refresh-kit")) process.exit(0);
 
 // 2) jumlah scene
@@ -68,7 +73,7 @@ if (!existsSync(p.storyboard)) {
   const S = theme.storyboard || {}, m = S.music || {};
   const brandBox = theme.watermark?.parts ? { left: "", right: theme.watermark.parts.map(([t]) => t).join("") } : { left: "", right: "" };
   const sb = {
-    composition: "html", skill: S.skill || "vox-explainer", brandOverlay: S.brandOverlay ?? false, brand: brandBox, cover: { at: "auto" },
+    composition: "html", skill: S.skill || "vox-explainer", ...(style ? { style, warna } : {}), brandOverlay: S.brandOverlay ?? false, brand: brandBox, cover: { at: "auto" },
     scenes: Array.from({ length: n }, (_, i) => ({
       music: i === 0 ? m.first ?? "pad" : i >= n - 3 ? m.last ?? "full" : m.middle ?? "build",
       sfx: closing && i === n - 1 && S.closingSfx?.cue ? [{ cue: S.closingSfx.cue, type: S.closingSfx.type }] : [],

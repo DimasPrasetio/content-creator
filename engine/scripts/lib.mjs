@@ -16,6 +16,7 @@ export const DIRS = {
   brands: path.join(ROOT, "Brands"), // satu folder per brand: profile.json, brand.md, MOTION.md, logo/, examples/
   references: path.join(ROOT, "References"),
   result: path.join(ROOT, "Result"), // hasil jadi saja: Result/<brand>/<nama>/ (video, thumbnail, caption)
+  styles: path.join(ROOT, "Styles"), // style milik pengguna (rasa video, lepas dari brand): Styles/<slug>/
   work: path.join(ENGINE, "work"), // hasil otomatis mesin (timing, cache, render); aman dihapus
 };
 
@@ -97,6 +98,108 @@ export const deepMerge = (a, b) => {
 };
 export const LOCAL_CONFIG = path.join(ENGINE, "config.local.json");
 export const config = () => deepMerge(readJson(path.join(ENGINE, "config.json"), {}), readJson(LOCAL_CONFIG, {}));
+
+// ------------------------------------------------------------------ STYLE = rasa video, lepas dari brand
+// Style bawaan plugin: Engine/styles/<slug>/; milik pengguna: Styles/<slug>/ (menimpa bawaan bernama sama, digabung dalam).
+// style.json: name, title, kind ("animasi" | "edit"), jalur (html | Pop | mg4 | edit), skill, warna ("brand" | "style"),
+// aliases (nama lama), theme (token kit HTML: colors, fonts, subtitle, glow, ...). Brand = identitas (logo, watermark,
+// CTA, penutup, warna brand, voice); brand mana pun boleh memakai style mana pun.
+export const STYLE_SLUG = /^[a-z0-9][a-z0-9-]*$/;
+const PLUGIN_STYLES = path.join(ENGINE, "styles");
+const styleFolders = () => {
+  const out = [];
+  for (const [source, root] of [["plugin", PLUGIN_STYLES], ["workspace", DIRS.styles]])
+    if (existsSync(root))
+      for (const d of readdirSync(root).sort()) {
+        const f = path.join(root, d, "style.json");
+        if (STYLE_SLUG.test(d) && existsSync(f)) out.push({ source, folder: d, dir: path.join(root, d), json: readJson(f, {}) });
+      }
+  return out;
+};
+/** Semua style: [{slug, title, kind, jalur, skill, warna, aliases, sources, dirs}] (bawaan + workspace digabung). */
+export const listStyles = () => {
+  const folders = styleFolders();
+  const alias = new Map();
+  for (const f of folders) for (const a of f.json.aliases ?? []) if (a !== f.folder) alias.set(a, f.json.name ?? f.folder);
+  const by = new Map();
+  for (const f of folders) {
+    const slug = alias.get(f.folder) ?? f.json.name ?? f.folder; // Styles/narration/ menimpa bawaan "ngobrol" (alias)
+    const cur = by.get(slug) ?? { slug, json: {}, sources: [], dirs: [] };
+    cur.json = deepMerge(cur.json, f.json);
+    cur.sources.push(f.source);
+    cur.dirs.push(f.dir);
+    by.set(slug, cur);
+  }
+  return [...by.values()].map(({ slug, json, sources, dirs }) => ({
+    ...json, slug, name: slug, title: json.title ?? slug, kind: json.kind ?? "animasi", aliases: json.aliases ?? [], sources, dirs,
+    // folder untuk menulis (selera, contoh): folder workspace bila ada, selain itu Styles/<slug>/ (dibuat saat perlu)
+    home: dirs.find((d) => d.startsWith(DIRS.styles)) ?? path.join(DIRS.styles, slug),
+  }));
+};
+/** Nama/alias -> slug kanonik (null bila tidak dikenal). */
+export const resolveStyle = (name) => {
+  if (!name) return null;
+  const n = String(name).toLowerCase().trim().replace(/\s+/g, "-");
+  const all = listStyles();
+  return (all.find((s) => s.slug === n) ?? all.find((s) => s.aliases.includes(n)) ?? all.find((s) => s.title.toLowerCase().replace(/\s+/g, "-") === n))?.slug ?? null;
+};
+/** Style lengkap (bawaan digabung milik workspace). Melempar error bila tidak ada. */
+export const loadStyle = (name) => {
+  const slug = resolveStyle(name);
+  const st = slug && listStyles().find((s) => s.slug === slug);
+  if (!st) {
+    const ada = listStyles().map((s) => s.slug).join(", ") || "-";
+    throw new Error(`Style "${name}" tidak ada (Styles/<slug>/style.json atau Engine/styles/<slug>/style.json). Tersedia: ${ada}`);
+  }
+  return st;
+};
+/** Style bawaan brand (rekomendasi, bukan kunci): profile.style, atau profile.visual.style lama bila cocok dengan alias. */
+export const brandStyle = (slug) => {
+  const p = brandProfile(slug);
+  return resolveStyle(p?.style) ?? resolveStyle(p?.visual?.style) ?? null;
+};
+
+// Tema kit HTML = bawaan kit < style.theme < identitas brand (< warna brand bila warna = "brand").
+// null di lapisan atas menimpa (mis. "watermark": null).
+const mergeTheme = (a, b) => {
+  if (Array.isArray(b) || typeof b !== "object" || b === null) return b === undefined ? a : b;
+  const o = { ...(a ?? {}) };
+  for (const k of Object.keys(b)) o[k] = mergeTheme(o[k], b[k]);
+  return o;
+};
+export const BRAND_THEME_KEYS = ["watermark", "mark", "cta", "closing", "ui"]; // + colors (warna brand) + storyboard.closingSfx
+/**
+ * Tema kit HTML untuk satu video. style = slug/alias (null = tanpa style: tema brand utuh seperti sebelum v0.7).
+ * Hasil: {theme, style (slug|null), warna ("brand"|"style"|null), sumber: [teks]}.
+ */
+export const kitTheme = ({ brand, style, warna } = {}) => {
+  const kit = readJson(path.join(ENGINE, "kit", "html", "theme.default.json"), {});
+  const bf = brand && brand !== "umum" ? path.join(DIRS.brands, brand, "theme.json") : null;
+  const bt = bf ? readJson(bf, null) : null;
+  const sumber = ["kit"];
+  let theme, slug = null, w = null;
+  if (!style) {
+    theme = mergeTheme(kit, bt ?? {});
+    if (bt) sumber.push(`Brands/${brand}/theme.json`);
+  } else {
+    const st = loadStyle(style);
+    if (st.kind === "edit") throw new Error(`Style "${st.slug}" untuk edit footage (npm run edit), bukan video animasi`);
+    slug = st.slug;
+    w = warna ?? st.warna ?? "brand";
+    if (!["brand", "style"].includes(w)) throw new Error(`warna harus "brand" atau "style" (bukan "${w}")`);
+    theme = mergeTheme(kit, st.theme ?? {});
+    if (st.skill) theme.storyboard = { ...(theme.storyboard ?? {}), skill: st.skill };
+    sumber.push(`style ${slug}`);
+    if (bt) {
+      for (const k of BRAND_THEME_KEYS) if (k in bt) theme[k] = mergeTheme(theme[k], bt[k]);
+      if (bt.storyboard?.closingSfx) theme.storyboard = { ...(theme.storyboard ?? {}), closingSfx: bt.storyboard.closingSfx };
+      sumber.push(`identitas Brands/${brand}`);
+      if (w === "brand" && bt.colors) (theme.colors = { ...theme.colors, ...bt.colors }), sumber.push("warna brand");
+    }
+  }
+  delete theme._doc;
+  return { theme, style: slug, warna: w, sumber };
+};
 
 export const run = (cmd, args) => execFileSync(cmd, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 

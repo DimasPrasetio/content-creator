@@ -1,6 +1,7 @@
 # Panduan untuk Claude (workspace content-creator)
 
-Workspace ini membuat video motion graphic vertikal (Reels/TikTok, 1080×1920) dari naskah, dengan plugin **content-creator**.
+Workspace ini membuat video vertikal (Reels/TikTok, 1080×1920) dengan plugin **content-creator**: video animasi dari naskah
+dan edit footage milik pengguna. **Style = rasa** (`Styles/`, dipakai brand mana pun), **brand = identitas + suara** (`Brands/`).
 Mulai video baru dengan `/content-creator <ide video>`; skill itu memuat alur lengkapnya (wawancara grill-me → contoh frame
 gaya + audisi suara → lalu otomatis tanpa pertanyaan: naskah → voice over ElevenLabs → visual → SFX → preview → render → QA → posting;
 satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `npm run new` + `npm run produce` (kit `Engine/kit/html/`).
@@ -9,8 +10,8 @@ satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `n
 | Folder | Isi |
 |---|---|
 | `Projects/<nama>/` | satu folder per video: `brief.md`, `script.md`, `script.txt`, `storyboard.json`, `voice.wav`, `preview/`, `html/`, `assets/`, `posting/`, `versions/`; proyek edit footage: `edit.json`, `edit/konteks.md`, `assets/raw/` |
-| `Styles/<slug>/` | gaya edit footage hasil bedah video referensi pengguna (`STYLE.md`, `style.json`, `reference.mp4`); bawaan plugin di `Engine/styles/` |
-| `Brands/<slug>/` | satu folder per brand: `profile.json`, `brand.md`, `MOTION.md`, `logo/`, `examples/`; `Brands/_selera.md` = riwayat selera |
+| `Styles/<slug>/` | style bernama (rasa video): `style.json`, `STYLE.md`, `selera.md` (selera visual), `examples/`; bawaan plugin di `Engine/styles/` (`npm run style -- list`) |
+| `Brands/<slug>/` | satu folder per brand (identitas + suara): `profile.json`, `theme.json`, `brand.md`, `MOTION.md`, `logo/`, `examples/`; `Brands/_selera.md` = riwayat brand, suara, isi |
 | `References/` | contoh gaya (video/gambar) |
 | `Result/<brand>/<nama>/` | hasil jadi saja: `<nama>.mp4`, `thumbnail.jpg`, `caption.txt` (+ format lain) |
 | `Engine/` | mesin dari plugin (diganti setiap `/content-creator:setup`); milik workspace di dalamnya: `config.local.json`, `src/pop/custom/`, `voices/`, `work/` |
@@ -29,7 +30,8 @@ satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?). Jalur C: `n
 1. Suara dulu, visual mengikuti suara, lalu SFX, baru render. Jangan memperlambat suara; panjang video diatur lewat naskah.
 2. Satu voice untuk satu video; brand berulang memakai profil `Brands/<slug>/profile.json` (`profile:` di frontmatter).
 3. Visual lewat salah satu jalur: A Pop (`npm run render`), B motion-graphics-v4 (`npm run mg4`, butuh skill Anthropic
-   terpasang), C HTML motion-graphics-skills (`npm run html`). Baca `Brands/<slug>/MOTION.md` sebelum mendesain bila ada.
+   terpasang), C HTML motion-graphics-skills (`npm run new -- <nama> --style=<style>` + `npm run produce`). Baca `STYLE.md`
+   style itu dan `Brands/<slug>/MOTION.md` (bila ada) sebelum mendesain. Selera visual dicatat per style (`npm run style -- selera`).
 4. Wajib preview + cek tata letak + `npm run qa` lolos sebelum diserahkan; `npm run posting` menghasilkan thumbnail (sampul khusus dari `posting/thumbnail.json`, 3 varian berpemicu psikologis yang jujur) + caption.
 5. Setelah pengguna menyetujui video final: `npm run drive -- <nama>` (bila Drive sudah diatur). Jangan unggah yang belum disetujui.
 6. Jangan membuka, menampilkan, atau menyalin API key (`.env.local`).

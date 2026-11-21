@@ -1,14 +1,16 @@
 // Profil brand: buat, lihat, dan bagikan ke anggota tim (suara & gaya brand tetap sama siapa pun pembuatnya).
 //
 //   npm run brand -- list
-//   npm run brand -- new <slug> [--name="Nama Brand"] [--left="TEKS KIRI"] [--right="TEKS KANAN"] [--voice=<voice>]
+//   npm run brand -- new <slug> [--name="Nama Brand"] [--left="TEKS KIRI"] [--right="TEKS KANAN"] [--voice=<voice>] [--style=<style>]
+// Brand = identitas (nama, brand pojok, logo, warna brand, CTA, penutup, voice, kamus). Rasa video = STYLE (npm run style);
+// "style" di profil hanya style bawaan yang direkomendasikan, brand tetap boleh memakai style lain.
 //   npm run brand -- pack <slug> [--scenes=a.tsx,b.tsx]   -> Brands/_export/<slug>.brand.tar.gz
 //        isi: Brands/<slug>/ (profile.json, brand.md, MOTION.md, logo/, examples/) + scene Pop khusus brand (opsional)
 //   npm run brand -- unpack <file.brand.tar.gz> [--force]  -> pasang di workspace ini (Brands/<slug>/ + Engine/src/pop/custom/)
 // Paket TIDAK berisi key, token, atau hasil video. Kirim lewat jalur yang Anda percaya (drive tim, repo privat, dsb.).
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DIRS, ENGINE, ROOT, config, readJson, run } from "./lib.mjs";
+import { DIRS, ENGINE, ROOT, brandStyle, config, readJson, resolveStyle, run } from "./lib.mjs";
 
 const [cmd, arg] = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const opt = (k) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
@@ -21,7 +23,7 @@ if (cmd === "list" || !cmd) {
     .map((slug) => {
       const p = readJson(path.join(DIRS.brands, slug, "profile.json"), {});
       const has = (f) => (existsSync(path.join(DIRS.brands, slug, f)) ? "ya" : "-");
-      return { slug, nama: p.nama ?? "", voice: p.voice?.voice ?? "", jalur: p.visual?.jalur ?? "", brandMd: has("brand.md"), motionMd: has("MOTION.md"), logo: has("logo") };
+      return { slug, nama: p.nama ?? "", voice: p.voice?.voice ?? "", style: brandStyle(slug) ?? "", brandMd: has("brand.md"), motionMd: has("MOTION.md"), logo: has("logo") };
     });
   rows.length ? console.table(rows) : console.log("Belum ada profil brand. Buat: npm run brand -- new <slug>");
 } else if (cmd === "new") {
@@ -35,7 +37,7 @@ if (cmd === "list" || !cmd) {
     nama: opt("name") ?? arg,
     brand: { left: opt("left") ?? "", right: opt("right") ?? "" },
     voice: { voice: opt("voice") ?? el.voice ?? "George", model: el.model ?? "eleven_v4", stability: el.stability ?? 0.7, similarityBoost: el.similarityBoost ?? 0.5, seed: el.seed ?? 4242 },
-    visual: { jalur: null, style: null, palette: {} },
+    style: opt("style") ? (resolveStyle(opt("style")) ?? (() => { throw new Error(`Style ${opt("style")} tidak ada (npm run style -- list)`); })()) : null,
     pronounce: {},
     asrAlias: {},
     catatan: [`${new Date().toISOString().slice(0, 10)}: profil dibuat`],

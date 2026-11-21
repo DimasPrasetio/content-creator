@@ -44,6 +44,11 @@ export PATH="$TB:$HOME/.local/bin:$PATH"
 OS="$(uname -s)"
 case "$(uname -m)" in x86_64|amd64) ARCH=x64; ARCH2=amd64 ;; arm64|aarch64) ARCH=arm64; ARCH2=arm64 ;; *) echo "Arsitektur $(uname -m) belum didukung"; exit 1 ;; esac
 if [ "$(id -u)" = 0 ]; then SUDO=""; elif command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then SUDO="sudo"; else SUDO="NONE"; fi
+# Linux/WSL dijalankan langsung di terminal: minta password sudo sekali (apt & library Chromium), boleh dilewati
+if [ "$SUDO" = NONE ] && [ "$OS" = Linux ] && [ -t 0 ] && command -v sudo >/dev/null 2>&1; then
+  printf '\nSetup butuh hak admin sekali untuk apt (Node, ffmpeg, library Chromium). Masukkan password Linux Anda\n(Ctrl+C di prompt = lewati; komponen dipasang ke folder pengguna bila bisa):\n'
+  if sudo -v 2>/dev/null; then SUDO="sudo"; ( while sleep 50; do kill -0 $$ 2>/dev/null || exit; sudo -n true 2>/dev/null || exit; done ) & fi
+fi
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 ok() { printf '  OK    %s\n' "$*"; }
@@ -69,6 +74,12 @@ if [ "$OS" = Linux ]; then
   if [ ${#base[@]} -gt 0 ]; then apt_install curl ca-certificates unzip xz-utils || die "butuh ${base[*]}; jalankan: sudo apt-get install -y curl ca-certificates unzip xz-utils"; fi
 fi
 has curl || die "butuh curl"
+# WSL2 (Windows): login di browser Windows lewat wslview (paket wslu); workspace sebaiknya di filesystem Linux
+WSL=0; grep -qsi microsoft /proc/version && WSL=1
+if [ "$WSL" = 1 ]; then
+  has wslview || apt_install wslu || info "wslu belum terpasang: link login dibuka manual (salin URL ke browser Windows)"
+  case "$WS" in /mnt/*) info "PERINGATAN workspace di drive Windows ($WS) jauh lebih lambat; disarankan ~/ContentCreator (lihat docs/WINDOWS.md)" ;; esac
+fi
 
 # Node.js >= 20
 node_ok() { has node && [ "$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)" -ge 20 ]; }
@@ -164,7 +175,11 @@ fi
 say "2/8 Workspace: $WS"
 mkdir -p "$WS"/{Projects,Brands,References,Result,Styles}
 copy_once() { [ -e "$WS/$1" ] || { mkdir -p "$(dirname "$WS/$1")"; cp "$PLUGIN_ROOT/template/$1" "$WS/$1"; ok "dibuat $1"; }; }
-for f in CLAUDE.md .gitignore Projects/README.md Brands/README.md Brands/_selera.md References/README.md Result/README.md Styles/README.md; do copy_once "$f"; done
+for f in CLAUDE.md .gitignore Brands/_selera.md; do copy_once "$f"; done
+# README folder = dokumentasi plugin (bukan data pengguna): selalu diperbarui mengikuti versi plugin
+for f in Projects/README.md Brands/README.md References/README.md Result/README.md Styles/README.md; do
+  if ! cmp -s "$PLUGIN_ROOT/template/$f" "$WS/$f" 2>/dev/null; then cp "$PLUGIN_ROOT/template/$f" "$WS/$f"; ok "diperbarui $f"; fi
+done
 
 say "3/8 Mesin -> $WS/Engine (data workspace tidak disentuh)"
 node "$PLUGIN_ROOT/bin/sync-engine.mjs" "$PLUGIN_ROOT/engine" "$WS/Engine"
@@ -218,7 +233,8 @@ fi
 # alat yang dipasang ke folder pengguna harus ditemukan oleh shell & Claude Code berikutnya
 mkdir -p "$CFG_DIR"
 printf '# dibuat content-creator setup\nexport PATH="%s:$HOME/.local/bin:$PATH"\n' "$TB" > "$CFG_DIR/env.sh"
-if [ -n "$(ls -A "$TB" 2>/dev/null)" ]; then
+[ "${WSL:-0}" = 1 ] && has wslview && printf 'export BROWSER="${BROWSER:-wslview}"\n' >> "$CFG_DIR/env.sh"
+if [ -n "$(ls -A "$TB" 2>/dev/null)" ] || [ "${WSL:-0}" = 1 ]; then
   for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
     { [ -e "$rc" ] || [ "$rc" = "$HOME/.profile" ]; } || continue
     grep -qs 'content-creator/env.sh' "$rc" || printf '\n[ -f "%s" ] && . "%s"\n' "$CFG_DIR/env.sh" "$CFG_DIR/env.sh" >> "$rc"
@@ -230,16 +246,14 @@ say "8/8 Pemeriksaan"
 mkdir -p "$CFG_DIR" && printf '%s\n' "$WS" > "$WS_FILE"
 ok "workspace tercatat di $WS_FILE"
 npm run -s check || true
+say "Akun & layanan"
+npm run -s akun || true
 cat <<EOF
 
-Komponen terpasang. Yang tersisa hanya AKUN milik Anda (panduan lengkap: $PLUGIN_ROOT/docs/SETUP.md):
-  0. Di shell yang sudah terbuka sebelum setup, muat PATH alat dulu:  . "$CFG_DIR/env.sh"
-  1. ElevenLabs (wajib):     cd "$WS" && npx -y @elevenlabs/cli@latest onboard init      (login di browser)
-  2. Voice default:          cd "$WS/Engine" && npm run voices   lalu isi elevenlabs.voice di config.local.json
-  3. Google Drive (opsional): rclone config create gdrive drive scope=drive root_folder_id=<ID folder>
-                              lalu isi drive.rootFolderId di $WS/Engine/config.local.json
-  4. Uji semua jalur:        cd "$WS/Engine" && npm run selftest
-  5. Higgsfield (opsional, aset AI berbayar kredit): higgsfield auth login      (login di browser, sekali)
-     MCP di Claude Code (opsional): jalankan setup dengan --with-higgsfield-mcp, lalu /mcp untuk login
-Lalu buka Claude Code di mana saja dan ketik: /content-creator <ide video>
+Komponen terpasang. Yang tersisa hanya AKUN milik Anda; status & langkahnya ada di atas (ulangi kapan saja:
+  cd "$WS/Engine" && npm run akun). Panduan lengkap: $PLUGIN_ROOT/docs/SETUP.md (Windows: docs/WINDOWS.md)
+  - Di shell yang sudah terbuka sebelum setup, muat PATH alat dulu:  . "$CFG_DIR/env.sh"
+  - Login selalu Anda lakukan sendiri di terminal/browser; jangan menempel key atau kode ke obrolan.
+  - Uji semua jalur: cd "$WS/Engine" && npm run selftest
+Lalu buka Claude Code di workspace dan ketik: /content-creator <ide video atau file footage>
 EOF

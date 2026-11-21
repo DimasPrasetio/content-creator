@@ -20,7 +20,7 @@
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DIRS, ENGINE, P, ROOT, brandOf, deepMerge, parseScript, readJson, resolveName, run } from "./lib.mjs";
+import { DIRS, ENGINE, P, ROOT, brandOf, brandStyle, deepMerge, kitTheme, loadStyle, parseScript, readJson, resolveName, run } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const name = resolveName(args.find((a) => !a.startsWith("--")));
@@ -76,10 +76,16 @@ variants.forEach((v, i) => {
   }
 });
 
-// --- 2. tema brand (sama dengan kit video) ---
+// --- 2. tema (sama dengan kit video: style + identitas brand) ---
 const brand = brandOf(name);
-const theme = deepMerge(readJson(path.join(ENGINE, "kit", "html", "theme.default.json"), {}), readJson(path.join(DIRS.brands, brand, "theme.json"), {}));
-delete theme._doc;
+const styleName = board.style ?? (board.composition === "html" || !board.composition ? brandStyle(brand) : null);
+const { theme } = (() => {
+  try {
+    return kitTheme({ brand, style: styleName && loadStyle(styleName).kind !== "edit" && (loadStyle(styleName).jalur ?? "html") === "html" ? styleName : null, warna: board.warna });
+  } catch {
+    return kitTheme({ brand });
+  }
+})();
 const corner = board.brand ?? {};
 const mark = theme.mark ?? theme.watermark?.parts ?? (corner.right || corner.left ? [[corner.right || corner.left, "accent"]] : []);
 

@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.7.0
+Tahap pertama roadmap "content creator lengkap" (`docs/ROADMAP.md`).
+- **Style lepas dari brand.** Style = rasa video (jalur & skill, tema huruf/palet/subtitle/glow/progress, musik, aturan
+  edit, `STYLE.md`, `selera.md`, `examples/`); brand = identitas + suara (nama, brand pojok, logo/watermark, warna brand,
+  CTA, penutup, kamus, voice, style bawaan sebagai rekomendasi). Brand mana pun dan jenis video apa pun boleh memakai
+  style mana pun; opsi `warna`: `brand` atau `style`.
+- `npm run style -- list | show | new | save | selera`: daftar style (bawaan plugin + `Styles/<slug>/` milik pengguna,
+  dengan alias), buat style baru atau turunan (`--dari`), **simpan video yang sudah jadi sebagai style bernama**
+  (identitas brand tidak ikut), dan catat selera per style.
+- Style bawaan berganti nama mudah diingat: `narration` → **Ngobrol** (alias lama tetap jalan), baru **Komik** (jalur Pop).
+- Tema kit HTML disusun bertingkat: kit < style < identitas brand (< warna brand bila `warna: brand`).
+  `npm run new -- <nama> --style=<style> [--warna=brand|style]`; tanpa `--style` dipakai style bawaan brand; tanpa style
+  sama sekali perilaku lama (tema brand utuh) tetap berlaku. Thumbnail mengikuti style proyek. Profil brand: `style`
+  menggantikan `visual` (`npm run brand -- new <slug> --style=<style>`; `visual.style` lama dibaca lewat alias).
+- Grill-me baru: **jenis pekerjaan → format → style → brand → sisanya**, jujur tentang yang sudah didukung
+  (landscape/video panjang menyusul di v0.8; podcast, rekaman layar, vlog di v0.9).
+- **Setup terpandu**: `npm run akun` (status ElevenLabs, Higgsfield, Google Drive, skill/whisper opsional + perintah
+  langkah berikutnya, `--json` untuk skill setup; tidak pernah menampilkan key). `/content-creator:setup` memandu akun
+  satu per satu dan login selalu dilakukan pengguna sendiri. Setup di Linux/WSL yang dijalankan di terminal meminta
+  password sudo sekali; README folder workspace kini ikut diperbarui.
+- **Windows lewat WSL2**: `docs/WINDOWS.md`; setup mendeteksi WSL, memasang `wslu` agar login terbuka di browser
+  Windows, dan memperingatkan workspace di `/mnt/c`.
+- Higgsfield di komputer yang belum pernah login kini dilaporkan "belum login" (sebelumnya "workspace belum dipilih").
+- Selftest menguji gabungan tema style, `style list/save/selera`, `new` dengan style bawaan brand, dan alias `narration`.
+
 ## 0.6.1
 - Higgsfield (diuji dengan akun sungguhan): akun dengan satu workspace dipilih otomatis setelah login (sebelumnya
   "No workspace selected" dikira belum login); lebih dari satu workspace → instruksi `higgsfield workspace list/set`.

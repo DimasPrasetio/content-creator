@@ -8,7 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { DIRS, ENGINE, P, ROOT, mg4Skill, run } from "./lib.mjs";
+import { DIRS, ENGINE, P, ROOT, kitTheme, mg4Skill, resolveStyle, run } from "./lib.mjs";
 
 const args = process.argv.slice(2);
 const full = args.includes("--full");
@@ -119,7 +119,7 @@ if (full) {
   writeFileSync(p.storyboard, JSON.stringify({ composition: "Pop", brand: { left: "SELFTEST", right: "" }, scenes: Array.from({ length: scenesN }, (_, i) => ({ key: `EX${i + 1}`, trans: i ? "slash" : "none" })) }, null, 2));
   npm("preview Pop + cek tata letak", "render", [NAME, "--preview"], { allowFail: true });
 }
-// 6) mesin edit footage (style narration), tanpa kredit: footage sintetis + suara sampel + transkrip sidecar
+// 6) mesin edit footage (style ngobrol, dipanggil dengan nama lama "narration" untuk menguji alias), tanpa kredit: footage sintetis + suara sampel + transkrip sidecar
 const NE = "00000000-02-selftest-edit";
 const pe = P(NE);
 const cleanEdit = () => {
@@ -133,7 +133,7 @@ const raw = path.join(ENGINE, "work", "_edit-sample");
 mkdirSync(raw, { recursive: true });
 run("ffmpeg", ["-v", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=1080x1920:r=30", "-i", SAMPLE_AUDIO, "-shortest", "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "aac", path.join(raw, "footage.mp4")]);
 copyFileSync(SAMPLE_AUDIO.replace(/\.mp3$/, ".align.json"), path.join(raw, "footage.words.json"));
-npm("edit: proyek baru (style narration)", "edit", [NE, "--new", "--style=narration", `--input=${path.join(raw, "footage.mp4")}`, "--force"]);
+npm("edit: proyek baru (style ngobrol lewat alias narration)", "edit", [NE, "--new", "--style=narration", `--input=${path.join(raw, "footage.mp4")}`, "--force"]);
 npm("edit: normalisasi + analisis konteks", "edit", [NE, "--analyze"]);
 // aset AI (Higgsfield) lewat CLI tiruan: perkiraan biaya, batas kredit, unduh, cache -> klip penuh di kalimat ketiga
 process.env.HIGGSFIELD_BIN = path.join(ENGINE, "scripts", "stub", "higgsfield.mjs");
@@ -156,6 +156,37 @@ npm("edit: potong + grading + grafis + render + QA", "edit", [NE]);
 rows.push({ langkah: "edit: hasil video", hasil: existsSync(pe.result) && /Semua pengecekan lolos/.test(step.last) ? "LULUS" : "GAGAL", detik: 0, catatan: "Result/umum/<nama>/<nama>.mp4 + QA" });
 if (!keep) cleanEdit();
 rmSync(raw, { recursive: true, force: true });
+
+// 7) style lepas dari brand: style + identitas brand + warna brand/style, simpan proyek jadi style, catat selera
+{
+  const NS = "00000000-05-selftest-style", ps = P(NS);
+  const SG = path.join(DIRS.styles, "zz-selftest-gaya"), SS = path.join(DIRS.styles, "zz-selftest-simpan"), BR = path.join(DIRS.brands, "zz-selftest-brand");
+  const cleanStyle = () => { for (const d of [ps.dir, ps.work, ps.resultDir, SG, SS, BR]) rmSync(d, { recursive: true, force: true }); };
+  cleanStyle();
+  mkdirSync(SG, { recursive: true });
+  mkdirSync(BR, { recursive: true });
+  writeFileSync(path.join(SG, "style.json"), JSON.stringify({ name: "zz-selftest-gaya", title: "Uji Gaya", aliases: ["zz-gaya-lama"], kind: "animasi", jalur: "html", skill: "launch-video", warna: "brand",
+    theme: { colors: { bg: "#010101", accent: "#AA0000" }, subtitle: { said: "accent", unsaid: "dim", key: "accent" }, fonts: { head: "Uji Head" } } }));
+  writeFileSync(path.join(BR, "profile.json"), JSON.stringify({ nama: "Uji", brand: { left: "", right: "UJI" }, style: "zz-gaya-lama" }));
+  writeFileSync(path.join(BR, "theme.json"), JSON.stringify({ colors: { accent: "#00BB00" }, subtitle: { said: "text" }, watermark: { parts: [["UJI", "accent"]] } }));
+  const t1 = kitTheme({ brand: "zz-selftest-brand", style: "zz-gaya-lama" }).theme, t2 = kitTheme({ brand: "zz-selftest-brand", style: "zz-selftest-gaya", warna: "style" }).theme;
+  const okMerge = t1.colors.accent === "#00BB00" && t1.colors.bg === "#010101" && t1.subtitle.said === "accent" && t1.fonts.head === "Uji Head" && t1.watermark?.parts?.[0]?.[0] === "UJI" && t1.storyboard.skill === "launch-video"
+    && t2.colors.accent === "#AA0000" && t2.watermark?.parts?.[0]?.[0] === "UJI" && resolveStyle("narration") === "ngobrol" && resolveStyle("Uji Gaya") === "zz-selftest-gaya";
+  rows.push({ langkah: "style: gabung tema (style < identitas brand < warna)", hasil: okMerge ? "LULUS" : "GAGAL", detik: 0, catatan: okMerge ? "alias, warna brand/style, watermark brand" : JSON.stringify({ a: t1.colors.accent, s: t1.subtitle, w: t2.colors.accent }).slice(0, 90) });
+  npm("style: daftar", "style", ["list"]);
+  mkdirSync(ps.dir, { recursive: true });
+  copyFileSync(SAMPLE_MD, ps.script);
+  writeFileSync(ps.script, readFileSync(ps.script, "utf8").replace(/^---\n/, "---\nprofile: zz-selftest-brand\n"));
+  npm("style: proyek baru memakai style bawaan brand", "new", [NS]);
+  const th = existsSync(path.join(ps.html, "theme.js")) ? readFileSync(path.join(ps.html, "theme.js"), "utf8") : "";
+  const sbs = JSON.parse(existsSync(ps.storyboard) ? readFileSync(ps.storyboard, "utf8") : "{}");
+  rows.push({ langkah: "style: theme.js & storyboard", hasil: th.includes("#00BB00") && th.includes("Uji Head") && sbs.style === "zz-selftest-gaya" && sbs.skill === "launch-video" ? "LULUS" : "GAGAL", detik: 0, catatan: `style ${sbs.style ?? "-"} · skill ${sbs.skill ?? "-"}` });
+  npm("style: simpan proyek jadi style bernama", "style", ["save", NS, "zz-selftest-simpan", "--title=Uji Simpan"]);
+  const saved = JSON.parse(existsSync(path.join(SS, "style.json")) ? readFileSync(path.join(SS, "style.json"), "utf8") : "{}");
+  rows.push({ langkah: "style: hasil simpan tanpa identitas brand", hasil: saved.theme?.fonts?.head === "Uji Head" && !("watermark" in (saved.theme ?? {})) && saved.title === "Uji Simpan" ? "LULUS" : "GAGAL", detik: 0, catatan: "Styles/<slug>/style.json" });
+  npm("style: catat selera (nama tampilan)", "style", ["selera", "Uji Simpan", "contoh catatan selera"]);
+  if (!keep) cleanStyle();
+}
 
 console.table(rows);
 const failed = rows.filter((r) => r.hasil === "GAGAL").length;
