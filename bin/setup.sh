@@ -208,6 +208,11 @@ if [ -x .venv/bin/python ] && [ "$(cat .deps-py 2>/dev/null)" = "$PYREQ" ]; then
   uv pip install -q --python .venv/bin/python --no-deps resemblyzer
   .venv/bin/python -c "import resemblyzer, scipy, sklearn, soundfile, PIL, playwright, cv2${WH_PKG:+, faster_whisper}; cv2.FaceDetectorYN" && echo "$PYREQ" > .deps-py && ok "terpasang${WH_PKG:+ (+ faster-whisper)}"
 fi
+# tiktok-uploader (unggah TikTok, opsional): versi dipatok karena scripts/tiktok_upload.py menyambung ke fungsi internalnya
+TT_VER=1.2.0
+if [ "$(.venv/bin/python -c 'import importlib.metadata as m; print(m.version("tiktok-uploader"))' 2>/dev/null)" = "$TT_VER" ]; then ok "tiktok-uploader $TT_VER"
+elif uv pip install -q --python .venv/bin/python "tiktok-uploader==$TT_VER"; then ok "tiktok-uploader $TT_VER (unggah TikTok; login per brand: npm run tiktok -- login <brand>)"
+else info "tiktok-uploader gagal dipasang (opsional, hanya untuk unggah TikTok)"; fi
 
 say "6/8 Browser render (Chromium Playwright + Chrome Headless Remotion)"
 if [ "$SKIP_BROWSERS" = 1 ]; then ok "dilewati (--skip-browsers)"; else

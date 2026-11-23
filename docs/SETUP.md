@@ -12,9 +12,10 @@ Panduan ini untuk orang yang baru memasang plugin, baik sendiri maupun sebagai a
 | 3. Login ElevenLabs | Anda (klik di browser) | Dipandu |
 | 4. Pilih voice default | Anda | Dipandu (audisi gratis) |
 | 5. Google Drive (opsional) | Anda (klik di browser) | Dipandu |
+| 5c. TikTok per brand (opsional) | Anda (login di jendela browser) | Dipandu |
 | 6. `npm run selftest` | Claude | Ya |
 
-Status semua akun kapan saja: `cd <workspace>/Engine && npm run akun` (ElevenLabs, Higgsfield, Google Drive, skill
+Status semua akun kapan saja: `cd <workspace>/Engine && npm run akun` (ElevenLabs, Higgsfield, Google Drive, TikTok, skill
 opsional, beserta perintah langkah berikutnya; tidak pernah menampilkan key).
 
 **Windows**: hanya lewat WSL2. Ikuti **[docs/WINDOWS.md](WINDOWS.md)** dulu, lalu lanjutkan panduan ini di dalam Ubuntu.
@@ -121,6 +122,25 @@ Voice per brand diatur di profil brand (langkah 7) dan menimpa voice default.
 > rclone memakai client ID bersama bawaan yang akan dipensiunkan sepanjang 2026. Untuk pemakaian jangka panjang, buat
 > client ID Google sendiri: https://rclone.org/drive/#making-your-own-client-id, lalu jalankan ulang `rclone config`.
 
+## 5c. TikTok (opsional, unggah setelah video disetujui)
+
+Satu akun TikTok per brand. Login dilakukan **Anda sendiri**, sekali per brand per komputer (perlu diulang bila sesi
+TikTok kedaluwarsa; `npm run akun` mengingatkan):
+```bash
+cd <workspace>/Engine && npm run tiktok -- login <brand>
+```
+Jendela browser terbuka di halaman login TikTok; paling mudah pindai **kode QR** dari aplikasi TikTok di ponsel. Jendela
+tertutup sendiri setelah login berhasil. Login tersimpan di `~/.config/content-creator/tiktok/<brand>/` (di luar
+workspace, tidak ikut `brand pack`). Bila TikTok menolak login di jendela itu: ekspor `cookies.txt` (format Netscape) dari
+Chrome yang sedang login TikTok dengan ekstensi pengekspor cookie, lalu `npm run tiktok -- login <brand> --cookies=<file>`
+dan hapus file itu setelahnya. Jangan pernah menempel sandi, kode, atau cookie di obrolan Claude.
+
+Uji pertama sebaiknya di **akun TikTok cadangan**: `npm run tiktok -- <nama> --sekarang --privat` (hanya Anda yang bisa
+melihat) atau `--latihan` (formulir diisi tanpa klik Post). Unggah memakai
+[tiktok-uploader](https://github.com/wkaisertexas/tiktok-uploader), robot browser **tidak resmi**: bisa berhenti bekerja
+saat TikTok mengubah tampilan web, dan TikTok bisa membatasi akun yang diunggahi lewat otomatisasi. Di server tanpa layar,
+login jendela tidak tersedia: pakai `--cookies`.
+
 ## 5b. Higgsfield (opsional, aset AI berbayar kredit)
 
 Untuk gambar/klip B-roll buatan AI (Seedance, GPT Image, Kling, ...). Butuh akun Higgsfield **berbayar**: setiap generate
@@ -176,6 +196,7 @@ Tanpa itu, jalur A (Pop) dan C (HTML) tetap berjalan, dan `npm run check` menand
 |---|---|
 | Akun ElevenLabs | masing-masing, **atau** satu akun bersama + API key per orang |
 | Google Drive | satu folder bersama; tiap anggota diberi akses Editor dan login rclone dengan akunnya sendiri |
+| TikTok | login per brand di komputer yang mengunggah (login tidak ikut `brand pack`) |
 | Brand | satu orang membuat profil, lalu `brand pack` → anggota `brand unpack` |
 | Plugin | semua memakai versi yang sama: `/plugin update content-creator` lalu `/content-creator:setup` |
 
@@ -189,5 +210,7 @@ Tanpa itu, jalur A (Pop) dan C (HTML) tetap berjalan, dan `npm run check` menand
 | `node`/`ffmpeg` tidak dikenali setelah setup | jalankan `. ~/.config/content-creator/env.sh`, atau buka terminal/sesi Claude Code baru |
 | `Tidak ada sumber waktu kata` | audio lama tanpa timestamps & tanpa key/whisper: `npm run voice -- <nama> --force`, atau setup `--with-whisper` |
 | Drive `tidak bisa diakses` | akun Google belum punya akses Editor ke folder, atau token kedaluwarsa: `rclone config reconnect gdrive:` |
+| `npm run tiktok` gagal: login | sesi TikTok kedaluwarsa atau logout: `npm run tiktok -- login <brand>` |
+| `npm run tiktok` gagal di tengah formulir | tampilan TikTok berubah atau CAPTCHA; lihat `Projects/<nama>/posting/tiktok-gagal.png`, unggah manual, perbarui plugin |
 | Unggah Drive sangat lambat | kecepatan upload koneksi Anda; video ±100 MB di 1 Mbps butuh ±15 menit (VPS jauh lebih cepat) |
 | File video terlalu besar (ratusan MB) | render sebelum v0.2.1: `npm run compress -- <nama>` (atau `--target=50MB`); setelan di `config.local.json` → `encode` |

@@ -2,10 +2,10 @@
 
 Plugin Claude Code untuk membuat **video dari ide sampai MP4 siap upload**: Reels/TikTok 9:16, feed 4:5/1:1, dan YouTube 16:9 pendek maupun panjang (2-20 menit):
 wawancara penyamaan persepsi → contoh frame gaya dari naskah Anda sendiri → audisi suara → naskah disetujui → voice over
-ElevenLabs yang konsisten → visual sinkron per kata → sound effect → render → QA otomatis → thumbnail + caption → Google Drive.
+ElevenLabs yang konsisten → visual sinkron per kata → sound effect → render → QA otomatis → thumbnail + caption → Google Drive → TikTok (opsional).
 
 *A Claude Code plugin that turns an idea into a finished video (9:16 TikTok/Reels, 4:5, 1:1, or 16:9 YouTube up to ~20 min): interview, script, ElevenLabs
-voice-over, word-synced motion graphics, SFX, render, automatic QA, thumbnail + caption, and Google Drive upload.
+voice-over, word-synced motion graphics, SFX, render, automatic QA, thumbnail + caption, Google Drive upload, and optional TikTok upload.
 Docs and prompts are in Indonesian.*
 
 ## Fitur
@@ -49,6 +49,10 @@ Docs and prompts are in Indonesian.*
 - **Ukuran file wajar**: encode *capped CRF* (±30-60 MB per menit untuk video bergrain, jauh lebih kecil untuk video
   bersih); `npm run compress` untuk mengecilkan hasil lama atau mencapai ukuran target.
 - **Hasil per brand**: `Result/<brand>/<nama>/` dan, setelah disetujui, salinan ke Google Drive (rclone).
+- **Unggah TikTok (opsional)**: `npm run tiktok` mengunggah video yang disetujui ke akun TikTok brand-nya (tayang sekarang
+  atau dijadwalkan, sampul = thumbnail, label konten AI otomatis). Login sekali per brand oleh Anda sendiri di jendela
+  browser. Memakai [tiktok-uploader](https://github.com/wkaisertexas/tiktok-uploader) (robot browser, **tidak resmi**:
+  bisa berhenti bekerja saat TikTok mengubah tampilan, dan akun bisa dibatasi TikTok).
 - **Aset AI Higgsfield (opsional)**: gambar & klip B-roll dari model Higgsfield (Seedance, GPT Image, ...) lewat CLI resmi
   yang dipasang setup (`npm run gen`): perkiraan kredit gratis, batas kredit per proyek, cache, manifest. Dipakai sebagai
   klip cutaway di edit footage, aset jalur C, dan latar thumbnail. MCP Higgsfield untuk Claude Code opsional
@@ -60,7 +64,7 @@ Docs and prompts are in Indonesian.*
 - **Semua komponen pendukung dipasang otomatis oleh setup**: Node.js, ffmpeg, uv + Python 3.12, rclone, paket npm/Python,
   Chromium, library sistem Chromium (Linux), CLI Higgsfield. Tidak ada model besar yang wajib diunduh.
 - Yang Anda siapkan sendiri hanya **akun**: ElevenLabs (wajib; voice Voice Library butuh paket berbayar), Google
-  Drive (opsional), Higgsfield (opsional, paket berbayar untuk aset AI), dan skill Anthropic `motion-graphics-v4`
+  Drive (opsional), TikTok per brand (opsional), Higgsfield (opsional, paket berbayar untuk aset AI), dan skill Anthropic `motion-graphics-v4`
   (opsional, jalur B).
 
 Panduan lengkap, termasuk pola tim: **[docs/SETUP.md](docs/SETUP.md)** · Windows (WSL2): **[docs/WINDOWS.md](docs/WINDOWS.md)** ·
@@ -87,7 +91,7 @@ Agent menanyakan hal yang perlu (tujuan, penonton, hook, CTA, rasa visual, rasa 
 frame + audisi suara, meminta persetujuan naskah sebelum memakai kredit, lalu memproduksi sampai `Result/<brand>/<nama>/`.
 
 Perintah mesin (dari `<workspace>/Engine`): `npm run check`, `voice`, `render`, `mg4`, `html`, `edit`, `sound`, `qa`, `posting`, `thumbnail`, `compress`,
-`export`, `drive`, `voices`, `brand`, `selftest`. Rincian: [engine/README.md](engine/README.md).
+`export`, `drive`, `tiktok`, `voices`, `brand`, `selftest`. Rincian: [engine/README.md](engine/README.md).
 
 ## Struktur
 ```

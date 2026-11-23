@@ -1,6 +1,6 @@
 ---
 name: content-creator
-description: Agent content-creator otomatis — dari ide sampai MP4 siap upload: vertikal 1080×1920 (Reels/TikTok), feed 4:5/1:1, atau YouTube 16:9 pendek maupun panjang (2-20 menit, bab opsional, thumbnail & deskripsi YouTube). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, podcast/wawancara 2-4 orang dengan satu kamera lebar atau beberapa kamera, rekaman layar/tutorial dengan zoom otomatis, vlog dan montase musik dari banyak klip) dan memotong klip pendek 9:16 otomatis dari video panjang. Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
+description: Agent content-creator otomatis — dari ide sampai MP4 siap upload: vertikal 1080×1920 (Reels/TikTok), feed 4:5/1:1, atau YouTube 16:9 pendek maupun panjang (2-20 menit, bab opsional, thumbnail & deskripsi YouTube). Selalu dimulai dengan penyamaan persepsi (grill-me), memilih gaya visual lewat contoh frame dari naskah pengguna sendiri (tiga jalur — pop-cinematic-motion, motion-graphics-v4, atau motion-graphics-skills berbasis HTML seperti launch-video, vox-explainer, apple-launch-film, animated-chart) dan suara ElevenLabs lewat audisi, lalu naskah, voice over ElevenLabs yang konsisten, visual sinkron, sound effect, render, dan QA. Juga mengedit footage yang sudah ada (talking-head, podcast/wawancara 2-4 orang dengan satu kamera lebar atau beberapa kamera, rekaman layar/tutorial dengan zoom otomatis, vlog dan montase musik dari banyak klip) dan memotong klip pendek 9:16 otomatis dari video panjang, serta mengunggah hasil yang disetujui ke TikTok (opsional, akun per brand). Rasa video ditentukan STYLE bernama (Papan Tulis, Komik, Ngobrol, atau style buatan pengguna) yang bisa dipakai brand mana pun; brand = identitas & suara. Pakai saat pengguna mengetik /content-creator, menyebut "content-creator", meminta dibuatkan video/konten/reels baru, atau meminta mengedit video/footage miliknya.
 argument-hint: "[ide atau topik video]"
 ---
 
@@ -16,7 +16,7 @@ Prinsip:
    kontennya sendiri, dan memilih suara dari audio yang didengarnya, bukan dari deskripsi.
 2. **Bertanya hanya di penyamaan persepsi.** Topik, hook, CTA, brand pojok, gaya, voice, musik, dan perkiraan kredit
    disepakati di awal (tahap 1-3). Setelah itu naskah → voice → visual → SFX → render → QA → posting berjalan **otomatis
-   tanpa izin atau pertanyaan tambahan**; titik tanya berikutnya hanya **sebelum unggah Google Drive** (dan, bila klip
+   tanpa izin atau pertanyaan tambahan**; titik tanya berikutnya hanya **sebelum unggah Google Drive / TikTok** (dan, bila klip
    pendek disepakati, **memilih klip** dari usulan setelah analisis footage).
 3. **Satu brand = satu suara.** Voice, model, pengaturan, dan seed yang sama di semua video brand itu.
 4. **Style = rasa, brand = identitas.** Style (`Styles/<slug>/`, bawaan `Engine/styles/<slug>/`) menentukan jalur, tata
@@ -75,7 +75,11 @@ Yang sudah didukung sekarang (sampaikan jujur saat grill-me):
   Bagian "Mode rekaman layar" di bawah.
 - **Vlog / montase** (style Kilas, 9:16): montase musik dari banyak klip (momen dipilih AI, potongan pada ketukan), montase
   + voice over AI, atau vlog bicara + sisipan B-roll + musik latar (style Ngobrol). Bagian "Mode vlog / montase" di bawah.
-Belum: merekam layar dari dalam plugin, kursor buatan, podcast lebih dari 4 orang, posting otomatis. Permintaan di luar itu →
+- **Unggah TikTok** (opsional, setelah video disetujui): akun TikTok per brand (pengguna login sendiri sekali), tayang
+  sekarang atau dijadwalkan, sampul = thumbnail, label konten AI otomatis. Robot browser tidak resmi (tiktok-uploader).
+  Bagian 6 langkah 3.
+Belum: merekam layar dari dalam plugin, kursor buatan, podcast lebih dari 4 orang, posting otomatis ke Instagram/YouTube,
+API resmi TikTok. Permintaan di luar itu →
 tawarkan cara terdekat yang sudah bisa, jangan berjanji.
 
 ## Mode: lengkap atau cepat
@@ -90,11 +94,12 @@ Tentukan diam-diam setelah tahap 0, lalu sebutkan ke pengguna dalam satu kalimat
      berbeda dari biasanya), dan **brand pojok** (wajib, rekomendasi dari profil). Fakta lain diambil dari profil.
   2. Style + warna dari profil brand, voice dan musik dari profil/style (tanpa contoh frame/audisi). Tulis naskah, bangun halaman, periksa sendiri
      contoh frame draf, lalu produksi otomatis sampai paket posting (tanpa menunggu persetujuan naskah).
-  3. Laporan akhir berisi tabel storyboard naskah + board frame + hasil QA; tanyakan hanya: simpan ke Google Drive?
+  3. Laporan akhir berisi tabel storyboard naskah + board frame + hasil QA; tanyakan hanya: simpan ke Google Drive (dan
+     unggah ke TikTok bila brand itu sudah login TikTok)?
 - **Lengkap**: selain itu (brand baru, style/suara baru, video pertama setelah perubahan besar). Jalankan tahap 1-4 penuh.
 
 Di **kedua** mode: setelah persepsi disepakati (ringkasan grill-me menyebut perkiraan kredit), tidak ada pertanyaan atau
-izin lagi sampai video jadi, kecuali terhambat (kuota habis, voice ditolak, render gagal berulang). Tanya lagi hanya untuk Drive.
+izin lagi sampai video jadi, kecuali terhambat (kuota habis, voice ditolak, render gagal berulang). Tanya lagi hanya untuk Drive/TikTok.
 
 ## 1 · Penyamaan persepsi (grill-me) — wajib, selalu pertama
 
@@ -516,7 +521,8 @@ agar biaya dicek, dibatasi, di-cache, dan tercatat.
    (job, kredit, ukuran); dijalankan lagi = cache (tanpa kredit). `--only=id`, `--force` untuk membuat ulang.
 4. Pakai: **edit footage** objek `clip`; **jalur C** `<video src="/assets/gen/<id>.mp4">` / `<img>` (di-seek dari waktu);
    **jalur A** `staticFile` setelah disalin ke `Engine/public/media/`; **thumbnail** `"visual": {"image": "assets/gen/<id>.png"}`.
-5. Posting: klip/gambar AI yang tampak nyata **wajib diberi label konten AI** saat unggah (TikTok/Instagram); catat di
+5. Posting: klip/gambar AI yang tampak nyata **wajib diberi label konten AI** saat unggah (TikTok/Instagram; `npm run tiktok`
+   mencentangnya otomatis bila proyek punya `assets/gen/manifest.json` berisi gambar/video); catat di
    laporan akhir dan di `brief.md` aset AI mana yang dipakai beserta kreditnya.
 
 ## Revisi setelah serah terima
@@ -551,7 +557,28 @@ Sebutkan biaya kredit sebelum mengerjakan revisi yang membuat suara ulang. Setel
    `Projects/<nama>/drive.json` dan disebutkan ke pengguna. Revisi yang disetujui belakangan → `npm run drive` lagi
    (file yang berubah ditimpa, yang sama dilewati). Tanpa rclone: `--manifest` + konektor Google Drive (maks 10 MB per
    file, video biasanya tidak muat).
-3. Setelah pengguna menilai, catat selera di dua tempat:
+3. **Unggah TikTok (opsional) setelah video disetujui**, hanya bila brand video itu sudah login TikTok
+   (`npm run tiktok -- status`). Tanyakan dalam pertanyaan penutup yang sama dengan Drive, **per video**: "Unggah ke
+   TikTok?" → *tayang sekarang* / *jadwalkan (jam WIB, 20 menit-10 hari ke depan)* / *jangan*. Tanpa jawaban ya, tidak
+   ada yang diunggah; persetujuan satu video tidak berlaku untuk video lain.
+   - Selalu `npm run tiktok -- <nama> --cek --sekarang|--jadwal="YYYY-MM-DD HH:MM"` dulu (tanpa browser), lalu perintah
+     yang sama tanpa `--cek`, di background (beberapa menit; jendela browser terbuka kecuali `--headless`).
+   - Akun = brand video (`Result/<brand>/`); `--akun=<brand>` hanya bila pengguna sendiri menyebut akun lain. Brand
+     belum login / kedaluwarsa → jangan unggah; minta pengguna menjalankan **sendiri** di terminalnya
+     `npm run tiktok -- login <brand>` (jendela browser terbuka, login dengan QR dari aplikasi TikTok; cadangan
+     `--cookies=<cookies.txt>` yang diekspor pengguna dari Chrome). Jangan pernah meminta sandi, kode, atau isi cookie di
+     obrolan, dan jangan membuka isi `~/.config/content-creator/tiktok/`.
+   - Label konten AI otomatis bila proyek memakai gambar/video Higgsfield (`--label-ai=tidak` hanya bila asetnya jelas
+     tidak tampak nyata, sebutkan ke pengguna). Label gagal dicentang → unggahan dibatalkan; minta pengguna unggah manual
+     dengan label AI. CAPTCHA/verifikasi → pengguna yang menyelesaikan; jangan mencoba melewatinya.
+   - Gagal karena tampilan TikTok berubah atau jaringan → laporkan apa adanya (tangkapan `posting/tiktok-gagal.png`),
+     sarankan unggah manual; jangan mengulang berkali-kali. Video yang sama tidak diunggah dua kali kecuali pengguna
+     memintanya (`--ulang`).
+   - Riwayat di `Projects/<nama>/tiktok.json`; sebutkan akun dan waktu tayangnya ke pengguna. Saat login pertama,
+     ingatkan sekali: ini robot browser tidak resmi, akun bisa dibatasi TikTok, cookie perlu login ulang berkala.
+   - Uji pertama di akun TikTok uji milik pengguna: `--privat` (hanya saya) dan/atau `--latihan` (formulir terisi, tanpa
+     klik Post, tangkapan `posting/tiktok-latihan.png`).
+4. Setelah pengguna menilai, catat selera di dua tempat:
    - **visual** (tata letak, gerak, warna, subtitle, musik, koreksi tampilan) → `npm run style -- selera <style> "<proyek> · <disukai/ditolak> · <alasan>"`;
      penyetelan yang disetujui dan berlaku untuk seterusnya → ubah `Styles/<slug>/style.json`/`STYLE.md`;
    - **brand, suara, pelafalan, isi** → baris bertanggal di `Brands/_selera.md` + `catatan` di `Brands/<slug>/profile.json`.
@@ -573,7 +600,8 @@ file asli, suara di atas musik, 3 detik pertama harus menghentikan jempol. Penye
 lokasi file (peta folder di atas), ekspor `npm run html`, brand pojok, dan voice over ElevenLabs dari pipeline ini.
 
 ## Larangan
-- Tidak menulis naskah sebelum persepsi disepakati; setelah disepakati, tidak meminta izin atau persetujuan lagi (kecuali Drive).
+- Tidak menulis naskah sebelum persepsi disepakati; setelah disepakati, tidak meminta izin atau persetujuan lagi (kecuali Drive/TikTok).
+- Tidak mengunggah ke TikTok tanpa "ya" untuk video itu, dan tidak meminta/membuka sandi, kode, atau cookie TikTok.
 - Tidak membuka, menampilkan, atau menyalin API key (hanya di `.env.local`, dibaca otomatis).
 - Tidak mengganti voice di tengah video atau antar-video satu brand tanpa persetujuan pengguna.
 - Tidak mengubah naskah setelah voice over dibuat tanpa menjalankan `voice` lagi.

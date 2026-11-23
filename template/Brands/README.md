@@ -36,6 +36,7 @@ npm run brand -- unpack <file>.brand.tar.gz           # pasang paket dari anggot
   "pronounce": { "istilah": "cara baca" },
   "asrAlias": { "ejaan-salah-asr": "Ejaan Benar" },
   "encode": { "crf": 23, "maxrate": "8M" },
+  "tiktok": { "akun": "@handle", "comment": true, "duet": true, "stitch": true },
   "catatan": ["selera yang disetujui / ditolak, beserta tanggal"]
 }
 ```
@@ -44,4 +45,7 @@ npm run brand -- unpack <file>.brand.tar.gz           # pasang paket dari anggot
   diberi peringatan saat `npm run voice`.
 - `brand` dan `style` hanya **rekomendasi** untuk agent content-creator; brand pojok tetap ditanyakan setiap video, dan
   brand boleh memakai style lain. Profil lama dengan `visual.style` tetap dibaca bila namanya cocok dengan alias style.
+- `tiktok` (opsional): pengaturan unggah `npm run tiktok` untuk brand ini. `akun` = pengaman: unggahan dibatalkan bila
+  browser ternyata login sebagai akun lain. Login TikTok-nya sendiri tidak disimpan di sini (dan tidak ikut `brand pack`),
+  melainkan di `~/.config/content-creator/tiktok/<slug>/` lewat `npm run tiktok -- login <slug>`.
 - Agent memperbarui `catatan` setelah video disetujui (apa yang disukai/ditolak pengguna).

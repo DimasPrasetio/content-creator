@@ -7,12 +7,14 @@
 //   --keep                          proyek uji tidak dihapus (untuk diperiksa)
 //   --only=podcast                  hanya bagian podcast + klip (v0.9)
 //   --only=layar | montase          hanya rekaman layar/tutorial atau vlog/montase (v0.10; juga cepat|buang|wajah|ai|v916|musik|vo|vlog)
+//   --only=tiktok                   hanya unggah TikTok (v0.11; halaman TikTok tiruan lokal, tanpa jaringan & tanpa akun)
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { DIRS, ENGINE, P, ROOT, kitTheme, mg4Skill, resolveStyle, run, youtubeChapters } from "./lib.mjs";
 import { podcastTest } from "./selftest_podcast.mjs";
 import { layarTest } from "./selftest_layar.mjs";
+import { tiktokTest } from "./selftest_tiktok.mjs";
 
 const args = process.argv.slice(2);
 const full = args.includes("--full");
@@ -52,6 +54,12 @@ if (only === "podcast") {
 if (["layar", "montase", "cepat", "buang", "wajah", "ai", "musik", "vo", "vlog", "v916"].includes(only)) {
   console.log(`Selftest ${only} (tanpa kredit)\n`);
   layarTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO, sampleMd: SAMPLE_MD, only });
+  finish();
+}
+
+if (only === "tiktok") {
+  console.log("Selftest unggah TikTok (tiruan lokal, tanpa jaringan)\n");
+  await tiktokTest({ npm, rows, step, keep });
   finish();
 }
 
@@ -285,6 +293,9 @@ podcastTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO });
 
 // 10) rekaman layar/tutorial + vlog/montase (v0.10)
 layarTest({ npm, rows, step, keep, sampleAudio: SAMPLE_AUDIO, sampleMd: SAMPLE_MD });
+
+// 11) unggah TikTok (v0.11): halaman TikTok tiruan lokal, tanpa jaringan & tanpa akun
+await tiktokTest({ npm, rows, step, keep });
 
 if (keep) console.log(`Proyek uji disimpan: ${path.relative(ROOT, p.dir)}`);
 else clean();

@@ -4,7 +4,7 @@ Workspace ini membuat video (Reels/TikTok 9:16, feed 4:5/1:1, YouTube 16:9 pende
 dan edit footage milik pengguna. **Style = rasa** (`Styles/`, dipakai brand mana pun), **brand = identitas + suara** (`Brands/`).
 Mulai video baru dengan `/content-creator <ide video>`; skill itu memuat alur lengkapnya (wawancara grill-me → contoh frame
 gaya + audisi suara → lalu otomatis tanpa pertanyaan: naskah → voice over ElevenLabs → visual → SFX → preview → render → QA → posting;
-satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive?; untuk klip pendek dari video panjang juga: klip mana yang dibuat).
+satu-satunya pertanyaan setelah wawancara: simpan ke Google Drive? (+ unggah ke TikTok? bila brand sudah login TikTok); untuk klip pendek dari video panjang juga: klip mana yang dibuat).
 Jalur C: `npm run new` + `npm run produce` (kit `Engine/kit/html/`). Edit footage: `npm run edit` (talking-head; podcast 2-4 orang dengan
 style Siniar, `--speakers=N [--multicam]`; rekaman layar/tutorial dengan style Layar, `[--facecam=N] [--idle=cepat|buang|utuh] [--narasi=ai]`;
 vlog/montase dengan style Kilas, `[--music=file] [--narasi=ai]`; B-roll `--broll=`); klip pendek 9:16 dari video panjang: `npm run clips`.
@@ -40,6 +40,9 @@ vlog/montase dengan style Kilas, `[--music=file] [--narasi=ai]`; B-roll `--broll
    Kanvas ditanya per video: jalur C dan edit footage langsung dalam 9:16, 16:9, 4:5, atau 1:1 (`--format=`); jalur A/B 9:16 + `npm run export`.
 4. Wajib preview + cek tata letak + `npm run qa` lolos sebelum diserahkan; `npm run posting` menghasilkan thumbnail (sampul khusus dari `posting/thumbnail.json`, 3 varian berpemicu psikologis yang jujur) + caption.
 5. Setelah pengguna menyetujui video final: `npm run drive -- <nama>` (bila Drive sudah diatur). Jangan unggah yang belum disetujui.
+   TikTok (opsional, ditanya per video: sekarang / jadwal WIB / jangan): `npm run tiktok -- <nama> --cek --sekarang|--jadwal="YYYY-MM-DD HH:MM"`
+   lalu tanpa `--cek`; akun = brand video, login sekali oleh pengguna sendiri (`npm run tiktok -- login <brand>`, QR dari aplikasi
+   TikTok). Jangan minta sandi/kode/cookie. Robot browser tidak resmi: gagal → laporkan, sarankan unggah manual.
 6. Jangan membuka, menampilkan, atau menyalin API key (`.env.local`).
 7. Aset AI Higgsfield (opsional, `npm run gen`): hanya dengan batas kredit yang disepakati pengguna; login hanya oleh pengguna
    (`higgsfield auth login`); tanpa teks, orang nyata, atau testimoni palsu di prompt; klip AI yang tampak nyata diberi label AI saat posting.

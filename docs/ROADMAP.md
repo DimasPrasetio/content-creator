@@ -62,4 +62,14 @@ over AI"; vlog "Montase musik, Vlog bicara + B-roll, Montase + voice over AI"; m
 "Otomatis, bisa dikoreksi"; momen montase "AI pilih, saya periksa board"; uji "Rekaman buatan saja"; loading/diam
 "Ditanya per video"; format "Ditanya per video"; ringkasan "Sepakat, jalankan".
 
-Bukan lingkup: setup Windows asli tanpa WSL, posting otomatis ke platform.
+### v0.11 · Unggah TikTok (selesai, 0.11.0)
+- `npm run tiktok`: video yang disetujui diunggah ke akun TikTok brand-nya (tayang sekarang / dijadwalkan WIB, sampul =
+  thumbnail, label konten AI otomatis), lewat tiktok-uploader (robot browser tidak resmi); login per brand oleh pengguna
+  sendiri di jendela browser; uji tanpa jaringan dengan halaman TikTok tiruan.
+
+Kesepakatan v0.11 (grill-me 2026-11-23): jalur "tiktok-uploader dulu" (API resmi menyusul bila perlu); akun "Satu akun
+per brand"; tayang "Ditanya per video"; login "Jendela login sendiri" (cadangan cookies.txt); uji "Akun TikTok uji";
+label AI "Saya tambahkan sendiri" (gagal dicentang → unggah manual); ringkasan "Sepakat, jalankan".
+
+Bukan lingkup: setup Windows asli tanpa WSL, API resmi TikTok, posting otomatis ke Instagram/YouTube, unggah massal,
+melewati CAPTCHA.

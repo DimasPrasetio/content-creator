@@ -19,10 +19,12 @@ Pasang atau perbarui workspace content-creator untuk pengguna. Bahasa kerja: Ind
    Setelah itu jalankan ulang bila perlu.
 4. **Akun, satu per satu.** Jalankan `. ~/.config/content-creator/env.sh && cd "<workspace>/Engine" && npm run akun -- --json`
    lalu pandu item yang statusnya `perlu`/`opsional` berurutan: ElevenLabs (wajib untuk voice over) → voice default
-   (tawarkan audisi `npm run voices`) → Higgsfield (opsional) → Google Drive (opsional) → whisper/motion-graphics-v4 (opsional).
+   (tawarkan audisi `npm run voices`) → Higgsfield (opsional) → Google Drive (opsional) → TikTok per brand (opsional) →
+   whisper/motion-graphics-v4 (opsional).
    Untuk setiap item: jelaskan gunanya dalam satu kalimat, tanyakan "atur sekarang atau lewati?" (`AskUserQuestion`), lalu
    tampilkan perintah dari kolom `langkah`. Login/izin selalu dilakukan **pengguna sendiri**: perintah yang membuka browser
-   atau meminta isian (`npx -y @elevenlabs/cli@latest onboard init`, `higgsfield auth login`, `rclone config create ...`)
+   atau meminta isian (`npx -y @elevenlabs/cli@latest onboard init`, `higgsfield auth login`, `rclone config create ...`,
+   `npm run tiktok -- login <brand>`; sebutkan sekali bahwa unggah TikTok memakai robot browser tidak resmi)
    diketik pengguna di terminalnya atau di kotak obrolan dengan awalan `!` (mis. `! cd "<workspace>" && npx -y @elevenlabs/cli@latest onboard init`).
    **Jangan pernah meminta, menerima, atau menampilkan key/token/kode di obrolan**, dan jangan membuka `.env.local`.
    Untuk Drive, minta pengguna menempel **link folder** tujuan (bukan token), ambil ID-nya, tulis `drive.rootFolderId` di

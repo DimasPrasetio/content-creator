@@ -1,6 +1,6 @@
 // Status akun & layanan luar + langkah berikutnya, untuk pengguna yang baru memasang content-creator.
 //
-//   npm run akun            ringkasan: ElevenLabs (wajib), Higgsfield, Google Drive, skill motion-graphics-v4, whisper (opsional)
+//   npm run akun            ringkasan: ElevenLabs (wajib), Higgsfield, Google Drive, TikTok, skill motion-graphics-v4, whisper (opsional)
 //   npm run akun -- --json  sama, dalam JSON (dibaca skill setup untuk memandu satu per satu)
 //
 // Tidak pernah mencetak key/token. Login selalu dilakukan pengguna sendiri (perintah di kolom "langkah").
@@ -82,12 +82,29 @@ const add = (o) => items.push(o);
     }
 }
 
-// 4) skill motion-graphics-v4 (opsional, milik Anthropic, untuk jalur B)
+// 4) TikTok (opsional, unggah hasil yang disetujui; login per brand oleh pengguna sendiri)
+{
+  const it = { id: "tiktok", nama: "TikTok (unggah, opsional)", wajib: false };
+  try {
+    const { tiktokStatus } = await import("./tiktok.mjs");
+    const st = tiktokStatus();
+    const on = st.brands.filter((b) => b.status === "login" || b.status === "segera kedaluwarsa");
+    const stale = st.brands.filter((b) => b.status === "kedaluwarsa" || b.status === "segera kedaluwarsa");
+    if (!st.lib) add({ ...it, status: "perlu", info: "tiktok-uploader belum terpasang", langkah: ["jalankan ulang /content-creator:setup"] });
+    else if (!on.length) add({ ...it, status: "opsional", info: "belum ada brand yang login", langkah: [`cd ${q(ENGINE)} && npm run tiktok -- login <brand>   (Anda login sendiri di jendela browser; QR dari aplikasi TikTok paling mudah)`] });
+    else add({ ...it, status: stale.length ? "perlu" : "siap", info: `login: ${on.map((b) => `${b.brand}${b.akun ? ` (${b.akun})` : ""}`).join(", ")}${stale.length ? `; perlu login ulang: ${stale.map((b) => b.brand).join(", ")}` : ""}`,
+      ...(stale.length ? { langkah: stale.map((b) => `cd ${q(ENGINE)} && npm run tiktok -- login ${b.brand}`) } : {}) });
+  } catch (e) {
+    add({ ...it, status: "opsional", info: e.message });
+  }
+}
+
+// 5) skill motion-graphics-v4 (opsional, milik Anthropic, untuk jalur B)
 add(mg4Skill()
   ? { id: "mg4", nama: "skill motion-graphics-v4 (jalur B, opsional)", wajib: false, status: "siap", info: "terpasang" }
   : { id: "mg4", nama: "skill motion-graphics-v4 (jalur B, opsional)", wajib: false, status: "opsional", info: "tidak terpasang; jalur A (Komik) & C (HTML) tetap jalan", langkah: ["pasang skill motion-graphics-v4 dari Anthropic ke ~/.claude/skills/ bila ingin jalur B"] });
 
-// 5) whisper (opsional, QA kejelasan kata gratis/offline)
+// 6) whisper (opsional, QA kejelasan kata gratis/offline)
 add(whisperReady()
   ? { id: "whisper", nama: "whisper lokal (opsional)", wajib: false, status: "siap", info: "QA kejelasan kata offline" }
   : { id: "whisper", nama: "whisper lokal (opsional)", wajib: false, status: "opsional", info: "tidak dipasang (QA kejelasan lewat ElevenLabs)", langkah: ["/content-creator:setup --with-whisper   (±1,8 GB)"] });

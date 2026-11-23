@@ -30,7 +30,8 @@
     "edit": "node scripts/edit.mjs",
     "clips": "node scripts/clips.mjs",
     "style": "node scripts/style.mjs",
-    "akun": "node scripts/akun.mjs"
+    "akun": "node scripts/akun.mjs",
+    "tiktok": "node scripts/tiktok.mjs"
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.77.0",

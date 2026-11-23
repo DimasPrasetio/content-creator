@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.11.0
+Unggah otomatis ke TikTok (opsional), setelah video disetujui pengguna.
+- `npm run tiktok -- <nama> --sekarang | --jadwal="YYYY-MM-DD HH:MM"` (jam WIB, 20 menit-10 hari, dibulatkan 5 menit):
+  video dari `Result/<brand>/<nama>/`, caption dari `caption.txt` (tagar diketik apa adanya, tidak diganti saran TikTok),
+  sampul `thumbnail.jpg`, komentar/duet/stitch dari `Brands/<slug>/profile.json` → `"tiktok"`. Riwayat di
+  `Projects/<nama>/tiktok.json`; video yang sama tidak diunggah dua kali (kecuali `--ulang`).
+- **Satu akun per brand**: `npm run tiktok -- login <brand>` membuka jendela browser, pengguna login sendiri (QR dari
+  aplikasi TikTok paling mudah; cadangan `--cookies=<cookies.txt>`). Login disimpan sebagai profil browser di
+  `~/.config/content-creator/tiktok/<brand>/` (di luar repo & workspace, tidak ikut `brand pack`); `status`, `logout`.
+  `"akun": "@handle"` di profil brand = pengaman salah akun. `npm run akun` menampilkan status login TikTok per brand.
+- **Label konten AI** otomatis bila proyek memakai gambar/video Higgsfield; gagal dicentang → unggahan dibatalkan.
+- `--cek` (tanpa browser), `--latihan` (formulir terisi tanpa klik Post), `--privat` (hanya saya, untuk akun uji).
+- Memakai [tiktok-uploader](https://github.com/wkaisertexas/tiktok-uploader) 1.2.0 (MIT, dipatok di setup) dengan
+  profil browser kita; cetakan cookie pustaka dibungkam, keluaran berisi "cookie" disaring. Robot browser **tidak resmi**:
+  bisa rusak saat TikTok mengubah tampilan web, dan akun bisa dibatasi.
+- Selftest bagian 11 (tanpa jaringan & akun): halaman TikTok tiruan lokal menguji login impor cookie, cek, latihan,
+  unggah, label AI, tolak unggah ganda, logout. `npm run selftest -- --only=tiktok`.
+- Bukan lingkup: API resmi TikTok, Instagram/YouTube, unggah massal, melewati CAPTCHA.
+
 ## 0.10.0
 Tahap keempat roadmap (`docs/ROADMAP.md`, gelombang kedua "jenis footage baru"): rekaman layar/tutorial + vlog/montase.
 - **Rekaman layar / tutorial** (style **Layar**, 16:9): `npm run edit -- <nama> --new --style=layar --input=layar.mp4

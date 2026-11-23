@@ -1,0 +1,42 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>TikTok Studio (tiruan selftest)</title></head>
+<body>
+<!-- Halaman unggah TikTok TIRUAN untuk selftest content-creator (tanpa jaringan): hanya memenuhi selektor
+     tiktok-uploader 1.2.0 + label AI, supaya sambungan tiktok_upload.py teruji. Bukan tampilan TikTok asli. -->
+<div id="root">
+  <input type="file" id="vid" accept="video/*">
+  <div id="after" style="display:none">
+    <div class="resolution-label-text">1080P</div>
+    <img class="cover-image" id="cov" src="data:,a">
+    <div class="edit-container" id="editc">Edit cover</div>
+    <div id="covpanel" style="display:none">
+      <div>Upload cover</div>
+      <span id="covslot"></span>
+      <div><div class="cover-edit-footer"><button class="TUXButton--primary" id="covok">Confirm</button></div></div>
+    </div>
+    <div contenteditable="true" id="desc">nama-file-video</div>
+    <div class="mention-list-popover" id="pop" style="display:none">saran tagar</div>
+    <label>Comment</label><div><input type="checkbox" id="c" checked></div>
+    <label>Duet</label><div><input type="checkbox" id="d" checked></div>
+    <label>Stitch</label><div><input type="checkbox" id="s" checked></div>
+    <div id="more">Show more</div>
+    <div id="adv" style="display:none"><div class="row"><span>AI-generated content</span><input type="checkbox" id="ai"></div></div>
+    <button data-e2e="post_video_button" data-disabled="false" id="post">Post</button>
+  </div>
+  <div id="done"></div>
+</div>
+<script>
+const $ = (i) => document.getElementById(i);
+$("vid").onchange = () => ($("after").style.display = "block");
+// input sampul baru ada setelah panel sampul dibuka (seperti TikTok), jadi input file video tetap satu-satunya di awal
+$("editc").onclick = () => { $("covpanel").style.display = "block"; $("covslot").innerHTML = '<input type="file" id="covfile" accept="image/png, image/jpeg, image/jpg">'; };
+$("covok").onclick = () => { $("cov").src = "data:,b"; $("covpanel").style.display = "none"; $("covslot").innerHTML = ""; window.__cover = true; };
+$("desc").addEventListener("input", () => ($("pop").style.display = /[#@][\w]+$/.test($("desc").innerText) ? "block" : "none"));
+$("desc").addEventListener("keydown", (e) => { if (e.key === "Escape") $("pop").style.display = "none"; });
+$("more").onclick = () => ($("adv").style.display = "block");
+$("post").onclick = () => {
+  window.__posted = { caption: $("desc").innerText, ai: $("ai").checked, comment: $("c").checked, duet: $("d").checked, stitch: $("s").checked, cover: !!window.__cover };
+  $("done").textContent = "Your video has been uploaded";
+};
+</script>
+</body></html>
