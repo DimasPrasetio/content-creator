@@ -78,6 +78,8 @@ def install_mock(ctx) -> bool:
             route.abort()
 
     ctx.route("**/*", handle)
+    if os.environ.get("CC_TIKTOK_MOCK_COVER") == "gagal":  # selftest: editor sampul menolak Save
+        ctx.add_init_script("window.__mockCoverFail = true")
     return True
 
 
@@ -184,6 +186,10 @@ class Latihan(Exception):
 
 class LabelAIGagal(Exception):
     pass
+
+
+class SampulGagal(Exception):
+    """Sampul khusus (thumbnail.jpg) tidak terpasang -> unggahan dibatalkan; video tidak boleh tayang tanpa sampul."""
 
 
 def set_ai_label(page) -> None:
@@ -313,7 +319,7 @@ def set_interactivity(state_out: dict):
 
 
 def set_cover(state_out: dict):
-    """Sampul khusus lewat editor 'Edit cover' (tab Upload cover -> Save). Gagal = sampul bawaan TikTok, unggahan lanjut."""
+    """Sampul khusus lewat editor 'Edit cover' (tab Upload cover -> Save). Gagal -> SampulGagal (unggahan dibatalkan)."""
 
     def run(page, cover_path: str) -> None:
         try:
@@ -355,7 +361,7 @@ def set_cover(state_out: dict):
         except Exception as e:
             state_out["sampul"] = False
             state_out["sampulPesan"] = (str(e).strip().splitlines() or [type(e).__name__])[0][:160]
-            say(f"  sampul khusus gagal ({state_out['sampulPesan']}); TikTok memakai sampul bawaan")
+            say(f"  sampul khusus gagal ({state_out['sampulPesan']}): unggahan DIBATALKAN")
             for name in ("Cancel", "Discard"):  # tutup editor agar formulir bisa lanjut
                 try:
                     c = page.get_by_role("button", name=name, exact=True)
@@ -365,6 +371,7 @@ def set_cover(state_out: dict):
                         break
                 except Exception:
                     pass
+            raise SampulGagal(state_out["sampulPesan"])
 
     return run
 
@@ -438,6 +445,10 @@ def patch_library(page, job: dict, state: dict):
     def post(pg):
         dismiss_popups(pg)
         state["form"] = True  # video terunggah ke formulir, caption/sampul/jadwal sudah diisi
+        if state.get("sampul") is not True:  # pengaman kedua: tanpa sampul khusus tidak pernah sampai ke Post
+            state["sampul"] = False
+            state.setdefault("sampulPesan", "sampul khusus belum terpasang")
+            raise SampulGagal(state["sampulPesan"])
         if job.get("labelAI"):
             say("  label konten AI ...")
             set_ai_label(pg)
@@ -509,12 +520,14 @@ def cmd_upload(a) -> int:
             errs = [m for m in col.msgs if m]
             if job.get("latihan") and not state.get("posted"):
                 # Latihan dilempar sebagai pengecualian -> dicatat pustaka sebagai gagal; itu yang diharapkan
-                ok = bool(state.get("form")) and (bool(state.get("labelAI")) or not job.get("labelAI"))
+                ok = bool(state.get("form")) and state.get("sampul") is True and (bool(state.get("labelAI")) or not job.get("labelAI"))
                 result(ok=ok, latihan=True, akun=akun, labelAI=bool(state.get("labelAI")), sampul=state.get("sampul"), sampulPesan=state.get("sampulPesan"), interaksi=state.get("interaksi"), screenshot=job.get("screenshot"),
                        pesan=None if ok else "; ".join(errs[-3:]))
                 return 0 if ok else 5
             if failed or not state.get("posted"):
-                if job.get("labelAI") and state.get("form") and not state.get("labelAI"):
+                if state.get("sampul") is False:
+                    result(ok=False, alasan="sampul", akun=akun, sampul=False, pesan=state.get("sampulPesan") or "sampul khusus tidak terpasang")
+                elif job.get("labelAI") and state.get("form") and not state.get("labelAI"):
                     result(ok=False, alasan="labelAI", akun=akun, pesan="label konten AI tidak bisa dicentang; unggah video ini manual")
                 else:
                     result(ok=False, alasan="unggah", akun=akun, pesan="; ".join(errs[-3:]) or "unggahan gagal")

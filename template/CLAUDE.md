@@ -43,6 +43,7 @@ vlog/montase dengan style Kilas, `[--music=file] [--narasi=ai]`; B-roll `--broll
    TikTok (opsional, ditanya per video: sekarang / jadwal WIB / jangan): `npm run tiktok -- <nama> --cek --sekarang|--jadwal="YYYY-MM-DD HH:MM"`
    lalu tanpa `--cek`; akun = brand video, login sekali oleh pengguna sendiri (`npm run tiktok -- login <brand>`, QR dari aplikasi
    TikTok). Jangan minta sandi/kode/cookie. Robot browser tidak resmi: gagal → laporkan, sarankan unggah manual.
+   Sampul wajib `thumbnail.jpg` (tanpa itu / gagal terpasang = tidak diunggah); caption maksimal 5 tagar.
 6. Jangan membuka, menampilkan, atau menyalin API key (`.env.local`).
 7. Aset AI Higgsfield (opsional, `npm run gen`): hanya dengan batas kredit yang disepakati pengguna; login hanya oleh pengguna
    (`higgsfield auth login`); tanpa teks, orang nyata, atau testimoni palsu di prompt; klip AI yang tampak nyata diberi label AI saat posting.

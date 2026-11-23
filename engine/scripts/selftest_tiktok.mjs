@@ -1,7 +1,7 @@
 // Bagian selftest v0.11: unggah TikTok tanpa jaringan dan tanpa akun. Pustaka tiktok-uploader diuji sambungannya
 // (selfcheck), lalu login (impor cookie tiruan), cek, latihan, dan unggah dijalankan terhadap halaman TikTok TIRUAN lokal
 // (Engine/selftest/tiktok-mock.html, lewat CC_TIKTOK_MOCK). Unggahan ke TikTok sungguhan hanya dengan akun uji pengguna.
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ENGINE, P, run } from "./lib.mjs";
 
@@ -12,6 +12,7 @@ export async function tiktokTest({ npm, rows, step, keep }) {
   const row = (langkah, ok, catatan = "") => rows.push({ langkah, hasil: ok ? "LULUS" : "GAGAL", detik: 0, catatan: String(catatan).slice(0, 90) });
   const json = (f, d = null) => { try { return JSON.parse(readFileSync(f, "utf8")); } catch { return d; } };
   const env0 = { dir: process.env.CC_TIKTOK_DIR, mock: process.env.CC_TIKTOK_MOCK };
+  delete process.env.CC_TIKTOK_MOCK_COVER;
   const clean = () => {
     for (const d of [p.dir, p.work, p.resultDir, base]) rmSync(d, { recursive: true, force: true });
   };
@@ -54,6 +55,12 @@ export async function tiktokTest({ npm, rows, step, keep }) {
 
     npm("tiktok: wajib pilih waktu tayang", "tiktok", [NAME, "--cek"], { allowFail: true });
     row("tiktok: tanpa --sekarang/--jadwal ditolak", /pilih waktu tayang/.test(step.last));
+    // tanpa thumbnail.jpg = ditolak (video TikTok wajib bersampul khusus)
+    const thumbAway = p.thumbnail + ".pindah";
+    renameSync(p.thumbnail, thumbAway);
+    npm("tiktok: tolak bila thumbnail tidak ada", "tiktok", [NAME, "--cek", "--sekarang"], { allowFail: true });
+    renameSync(thumbAway, p.thumbnail);
+    row("tiktok: tanpa thumbnail.jpg tidak diunggah", /thumbnail\.jpg tidak ada/.test(step.last));
     npm("tiktok: cek lolos (sekarang)", "tiktok", [NAME, "--cek", "--sekarang"]);
     row("tiktok: rencana unggah benar", /label AI\s+: tidak/.test(step.last) && /sampul\s+: thumbnail\.jpg/.test(step.last) && /@akun_uji/.test(step.last));
 
@@ -64,10 +71,17 @@ export async function tiktokTest({ npm, rows, step, keep }) {
     const shot = path.join(p.dir, "posting", "tiktok-latihan.png");
     row("tiktok: latihan tidak memposting", existsSync(shot) && /Latihan selesai.*label AI tercentang/.test(step.last) && /TIDAK diposting/.test(step.last));
 
+    // sampul gagal terpasang -> dibatalkan, tidak pernah diposting dengan sampul bawaan
+    process.env.CC_TIKTOK_MOCK_COVER = "gagal";
+    npm("tiktok: sampul gagal -> batal", "tiktok", [NAME, "--sekarang", "--headless"], { allowFail: true });
+    delete process.env.CC_TIKTOK_MOCK_COVER;
+    const g = (json(path.join(p.dir, "tiktok.json"), { unggahan: [] }).unggahan.at(-1)) ?? {};
+    row("tiktok: tanpa sampul khusus tidak diposting", g.ok === false && g.alasan === "sampul" && g.sampul === false && /TIDAK diunggah/.test(step.last), `${g.alasan} · ${g.pesan ?? ""}`);
+
     npm("tiktok: unggah ke halaman tiruan", "tiktok", [NAME, "--sekarang", "--headless"]);
     const rec = json(path.join(p.dir, "tiktok.json"), { unggahan: [] });
     const last = rec.unggahan.at(-1) ?? {};
-    row("tiktok: tercatat di tiktok.json", last.ok === true && !last.latihan && last.labelAI === true && last.akun === "@akun_uji" && rec.unggahan.length === 2, `${rec.unggahan.length} entri`);
+    row("tiktok: tercatat di tiktok.json", last.ok === true && !last.latihan && last.labelAI === true && last.akun === "@akun_uji" && rec.unggahan.length === 3, `${rec.unggahan.length} entri`);
     const t = last.tiruan ?? {};
     row("tiktok: popup ditutup; caption, sampul (Edit cover), komentar/reuse, label AI terisi", /Video uji unggah otomatis!/.test(t.caption ?? "") && /#belajar #fyp/.test(t.caption ?? "") && !/nama-file-video/.test(t.caption ?? "") && t.cover && last.sampul === true && t.ai && t.comment && t.reuse && last.interaksi?.Comment === "ya" && !t.checksOn, JSON.stringify(t.caption ?? "").slice(0, 60));
     row("tiktok: tidak ada cookie di keluaran", !/nilai-uji|sessionid/i.test(step.last));

@@ -188,8 +188,13 @@ const main = async () => {
   if (existsSync(p.caption) && !caption) problems.push("caption.txt kosong");
   if (caption.length > 4000) problems.push(`caption ${caption.length} karakter, batas TikTok 4000`);
   else if (caption.length > 2200) notes.push(`caption ${caption.length} karakter (panjang; TikTok lama membatasi 2200)`);
+  // video TikTok wajib bersampul khusus (thumbnail.jpg dari paket posting), tidak pernah sampul frame bawaan TikTok
   const cover = existsSync(p.thumbnail) ? p.thumbnail : null;
-  if (!cover) notes.push("thumbnail.jpg tidak ada: sampul dipilih TikTok dari frame video");
+  if (!cover) problems.push(`thumbnail.jpg tidak ada: video TikTok wajib bersampul khusus (npm run posting -- ${name})`);
+  else {
+    const [tw, th] = run("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width,height", "-of", "default=nw=1:nk=1", cover]).trim().split("\n").map(Number);
+    if (!(tw > 0 && th > 0)) problems.push("thumbnail.jpg tidak terbaca sebagai gambar");
+  }
 
   let info = null;
   if (existsSync(video)) {
@@ -283,7 +288,6 @@ const main = async () => {
   rec.unggahan.push(entry);
   writeFileSync(recPath, JSON.stringify(rec, null, 2) + "\n");
   if (status === 0 && res?.ok) {
-    if (res?.sampul === false) console.log(`  catatan: sampul khusus tidak terpasang (${res.sampulPesan ?? "?"}); TikTok memakai sampul bawaan. Ganti manual di aplikasi bila perlu.`);
     if (res?.interaksi) console.log(`  interaksi: ${Object.entries(res.interaksi).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
     if (job.latihan) return console.log(`\nLatihan selesai: formulir terisi${entry.labelAI ? " + label AI tercentang" : ""}, TIDAK diposting. Tangkapan: ${path.relative(ROOT, job.screenshot)}`);
     return console.log(`\n${sched ? `Terjadwal tayang ${sched.local} WIB` : "Terunggah"} di TikTok ${entry.akun ?? slug}${entry.labelAI ? " (berlabel konten AI)" : ""}. Tercatat di ${path.relative(ROOT, recPath)}.`);
@@ -291,6 +295,7 @@ const main = async () => {
   const why = {
     login: `login TikTok brand ${slug} tidak berlaku lagi: pengguna menjalankan npm run tiktok -- login ${slug}`,
     akun: `browser login sebagai akun lain (${res?.pesan ?? ""}); login ulang dengan akun yang benar`,
+    sampul: `sampul khusus (thumbnail.jpg) tidak bisa dipasang (${res?.pesan ?? "?"}), jadi video TIDAK diunggah: video tanpa sampul khusus tidak boleh tayang. Lihat ${path.relative(ROOT, job.screenshotGagal)}; coba lagi, atau unggah manual dengan sampul itu`,
     labelAI: "label konten AI tidak bisa dicentang otomatis, jadi video TIDAK diunggah. Unggah manual lewat aplikasi/web TikTok dan nyalakan label AI",
   }[entry.alasan] ?? `${entry.pesan ?? "gagal"}. Bisa karena tampilan TikTok berubah, CAPTCHA, atau jaringan; lihat ${path.relative(ROOT, job.screenshotGagal)}`;
   throw new Error(`Unggah TikTok gagal: ${why}`);

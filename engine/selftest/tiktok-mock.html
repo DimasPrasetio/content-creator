@@ -48,7 +48,7 @@ $("chkon").onclick = () => { window.__checksOn = true; $("portal").style.display
 $("tipok").onclick = () => ($("tip").style.display = "none");
 // input sampul baru ada setelah panel sampul dibuka (seperti TikTok), jadi input file video tetap satu-satunya di awal
 $("editc").onclick = () => { $("covpanel").style.display = "block"; $("covslot").innerHTML = '<input type="file" id="covfile" accept="image/jpeg, image/png, image/jpg">'; };
-$("covsave").onclick = () => { if ($("covfile").files.length) { $("cov").src = "data:,b"; window.__cover = true; } $("covpanel").style.display = "none"; $("covslot").innerHTML = ""; };
+$("covsave").onclick = () => { if (window.__mockCoverFail) return; if ($("covfile").files.length) { $("cov").src = "data:,b"; window.__cover = true; } $("covpanel").style.display = "none"; $("covslot").innerHTML = ""; };
 $("covcancel").onclick = () => { $("covpanel").style.display = "none"; $("covslot").innerHTML = ""; };
 for (const [l, i] of [["lc", "c"], ["lr", "r"]]) $(i).addEventListener("change", () => ($(l).dataset.checked = String($(i).checked)));
 $("desc").addEventListener("input", () => ($("pop").style.display = /[#@][\w]+$/.test($("desc").innerText) ? "block" : "none"));

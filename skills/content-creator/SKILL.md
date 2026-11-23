@@ -571,6 +571,9 @@ Sebutkan biaya kredit sebelum mengerjakan revisi yang membuat suara ulang. Setel
    - Label konten AI otomatis bila proyek memakai gambar/video Higgsfield (`--label-ai=tidak` hanya bila asetnya jelas
      tidak tampak nyata, sebutkan ke pengguna). Label gagal dicentang → unggahan dibatalkan; minta pengguna unggah manual
      dengan label AI. CAPTCHA/verifikasi → pengguna yang menyelesaikan; jangan mencoba melewatinya.
+   - **Wajib bersampul khusus**: `thumbnail.jpg` dari paket posting selalu dipasang sebagai sampul. Tanpa thumbnail →
+     ditolak (jalankan `npm run posting` dulu); sampul gagal terpasang → unggahan dibatalkan, video tidak pernah tayang
+     dengan sampul frame bawaan TikTok. Tagar caption TikTok paling banyak 5 (otomatis).
    - Gagal karena tampilan TikTok berubah atau jaringan → laporkan apa adanya (tangkapan `posting/tiktok-gagal.png`),
      sarankan unggah manual; jangan mengulang berkali-kali. Video yang sama tidak diunggah dua kali kecuali pengguna
      memintanya (`--ulang`).

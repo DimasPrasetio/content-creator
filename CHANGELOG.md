@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.3
+Video TikTok **wajib bersampul khusus** (permintaan pengguna: tidak boleh tayang tanpa thumbnail yang disiapkan).
+- `thumbnail.jpg` tidak ada atau tidak terbaca → `npm run tiktok` menolak sebelum membuka browser.
+- Sampul gagal terpasang di editor "Edit cover" → unggahan dibatalkan sebelum Post (`alasan: "sampul"` di
+  `tiktok.json`, tangkapan `posting/tiktok-gagal.png`); pengaman kedua di langkah Post. Latihan juga gagal bila sampul
+  tidak terpasang.
+- Selftest: tanpa thumbnail ditolak, sampul gagal (halaman tiruan menolak Save) tidak diposting.
+
 ## 0.11.2
 Sampul & interaksi TikTok mengikuti tampilan TikTok Studio terbaru (diperiksa di akun asli tanpa memposting).
 - Sampul khusus (`thumbnail.jpg`) kini terpasang lewat editor "Edit cover" (unggah gambar -> Save). Bila gagal,
