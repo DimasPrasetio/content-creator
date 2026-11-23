@@ -562,7 +562,7 @@ Sebutkan biaya kredit sebelum mengerjakan revisi yang membuat suara ulang. Setel
    TikTok?" → *tayang sekarang* / *jadwalkan (jam WIB, 20 menit-10 hari ke depan)* / *jangan*. Tanpa jawaban ya, tidak
    ada yang diunggah; persetujuan satu video tidak berlaku untuk video lain.
    - Selalu `npm run tiktok -- <nama> --cek --sekarang|--jadwal="YYYY-MM-DD HH:MM"` dulu (tanpa browser), lalu perintah
-     yang sama tanpa `--cek`, di background (beberapa menit; jendela browser terbuka kecuali `--headless`).
+     yang sama tanpa `--cek`, di background (beberapa menit; browser tersembunyi/headless, tidak ada jendela yang terbuka).
    - Akun = brand video (`Result/<brand>/`); `--akun=<brand>` hanya bila pengguna sendiri menyebut akun lain. Brand
      belum login / kedaluwarsa → jangan unggah; minta pengguna menjalankan **sendiri** di terminalnya
      `npm run tiktok -- login <brand>` (jendela browser terbuka, login dengan QR dari aplikasi TikTok; cadangan
@@ -570,7 +570,9 @@ Sebutkan biaya kredit sebelum mengerjakan revisi yang membuat suara ulang. Setel
      obrolan, dan jangan membuka isi `~/.config/content-creator/tiktok/`.
    - Label konten AI otomatis bila proyek memakai gambar/video Higgsfield (`--label-ai=tidak` hanya bila asetnya jelas
      tidak tampak nyata, sebutkan ke pengguna). Label gagal dicentang → unggahan dibatalkan; minta pengguna unggah manual
-     dengan label AI. CAPTCHA/verifikasi → pengguna yang menyelesaikan; jangan mencoba melewatinya.
+     dengan label AI. CAPTCHA/verifikasi → jangan mencoba melewatinya: di mode tersembunyi unggahan berhenti
+     (`alasan: "captcha"`); jelaskan ke pengguna lalu ulangi perintah yang sama dengan `--jendela` agar pengguna
+     menyelesaikan CAPTCHA sendiri di jendela yang terbuka (ditunggu 5 menit).
    - **Wajib bersampul khusus**: `thumbnail.jpg` dari paket posting selalu dipasang sebagai sampul. Tanpa thumbnail →
      ditolak (jalankan `npm run posting` dulu); sampul gagal terpasang → unggahan dibatalkan, video tidak pernah tayang
      dengan sampul frame bawaan TikTok. Tagar caption TikTok paling banyak 5 (otomatis).

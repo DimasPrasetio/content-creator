@@ -13,6 +13,7 @@ export async function tiktokTest({ npm, rows, step, keep }) {
   const json = (f, d = null) => { try { return JSON.parse(readFileSync(f, "utf8")); } catch { return d; } };
   const env0 = { dir: process.env.CC_TIKTOK_DIR, mock: process.env.CC_TIKTOK_MOCK };
   delete process.env.CC_TIKTOK_MOCK_COVER;
+  delete process.env.CC_TIKTOK_MOCK_CAPTCHA;
   const clean = () => {
     for (const d of [p.dir, p.work, p.resultDir, base]) rmSync(d, { recursive: true, force: true });
   };
@@ -67,26 +68,33 @@ export async function tiktokTest({ npm, rows, step, keep }) {
     // proyek beraset AI -> label otomatis
     mkdirSync(path.join(p.assets, "gen"), { recursive: true });
     writeFileSync(path.join(p.assets, "gen", "manifest.json"), JSON.stringify({ items: { meja: { kind: "video", credits: 0 } } }));
-    npm("tiktok: latihan (formulir terisi, tanpa Post) + label AI", "tiktok", [NAME, "--latihan", "--sekarang", "--headless"]);
+    npm("tiktok: latihan (formulir terisi, tanpa Post) + label AI", "tiktok", [NAME, "--latihan", "--sekarang"]);
     const shot = path.join(p.dir, "posting", "tiktok-latihan.png");
     row("tiktok: latihan tidak memposting", existsSync(shot) && /Latihan selesai.*label AI tercentang/.test(step.last) && /TIDAK diposting/.test(step.last));
 
     // sampul gagal terpasang -> dibatalkan, tidak pernah diposting dengan sampul bawaan
     process.env.CC_TIKTOK_MOCK_COVER = "gagal";
-    npm("tiktok: sampul gagal -> batal", "tiktok", [NAME, "--sekarang", "--headless"], { allowFail: true });
+    npm("tiktok: sampul gagal -> batal", "tiktok", [NAME, "--sekarang"], { allowFail: true });
     delete process.env.CC_TIKTOK_MOCK_COVER;
     const g = (json(path.join(p.dir, "tiktok.json"), { unggahan: [] }).unggahan.at(-1)) ?? {};
     row("tiktok: tanpa sampul khusus tidak diposting", g.ok === false && g.alasan === "sampul" && g.sampul === false && /TIDAK diunggah/.test(step.last), `${g.alasan} · ${g.pesan ?? ""}`);
 
-    npm("tiktok: unggah ke halaman tiruan", "tiktok", [NAME, "--sekarang", "--headless"]);
+    // CAPTCHA di browser tersembunyi (bawaan) -> berhenti, tidak ditembus, saran --jendela
+    process.env.CC_TIKTOK_MOCK_CAPTCHA = "ya";
+    npm("tiktok: CAPTCHA -> berhenti", "tiktok", [NAME, "--sekarang"], { allowFail: true });
+    delete process.env.CC_TIKTOK_MOCK_CAPTCHA;
+    const c = (json(path.join(p.dir, "tiktok.json"), { unggahan: [] }).unggahan.at(-1)) ?? {};
+    row("tiktok: CAPTCHA di headless -> batal + saran --jendela", c.ok === false && c.alasan === "captcha" && /--jendela/.test(step.last) && /TIDAK diunggah/.test(step.last), `${c.alasan} · ${c.pesan ?? ""}`);
+
+    npm("tiktok: unggah ke halaman tiruan (--headless lama tetap diterima)", "tiktok", [NAME, "--sekarang", "--headless"]);
     const rec = json(path.join(p.dir, "tiktok.json"), { unggahan: [] });
     const last = rec.unggahan.at(-1) ?? {};
-    row("tiktok: tercatat di tiktok.json", last.ok === true && !last.latihan && last.labelAI === true && last.akun === "@akun_uji" && rec.unggahan.length === 3, `${rec.unggahan.length} entri`);
+    row("tiktok: tercatat di tiktok.json", last.ok === true && !last.latihan && last.labelAI === true && last.akun === "@akun_uji" && rec.unggahan.length === 4, `${rec.unggahan.length} entri`);
     const t = last.tiruan ?? {};
     row("tiktok: popup ditutup; caption, sampul (Edit cover), komentar/reuse, label AI terisi", /Video uji unggah otomatis!/.test(t.caption ?? "") && /#belajar #fyp/.test(t.caption ?? "") && !/nama-file-video/.test(t.caption ?? "") && t.cover && last.sampul === true && t.ai && t.comment && t.reuse && last.interaksi?.Comment === "ya" && !t.checksOn, JSON.stringify(t.caption ?? "").slice(0, 60));
     row("tiktok: tidak ada cookie di keluaran", !/nilai-uji|sessionid/i.test(step.last));
 
-    npm("tiktok: tolak unggah ganda", "tiktok", [NAME, "--sekarang", "--headless"], { allowFail: true });
+    npm("tiktok: tolak unggah ganda", "tiktok", [NAME, "--sekarang"], { allowFail: true });
     row("tiktok: video yang sama tidak terunggah dua kali", /sudah diunggah/.test(step.last));
 
     npm("tiktok: logout", "tiktok", ["logout", "umum"]);

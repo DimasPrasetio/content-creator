@@ -53,7 +53,15 @@ def open_profile(pw, profile: Path, headless: bool, browser: str | None = None):
     err = None
     for b in order:
         try:
-            ctx = pw.chromium.launch_persistent_context(str(profile), channel="chrome" if b == "chrome" else None, **common)
+            ch = "chrome" if b == "chrome" else None
+            ctx = pw.chromium.launch_persistent_context(str(profile), channel=ch, **common)
+            if headless:
+                # Chrome headless baru = browser yang sama, hanya identitasnya "HeadlessChrome" -> samakan dengan Chrome biasa
+                pg = ctx.pages[0] if ctx.pages else ctx.new_page()
+                ua = pg.evaluate("navigator.userAgent")
+                if "HeadlessChrome" in ua:
+                    ctx.close()
+                    ctx = pw.chromium.launch_persistent_context(str(profile), channel=ch, user_agent=ua.replace("HeadlessChrome", "Chrome"), **common)
             ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
             return ctx, b
         except Exception as e:  # Chrome asli tidak ada -> Chromium
@@ -80,6 +88,8 @@ def install_mock(ctx) -> bool:
     ctx.route("**/*", handle)
     if os.environ.get("CC_TIKTOK_MOCK_COVER") == "gagal":  # selftest: editor sampul menolak Save
         ctx.add_init_script("window.__mockCoverFail = true")
+    if os.environ.get("CC_TIKTOK_MOCK_CAPTCHA") == "ya":  # selftest: TikTok meminta CAPTCHA setelah video dipilih
+        ctx.add_init_script("window.__mockCaptcha = true")
     return True
 
 
@@ -190,6 +200,46 @@ class LabelAIGagal(Exception):
 
 class SampulGagal(Exception):
     """Sampul khusus (thumbnail.jpg) tidak terpasang -> unggahan dibatalkan; video tidak boleh tayang tanpa sampul."""
+
+
+CAPTCHA_STOP: list[str] = []  # pustaka menelan pengecualian langkah formulir -> CAPTCHA dicatat di sini
+
+
+class CaptchaPerlu(Exception):
+    """TikTok meminta CAPTCHA. Tidak pernah ditembus: browser tersembunyi berhenti, browser berjendela menunggu pengguna."""
+
+    def __init__(self, msg: str):
+        super().__init__(msg)
+        CAPTCHA_STOP.append(msg)
+
+
+CAPTCHA_SEL = "[id*='captcha' i], [class*='captcha' i], iframe[src*='captcha' i]"
+CAPTCHA_WAIT = int(os.environ.get("CC_TIKTOK_CAPTCHA_WAIT", "300"))
+
+
+def captcha_visible(page) -> bool:
+    try:
+        loc = page.locator(CAPTCHA_SEL)
+        return any(loc.nth(i).is_visible() for i in range(min(loc.count(), 10)))
+    except Exception:
+        return False
+
+
+def check_captcha(page, headless: bool) -> None:
+    """CAPTCHA muncul: tersembunyi -> berhenti (ulangi dengan --jendela); berjendela -> tunggu pengguna menyelesaikannya."""
+    if not captcha_visible(page):
+        return
+    if headless:
+        raise CaptchaPerlu("TikTok meminta CAPTCHA di browser tersembunyi")
+    say(f"  TikTok meminta CAPTCHA: selesaikan sendiri di jendela browser (menunggu {CAPTCHA_WAIT // 60} menit) ...")
+    end = time.time() + CAPTCHA_WAIT
+    while time.time() < end:
+        time.sleep(2)
+        if not captcha_visible(page):
+            say("  CAPTCHA selesai, lanjut")
+            time.sleep(1.5)
+            return
+    raise CaptchaPerlu(f"CAPTCHA tidak diselesaikan dalam {CAPTCHA_WAIT // 60} menit")
 
 
 def set_ai_label(page) -> None:
@@ -415,7 +465,7 @@ def dismiss_popups(page, rounds: int = 4) -> int:
     return closed
 
 
-def patch_library(page, job: dict, state: dict):
+def patch_library(page, job: dict, state: dict, headless: bool = True):
     """Sambungkan tiktok-uploader ke browser ber-profil kita, bungkam cetakan cookie, sisipkan label AI & latihan."""
     import tiktok_uploader.auth as tauth
     import tiktok_uploader.upload as tup
@@ -430,8 +480,10 @@ def patch_library(page, job: dict, state: dict):
     # tutup sebelum dan sesudah setiap langkah formulir
     def guarded(fn):
         def run(pg, *a, **k):
+            check_captcha(pg, headless)
             dismiss_popups(pg)
             out = fn(pg, *a, **k)
+            check_captcha(pg, headless)
             dismiss_popups(pg)
             return out
 
@@ -443,6 +495,7 @@ def patch_library(page, job: dict, state: dict):
     original_post = tup._post_video
 
     def post(pg):
+        check_captcha(pg, headless)
         dismiss_popups(pg)
         state["form"] = True  # video terunggah ke formulir, caption/sampul/jadwal sudah diisi
         if state.get("sampul") is not True:  # pengaman kedua: tanpa sampul khusus tidak pernah sampai ke Post
@@ -489,7 +542,11 @@ def cmd_upload(a) -> int:
     job = json.loads(Path(a.job).read_text())
     acc = Path(job["dir"])
     meta = json.loads((acc / "akun.json").read_text()) if (acc / "akun.json").exists() else {}
-    headless = job.get("headless") if job.get("headless") is not None else headless_default()
+    # bawaan: browser tersembunyi (headless); --jendela = terlihat (untuk CAPTCHA). Tanpa layar selalu tersembunyi.
+    headless = True if job.get("headless") is None else bool(job["headless"])
+    if not headless and headless_default():
+        say("Tidak ada layar di komputer ini: memakai browser tersembunyi.")
+        headless = True
     state: dict = {}
     col = Collect()
     logging.getLogger("tiktok_uploader").addHandler(col)
@@ -499,6 +556,7 @@ def cmd_upload(a) -> int:
         page = ctx.pages[0] if ctx.pages else ctx.new_page()
         try:
             page.goto(MAIN, wait_until="domcontentloaded")
+            check_captcha(page, headless)
             if not has_session(ctx):
                 result(ok=False, alasan="login", pesan="sesi login TikTok tidak ada/kedaluwarsa")
                 return 4
@@ -506,7 +564,7 @@ def cmd_upload(a) -> int:
             if job.get("akunDiharapkan") and akun and akun.lower() != job["akunDiharapkan"].lower():
                 result(ok=False, alasan="akun", pesan=f"browser login sebagai {akun}, bukan {job['akunDiharapkan']}")
                 return 4
-            tup = patch_library(page, job, state)
+            tup = patch_library(page, job, state, headless)
             sched = dt.datetime.fromisoformat(job["jadwalUTC"]).astimezone(dt.timezone.utc) if job.get("jadwalUTC") else None
             up = tup.TikTokUploader(cookies_list=[c for c in ctx.cookies(MAIN)], browser="chromium", headless=headless)
             say(f"Mengunggah ke TikTok {akun or ''} ({'jadwal ' + job['jadwalLokal'] if sched else 'tayang sekarang'}"
@@ -518,6 +576,14 @@ def cmd_upload(a) -> int:
                 comment=job.get("comment", True), stitch=job.get("stitch", True), duet=job.get("duet", True),
             )
             errs = [m for m in col.msgs if m]
+            if CAPTCHA_STOP or (not state.get("posted") and captcha_visible(page)):
+                result(ok=False, alasan="captcha", akun=akun, headless=headless, pesan=(CAPTCHA_STOP or ["TikTok meminta CAPTCHA"])[-1])
+                try:
+                    if job.get("screenshotGagal"):
+                        page.screenshot(path=job["screenshotGagal"], full_page=True)
+                except Exception:
+                    pass
+                return 5
             if job.get("latihan") and not state.get("posted"):
                 # Latihan dilempar sebagai pengecualian -> dicatat pustaka sebagai gagal; itu yang diharapkan
                 ok = bool(state.get("form")) and state.get("sampul") is True and (bool(state.get("labelAI")) or not job.get("labelAI"))
@@ -543,7 +609,9 @@ def cmd_upload(a) -> int:
         except Exception as e:
             msg = (str(e).strip().splitlines() or [type(e).__name__])[0][:200]
             alasan = "login" if "InsufficientAuth" in type(e).__name__ or "Authentication failed" in msg else "unggah"
-            result(ok=False, alasan=alasan, pesan=msg)
+            if isinstance(e, CaptchaPerlu) or CAPTCHA_STOP or captcha_visible(page):
+                alasan = "captcha"
+            result(ok=False, alasan=alasan, headless=headless, pesan=msg)
             try:
                 if job.get("screenshotGagal"):
                     page.screenshot(path=job["screenshotGagal"], full_page=True)

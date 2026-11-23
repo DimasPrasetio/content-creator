@@ -136,7 +136,8 @@ Chrome yang sedang login TikTok dengan ekstensi pengekspor cookie, lalu `npm run
 dan hapus file itu setelahnya. Jangan pernah menempel sandi, kode, atau cookie di obrolan Claude.
 
 Uji pertama sebaiknya di **akun TikTok cadangan**: `npm run tiktok -- <nama> --sekarang --privat` (hanya Anda yang bisa
-melihat) atau `--latihan` (formulir diisi tanpa klik Post). Unggah memakai
+melihat) atau `--latihan` (formulir diisi tanpa klik Post). Unggahan berjalan di browser tersembunyi (tidak ada jendela);
+`--jendela` menampilkannya, misalnya bila TikTok meminta CAPTCHA yang harus Anda selesaikan sendiri. Unggah memakai
 [tiktok-uploader](https://github.com/wkaisertexas/tiktok-uploader), robot browser **tidak resmi**: bisa berhenti bekerja
 saat TikTok mengubah tampilan web, dan TikTok bisa membatasi akun yang diunggahi lewat otomatisasi. Di server tanpa layar,
 login jendela tidak tersedia: pakai `--cookies`.
@@ -211,6 +212,6 @@ Tanpa itu, jalur A (Pop) dan C (HTML) tetap berjalan, dan `npm run check` menand
 | `Tidak ada sumber waktu kata` | audio lama tanpa timestamps & tanpa key/whisper: `npm run voice -- <nama> --force`, atau setup `--with-whisper` |
 | Drive `tidak bisa diakses` | akun Google belum punya akses Editor ke folder, atau token kedaluwarsa: `rclone config reconnect gdrive:` |
 | `npm run tiktok` gagal: login | sesi TikTok kedaluwarsa atau logout: `npm run tiktok -- login <brand>` |
-| `npm run tiktok` gagal di tengah formulir | tampilan TikTok berubah atau CAPTCHA; lihat `Projects/<nama>/posting/tiktok-gagal.png`, unggah manual, perbarui plugin |
+| `npm run tiktok` gagal di tengah formulir | tampilan TikTok berubah atau CAPTCHA (`alasan: captcha` → ulangi dengan `--jendela` dan selesaikan sendiri); lihat `Projects/<nama>/posting/tiktok-gagal.png`, unggah manual, perbarui plugin |
 | Unggah Drive sangat lambat | kecepatan upload koneksi Anda; video ±100 MB di 1 Mbps butuh ±15 menit (VPS jauh lebih cepat) |
 | File video terlalu besar (ratusan MB) | render sebelum v0.2.1: `npm run compress -- <nama>` (atau `--target=50MB`); setelan di `config.local.json` → `encode` |

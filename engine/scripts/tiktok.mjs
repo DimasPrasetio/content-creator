@@ -9,7 +9,10 @@
 //   npm run tiktok -- <nama> --sekarang | --jadwal="YYYY-MM-DD HH:MM"   (jam WIB; 20 menit - 10 hari ke depan)
 //        [--privat] (hanya saya, untuk akun uji)  [--file=<nama>.16x9.mp4]  [--label-ai=ya|tidak] (bawaan: ya bila
 //        proyek memakai aset AI Higgsfield)  [--latihan] (isi formulir, tanpa klik Post)  [--cek] (periksa saja, tanpa
-//        browser)  [--headless]  [--ulang] (unggah lagi walau sudah pernah)  [--akun=<brand>]
+//        browser)  [--jendela] (browser terlihat; bawaan: tersembunyi/headless)  [--ulang] (unggah lagi walau sudah
+//        pernah)  [--akun=<brand>]
+//        CAPTCHA tidak pernah ditembus: browser tersembunyi berhenti (ulangi dengan --jendela), browser berjendela
+//        menunggu pengguna menyelesaikannya sendiri (5 menit).
 //
 // Login tersimpan per brand di ~/.config/content-creator/tiktok/<brand>/ (profil browser, di luar repo & workspace;
 // tidak pernah dicetak, tidak ikut `npm run brand -- pack`). Riwayat unggah: Projects/<nama>/tiktok.json.
@@ -233,6 +236,7 @@ const main = async () => {
   console.log(`  tayang    : ${sched ? `jadwal ${sched.local} WIB` : now ? "sekarang" : "?"}${flag("privat") ? " · privat (hanya saya)" : " · publik"}`);
   console.log(`  label AI  : ${labelAI ? "ya" : "tidak"}${autoAI ? " (proyek memakai aset AI)" : ""}`);
   console.log(`  interaksi : komentar ${tcfg.comment ? "ya" : "tidak"} · duet ${tcfg.duet ? "ya" : "tidak"} · stitch ${tcfg.stitch ? "ya" : "tidak"}`);
+  console.log(`  browser   : ${flag("jendela") ? "jendela terlihat (--jendela)" : "tersembunyi (headless); --jendela untuk melihatnya"}`);
   console.log(`  caption   : ${caption.split("\n")[0].slice(0, 90)}${caption.length > 90 ? " …" : ""} (${caption.length} karakter)`);
   for (const n of notes) console.log(`  catatan   : ${n}`);
   if (problems.length) {
@@ -254,7 +258,7 @@ const main = async () => {
     privat: flag("privat"),
     labelAI,
     latihan: flag("latihan"),
-    headless: flag("headless") ? true : null,
+    headless: !flag("jendela"), // bawaan tersembunyi; --headless lama tetap diterima (sama dengan bawaan)
     comment: !!tcfg.comment,
     duet: !!tcfg.duet,
     stitch: !!tcfg.stitch,
@@ -296,6 +300,9 @@ const main = async () => {
     login: `login TikTok brand ${slug} tidak berlaku lagi: pengguna menjalankan npm run tiktok -- login ${slug}`,
     akun: `browser login sebagai akun lain (${res?.pesan ?? ""}); login ulang dengan akun yang benar`,
     sampul: `sampul khusus (thumbnail.jpg) tidak bisa dipasang (${res?.pesan ?? "?"}), jadi video TIDAK diunggah: video tanpa sampul khusus tidak boleh tayang. Lihat ${path.relative(ROOT, job.screenshotGagal)}; coba lagi, atau unggah manual dengan sampul itu`,
+    captcha: res?.headless === false
+      ? `TikTok meminta CAPTCHA dan tidak diselesaikan di jendela (${res?.pesan ?? "?"}), jadi video TIDAK diunggah. Ulangi perintah yang sama dengan --jendela dan selesaikan CAPTCHA-nya sendiri`
+      : `TikTok meminta CAPTCHA (verifikasi manusia). Browser tersembunyi tidak bisa menampilkannya, jadi video TIDAK diunggah. Ulangi perintah yang sama dengan --jendela, lalu pengguna menyelesaikan CAPTCHA sendiri di jendela yang terbuka`,
     labelAI: "label konten AI tidak bisa dicentang otomatis, jadi video TIDAK diunggah. Unggah manual lewat aplikasi/web TikTok dan nyalakan label AI",
   }[entry.alasan] ?? `${entry.pesan ?? "gagal"}. Bisa karena tampilan TikTok berubah, CAPTCHA, atau jaringan; lihat ${path.relative(ROOT, job.screenshotGagal)}`;
   throw new Error(`Unggah TikTok gagal: ${why}`);

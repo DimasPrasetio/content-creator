@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.11.4
+Unggah TikTok kini **tanpa jendela browser** (headless) secara bawaan, atas permintaan pengguna.
+- Browser tersembunyi memakai Chrome yang sama dengan identitas Chrome biasa (bukan "HeadlessChrome"), jadi TikTok
+  melihat browser yang sama dengan mode berjendela. Diuji latihan di akun brand asli: formulir, sampul khusus, dan
+  interaksi terisi tanpa CAPTCHA.
+- `--jendela` = browser terlihat. `--headless` lama tetap diterima (sama dengan bawaan). Login tetap lewat jendela.
+- CAPTCHA tidak pernah ditembus: di mode tersembunyi unggahan berhenti sebelum Post (`alasan: "captcha"`, pesan
+  menyarankan `--jendela`); di mode jendela unggahan menunggu pengguna menyelesaikannya (5 menit).
+- Selftest: CAPTCHA di halaman tiruan → batal dengan saran `--jendela`.
+
 ## 0.11.3
 Video TikTok **wajib bersampul khusus** (permintaan pengguna: tidak boleh tayang tanpa thumbnail yang disiapkan).
 - `thumbnail.jpg` tidak ada atau tidak terbaca → `npm run tiktok` menolak sebelum membuka browser.

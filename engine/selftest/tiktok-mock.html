@@ -40,9 +40,11 @@
 <div id="tip" style="display:none;position:fixed;right:0;bottom:0;z-index:9;width:60%;height:50%;background:#eee">
   <div>New editing features added</div><button id="tipok">Got it</button>
 </div>
+<!-- CAPTCHA (CC_TIKTOK_MOCK_CAPTCHA=ya): muncul setelah video dipilih, tidak bisa ditutup otomatis -->
+<div id="captcha-verify-container" class="captcha-verify-container" style="display:none;position:fixed;top:20%;left:20%;z-index:30;background:#fff;padding:30px" data-cap="1"><span id="cap-inner">Drag the slider to fit the puzzle</span></div>
 <script>
 const $ = (i) => document.getElementById(i);
-$("vid").onchange = () => { $("after").style.display = "block"; $("portal").style.display = "block"; $("tip").style.display = "block"; };
+$("vid").onchange = () => { $("after").style.display = "block"; $("portal").style.display = "block"; $("tip").style.display = "block"; if (window.__mockCaptcha) document.getElementById("captcha-verify-container").style.display = "block"; };
 $("chkcancel").onclick = () => ($("portal").style.display = "none");
 $("chkon").onclick = () => { window.__checksOn = true; $("portal").style.display = "none"; };
 $("tipok").onclick = () => ($("tip").style.display = "none");
