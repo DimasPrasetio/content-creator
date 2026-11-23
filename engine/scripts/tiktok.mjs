@@ -100,17 +100,30 @@ export const parseSchedule = (s, now = Date.now(), offsetMin = TZ_OFFSET_MIN) =>
   return { utc: new Date(t).toISOString(), local };
 };
 
-/** Caption TikTok dari caption.txt: spasi rapi, tagar selalu dipisah spasi (diketik per kata oleh tiktok_upload.py). */
-export const tiktokCaption = (txt) =>
-  String(txt)
+/** Batas tagar caption TikTok (tagar ke-6 dst. dibuang; caption.txt untuk platform lain tetap utuh). */
+export const TIKTOK_MAX_TAGS = 5;
+
+/** Caption TikTok dari caption.txt: spasi rapi, tagar selalu dipisah spasi (diketik per kata oleh tiktok_upload.py),
+ *  paling banyak `maxTags` tagar (urutan asli dipertahankan, tagar ganda dihitung sekali). */
+export const tiktokCaption = (txt, maxTags = TIKTOK_MAX_TAGS) => {
+  const seen = new Set();
+  return String(txt)
     .replace(/\r/g, "")
     .replace(/[ \t]+/g, " ")
     .replace(/(\S)(#[\p{L}\p{N}_]+)/gu, "$1 $2")
+    .replace(/#[\p{L}\p{N}_]+/gu, (tag) => {
+      const k = tag.toLowerCase();
+      if (seen.has(k) || seen.size >= maxTags) return "";
+      seen.add(k);
+      return tag;
+    })
+    .replace(/[ \t]+/g, " ")
     .split("\n")
     .map((l) => l.trim())
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+};
 
 const sha = (f) => createHash("sha256").update(readFileSync(f)).digest("hex");
 const usesAI = (dir) => {

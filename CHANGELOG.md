@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.11.1
+Hasil uji unggah TikTok sungguhan pertama (akun brand, 2026-11-23).
+- Popup TikTok yang muncul setelah video terunggah ("Turn on automatic content checks?", tooltip "New editing features
+  added") menghalangi klik dan menggagalkan unggahan. Kini ditutup otomatis sebelum/sesudah setiap langkah formulir,
+  selalu dengan tombol penolak (Cancel/Got it/Not now): pengaturan akun tidak diubah. Halaman tiruan selftest ikut
+  memunculkan popup itu.
+- Caption TikTok paling banyak **5 tagar** (tagar ke-6 dst. dibuang, tagar ganda dihitung sekali); `caption.txt`
+  untuk platform lain tetap utuh.
+- Diketahui: sampul khusus (`thumbnail.jpg`) dan sakelar komentar/duet/stitch belum terpasang di tampilan TikTok
+  terbaru (unggahan tetap jalan memakai sampul frame & pengaturan bawaan akun); diperbaiki di rilis berikut.
+
 ## 0.11.0
 Unggah otomatis ke TikTok (opsional), setelah video disetujui pengguna.
 - `npm run tiktok -- <nama> --sekarang | --jadwal="YYYY-MM-DD HH:MM"` (jam WIB, 20 menit-10 hari, dibulatkan 5 menit):

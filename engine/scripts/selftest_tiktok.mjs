@@ -25,13 +25,14 @@ export async function tiktokTest({ npm, rows, step, keep }) {
     // fungsi murni: caption & jadwal
     const m = await import("./tiktok.mjs");
     const cap = m.tiktokCaption("Hook kuat!\r\n\n\n\nManfaat  satu.#belajar\n#fyp   #tips");
+    const cap5 = m.tiktokCaption("Teks #a ok.\n\n#b #c #A #d #e #f #g\n#h");
     const now = Date.UTC(2026, 10, 23, 5, 0);
     const s1 = m.parseSchedule("2026-11-23 13:07", now);
     let tooClose = false, tooFar = false;
     try { m.parseSchedule("2026-11-23 12:15", now); } catch { tooClose = true; }
     try { m.parseSchedule("2026-12-05 12:00", now); } catch { tooFar = true; }
-    row("tiktok: caption rapi + jadwal WIB (5 menit, 20 mnt-10 hr)",
-      cap === "Hook kuat!\n\nManfaat satu. #belajar\n#fyp #tips" && s1.utc === "2026-11-23T06:10:00.000Z" && s1.local === "2026-11-23 13:10" && tooClose && tooFar,
+    row("tiktok: caption rapi, maks 5 tagar + jadwal WIB (5 menit, 20 mnt-10 hr)",
+      cap === "Hook kuat!\n\nManfaat satu. #belajar\n#fyp #tips" && cap5 === "Teks #a ok.\n\n#b #c #d #e" && s1.utc === "2026-11-23T06:10:00.000Z" && s1.local === "2026-11-23 13:10" && tooClose && tooFar,
       `${JSON.stringify(cap).slice(0, 40)} · ${s1.local}`);
 
     // hasil jadi tiruan (9:16) di Result/umum/<nama>/
@@ -68,7 +69,7 @@ export async function tiktokTest({ npm, rows, step, keep }) {
     const last = rec.unggahan.at(-1) ?? {};
     row("tiktok: tercatat di tiktok.json", last.ok === true && !last.latihan && last.labelAI === true && last.akun === "@akun_uji" && rec.unggahan.length === 2, `${rec.unggahan.length} entri`);
     const t = last.tiruan ?? {};
-    row("tiktok: caption, sampul, label AI terisi di formulir", /Video uji unggah otomatis!/.test(t.caption ?? "") && /#belajar #fyp/.test(t.caption ?? "") && !/nama-file-video/.test(t.caption ?? "") && t.cover && t.ai && t.comment, JSON.stringify(t.caption ?? "").slice(0, 60));
+    row("tiktok: popup ditutup (tanpa ubah pengaturan); caption, sampul, label AI terisi", /Video uji unggah otomatis!/.test(t.caption ?? "") && /#belajar #fyp/.test(t.caption ?? "") && !/nama-file-video/.test(t.caption ?? "") && t.cover && t.ai && t.comment && !t.checksOn, JSON.stringify(t.caption ?? "").slice(0, 60));
     row("tiktok: tidak ada cookie di keluaran", !/nilai-uji|sessionid/i.test(step.last));
 
     npm("tiktok: tolak unggah ganda", "tiktok", [NAME, "--sekarang", "--headless"], { allowFail: true });

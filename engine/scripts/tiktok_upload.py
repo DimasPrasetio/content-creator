@@ -251,6 +251,45 @@ def set_description(page, text: str) -> None:
     time.sleep(0.5)
 
 
+POPUP_SCOPES = "[data-floating-ui-portal], [role='dialog'], [class*='TUXModal'], [class*='modal']"
+# Tombol yang MENOLAK/menutup popup info TikTok (mis. "Turn on automatic content checks?" -> Cancel, tooltip fitur baru
+# -> Got it). Tidak pernah "Turn on"/"Post now"/"Discard": pengaturan akun tidak diubah dan unggahan tidak dibuang.
+POPUP_BUTTONS = re.compile(r"^\s*(Got it|Cancel|Not now|Skip|Dismiss|Close|Maybe later|OK)\s*$", re.I)
+
+
+def dismiss_popups(page, rounds: int = 4) -> int:
+    """Tutup popup/tooltip TikTok yang menghalangi klik formulir. Mengembalikan jumlah popup yang ditutup."""
+    closed = 0
+    for _ in range(rounds):
+        hit = False
+        for loc in (
+            page.locator(POPUP_SCOPES).get_by_role("button", name=POPUP_BUTTONS),
+            page.get_by_role("button", name=re.compile(r"^\s*Got it\s*$", re.I)),
+        ):
+            try:
+                n = loc.count()
+            except Exception:
+                n = 0
+            for i in range(n):
+                b = loc.nth(i)
+                try:
+                    if b.is_visible():
+                        b.click(timeout=3000)
+                        hit = True
+                        closed += 1
+                        time.sleep(0.7)
+                        break
+                except Exception:
+                    continue
+            if hit:
+                break
+        if not hit:
+            break
+    if closed:
+        say(f"  popup TikTok ditutup ({closed})")
+    return closed
+
+
 def patch_library(page, job: dict, state: dict):
     """Sambungkan tiktok-uploader ke browser ber-profil kita, bungkam cetakan cookie, sisipkan label AI & latihan."""
     import tiktok_uploader.auth as tauth
@@ -259,9 +298,25 @@ def patch_library(page, job: dict, state: dict):
     tauth.print = lambda *a, **k: None  # pustaka mencetak isi cookie ("DEBUG: Adding cookie") -> dibungkam
     tup.get_browser = lambda *a, **k: page
     tup._set_description = set_description
+
+    # popup TikTok (cek konten otomatis, fitur baru, dsb.) muncul setelah video terunggah dan menghalangi klik:
+    # tutup sebelum dan sesudah setiap langkah formulir
+    def guarded(fn):
+        def run(pg, *a, **k):
+            dismiss_popups(pg)
+            out = fn(pg, *a, **k)
+            dismiss_popups(pg)
+            return out
+
+        return run
+
+    for name in ("_set_video", "_set_cover", "_remove_split_window", "_set_interactivity", "_set_description", "_set_visibility", "_set_schedule_video"):
+        if hasattr(tup, name):
+            setattr(tup, name, guarded(getattr(tup, name)))
     original_post = tup._post_video
 
     def post(pg):
+        dismiss_popups(pg)
         state["form"] = True  # video terunggah ke formulir, caption/sampul/jadwal sudah diisi
         if job.get("labelAI"):
             say("  label konten AI ...")
