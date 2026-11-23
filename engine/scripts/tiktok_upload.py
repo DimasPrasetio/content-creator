@@ -251,6 +251,124 @@ def set_description(page, text: str) -> None:
     time.sleep(0.5)
 
 
+def expand_settings(page) -> None:
+    """Buka 'Show more' di bagian Settings (komentar/reuse/label AI tersembunyi di sana sejak tampilan TikTok 2026)."""
+    for t in ("Show more", "More options", "Advanced settings"):
+        try:
+            loc = page.get_by_text(t, exact=True)
+            if loc.count() and loc.first.is_visible():
+                loc.first.scroll_into_view_if_needed()
+                loc.first.click(timeout=5000)
+                time.sleep(1)
+                return
+        except Exception:
+            continue
+
+
+def _checkbox(page, text: str):
+    """Kotak centang TikTok (label.Checkbox__root berisi teks) atau gaya lama (label + input saudara)."""
+    new = page.locator("label[class*='Checkbox__root']").filter(has_text=re.compile(rf"^\s*{re.escape(text)}\s*$", re.I))
+    if new.count():
+        lab = new.first
+        state = lambda: (lab.get_attribute("data-checked") or lab.get_attribute("aria-checked") or "") == "true"  # noqa: E731
+        disabled = (lab.get_attribute("data-disabled") or lab.get_attribute("aria-disabled") or "") == "true"
+        return lab, state, disabled
+    old = page.locator(f"xpath=//label[.='{text}']/following-sibling::div/input")
+    if old.count():
+        inp = old.first
+        return inp, inp.is_checked, inp.is_disabled()
+    return None, None, False
+
+
+def set_interactivity(state_out: dict):
+    """Komentar & reuse (duet/stitch digabung TikTok jadi 'Reuse of content'; tidak tersedia untuk video > 60 dtk)."""
+
+    def run(page, comment: bool = True, stitch: bool = True, duet: bool = True, *a, **k) -> None:
+        expand_settings(page)
+        want = {"Comment": comment}
+        if page.locator("label[class*='Checkbox__root']").filter(has_text=re.compile(r"Reuse of content", re.I)).count():
+            want["Reuse of content"] = duet or stitch
+        else:
+            want.update({"Duet": duet, "Stitch": stitch})
+        done = {}
+        for text, on in want.items():
+            try:
+                el, checked, disabled = _checkbox(page, text)
+                if el is None:
+                    done[text] = "tidak ada"
+                    continue
+                if disabled:
+                    done[text] = "tidak tersedia"
+                    continue
+                if checked() != on:
+                    el.scroll_into_view_if_needed()
+                    el.click(timeout=5000)
+                    time.sleep(0.5)
+                done[text] = "ya" if checked() else "tidak"
+            except Exception as e:
+                done[text] = "gagal: " + (str(e).strip().splitlines() or [type(e).__name__])[0][:60]
+        state_out["interaksi"] = done
+
+    return run
+
+
+def set_cover(state_out: dict):
+    """Sampul khusus lewat editor 'Edit cover' (tab Upload cover -> Save). Gagal = sampul bawaan TikTok, unggahan lanjut."""
+
+    def run(page, cover_path: str) -> None:
+        try:
+            if not cover_path or not Path(cover_path).exists():
+                raise RuntimeError("file sampul tidak ada")
+            btn = page.get_by_text("Edit cover", exact=True)
+            if not btn.count():
+                btn = page.locator("xpath=//div[contains(@class, 'edit-container')]")
+            btn.first.scroll_into_view_if_needed()
+            btn.first.click(timeout=15000)
+            time.sleep(1.5)
+            tab = page.get_by_text("Upload cover", exact=True)
+            inp = page.locator("input[type='file'][accept*='image']")
+            if not inp.count() and tab.count():
+                tab.first.click(timeout=5000)  # gaya lama: input muncul setelah tab dibuka
+                time.sleep(1)
+            inp.first.wait_for(state="attached", timeout=15000)
+            inp.first.set_input_files(cover_path)
+            time.sleep(3)
+            save = page.get_by_role("button", name=re.compile(r"^\s*(Save|Confirm|Done)\s*$", re.I))
+            for i in range(save.count()):
+                b = save.nth(i)
+                if b.is_visible():
+                    for _ in range(30):  # tombol aktif setelah gambar diproses
+                        if b.is_enabled() and (b.get_attribute("aria-disabled") or "false") != "true":
+                            break
+                        time.sleep(0.5)
+                    b.click(timeout=10000)
+                    break
+            else:
+                raise RuntimeError("tombol Save sampul tidak ditemukan")
+            for _ in range(30):  # editor tertutup = tersimpan
+                if not page.get_by_text("Upload cover", exact=True).filter(visible=True).count():
+                    break
+                time.sleep(0.5)
+            else:
+                raise RuntimeError("editor sampul tidak tertutup setelah Save")
+            state_out["sampul"] = True
+        except Exception as e:
+            state_out["sampul"] = False
+            state_out["sampulPesan"] = (str(e).strip().splitlines() or [type(e).__name__])[0][:160]
+            say(f"  sampul khusus gagal ({state_out['sampulPesan']}); TikTok memakai sampul bawaan")
+            for name in ("Cancel", "Discard"):  # tutup editor agar formulir bisa lanjut
+                try:
+                    c = page.get_by_role("button", name=name, exact=True)
+                    if c.count() and c.first.is_visible():
+                        c.first.click(timeout=3000)
+                        time.sleep(0.8)
+                        break
+                except Exception:
+                    pass
+
+    return run
+
+
 POPUP_SCOPES = "[data-floating-ui-portal], [role='dialog'], [class*='TUXModal'], [class*='modal']"
 # Tombol yang MENOLAK/menutup popup info TikTok (mis. "Turn on automatic content checks?" -> Cancel, tooltip fitur baru
 # -> Got it). Tidak pernah "Turn on"/"Post now"/"Discard": pengaturan akun tidak diubah dan unggahan tidak dibuang.
@@ -298,6 +416,8 @@ def patch_library(page, job: dict, state: dict):
     tauth.print = lambda *a, **k: None  # pustaka mencetak isi cookie ("DEBUG: Adding cookie") -> dibungkam
     tup.get_browser = lambda *a, **k: page
     tup._set_description = set_description
+    tup._set_cover = set_cover(state)
+    tup._set_interactivity = set_interactivity(state)
 
     # popup TikTok (cek konten otomatis, fitur baru, dsb.) muncul setelah video terunggah dan menghalangi klik:
     # tutup sebelum dan sesudah setiap langkah formulir
@@ -390,7 +510,7 @@ def cmd_upload(a) -> int:
             if job.get("latihan") and not state.get("posted"):
                 # Latihan dilempar sebagai pengecualian -> dicatat pustaka sebagai gagal; itu yang diharapkan
                 ok = bool(state.get("form")) and (bool(state.get("labelAI")) or not job.get("labelAI"))
-                result(ok=ok, latihan=True, akun=akun, labelAI=bool(state.get("labelAI")), screenshot=job.get("screenshot"),
+                result(ok=ok, latihan=True, akun=akun, labelAI=bool(state.get("labelAI")), sampul=state.get("sampul"), sampulPesan=state.get("sampulPesan"), interaksi=state.get("interaksi"), screenshot=job.get("screenshot"),
                        pesan=None if ok else "; ".join(errs[-3:]))
                 return 0 if ok else 5
             if failed or not state.get("posted"):
@@ -405,7 +525,7 @@ def cmd_upload(a) -> int:
                     pass
                 return 5
             extra = {"tiruan": page.evaluate("window.__posted || null")} if mock else {}
-            result(ok=True, akun=akun, labelAI=bool(state.get("labelAI")), browser=browser, **extra)
+            result(ok=True, akun=akun, labelAI=bool(state.get("labelAI")), sampul=state.get("sampul"), sampulPesan=state.get("sampulPesan"), interaksi=state.get("interaksi"), browser=browser, **extra)
             return 0
         except Exception as e:
             msg = (str(e).strip().splitlines() or [type(e).__name__])[0][:200]

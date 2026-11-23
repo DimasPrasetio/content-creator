@@ -274,6 +274,8 @@ const main = async () => {
     tayang: sched ? { jadwalWIB: sched.local, utc: sched.utc } : "sekarang",
     privat: job.privat || undefined,
     labelAI: res?.labelAI ?? false,
+    sampul: res?.sampul ?? null,
+    ...(res?.interaksi ? { interaksi: res.interaksi } : {}),
     detik: Math.round((Date.now() - t0) / 1000),
     ...(res?.tiruan ? { tiruan: res.tiruan } : {}), // selftest: isi formulir halaman tiruan
     ...(res?.ok ? {} : { alasan: res?.alasan ?? "unggah", pesan: res?.pesan ?? err.split("\n").at(-1) ?? null }),
@@ -281,6 +283,8 @@ const main = async () => {
   rec.unggahan.push(entry);
   writeFileSync(recPath, JSON.stringify(rec, null, 2) + "\n");
   if (status === 0 && res?.ok) {
+    if (res?.sampul === false) console.log(`  catatan: sampul khusus tidak terpasang (${res.sampulPesan ?? "?"}); TikTok memakai sampul bawaan. Ganti manual di aplikasi bila perlu.`);
+    if (res?.interaksi) console.log(`  interaksi: ${Object.entries(res.interaksi).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
     if (job.latihan) return console.log(`\nLatihan selesai: formulir terisi${entry.labelAI ? " + label AI tercentang" : ""}, TIDAK diposting. Tangkapan: ${path.relative(ROOT, job.screenshot)}`);
     return console.log(`\n${sched ? `Terjadwal tayang ${sched.local} WIB` : "Terunggah"} di TikTok ${entry.akun ?? slug}${entry.labelAI ? " (berlabel konten AI)" : ""}. Tercatat di ${path.relative(ROOT, recPath)}.`);
   }

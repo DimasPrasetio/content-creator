@@ -69,7 +69,7 @@ export async function tiktokTest({ npm, rows, step, keep }) {
     const last = rec.unggahan.at(-1) ?? {};
     row("tiktok: tercatat di tiktok.json", last.ok === true && !last.latihan && last.labelAI === true && last.akun === "@akun_uji" && rec.unggahan.length === 2, `${rec.unggahan.length} entri`);
     const t = last.tiruan ?? {};
-    row("tiktok: popup ditutup (tanpa ubah pengaturan); caption, sampul, label AI terisi", /Video uji unggah otomatis!/.test(t.caption ?? "") && /#belajar #fyp/.test(t.caption ?? "") && !/nama-file-video/.test(t.caption ?? "") && t.cover && t.ai && t.comment && !t.checksOn, JSON.stringify(t.caption ?? "").slice(0, 60));
+    row("tiktok: popup ditutup; caption, sampul (Edit cover), komentar/reuse, label AI terisi", /Video uji unggah otomatis!/.test(t.caption ?? "") && /#belajar #fyp/.test(t.caption ?? "") && !/nama-file-video/.test(t.caption ?? "") && t.cover && last.sampul === true && t.ai && t.comment && t.reuse && last.interaksi?.Comment === "ya" && !t.checksOn, JSON.stringify(t.caption ?? "").slice(0, 60));
     row("tiktok: tidak ada cookie di keluaran", !/nilai-uji|sessionid/i.test(step.last));
 
     npm("tiktok: tolak unggah ganda", "tiktok", [NAME, "--sekarang", "--headless"], { allowFail: true });

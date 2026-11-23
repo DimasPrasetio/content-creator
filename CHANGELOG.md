@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.2
+Sampul & interaksi TikTok mengikuti tampilan TikTok Studio terbaru (diperiksa di akun asli tanpa memposting).
+- Sampul khusus (`thumbnail.jpg`) kini terpasang lewat editor "Edit cover" (unggah gambar -> Save). Bila gagal,
+  unggahan tetap jalan dengan sampul bawaan dan catatannya muncul di keluaran + `tiktok.json` (`sampul`).
+- Komentar & "Reuse of content" (pengganti Duet/Stitch) disetel setelah membuka "Show more"; yang tidak tersedia
+  (reuse untuk video > 60 detik) dilewati dengan catatan. Hasilnya tercatat di `tiktok.json` (`interaksi`).
+- Halaman tiruan selftest mengikuti tata letak baru (editor sampul, kotak centang Comment/Reuse of content).
+
 ## 0.11.1
 Hasil uji unggah TikTok sungguhan pertama (akun brand, 2026-11-23).
 - Popup TikTok yang muncul setelah video terunggah ("Turn on automatic content checks?", tooltip "New editing features

@@ -48,4 +48,6 @@ npm run brand -- unpack <file>.brand.tar.gz           # pasang paket dari anggot
 - `tiktok` (opsional): pengaturan unggah `npm run tiktok` untuk brand ini. `akun` = pengaman: unggahan dibatalkan bila
   browser ternyata login sebagai akun lain. Login TikTok-nya sendiri tidak disimpan di sini (dan tidak ikut `brand pack`),
   melainkan di `~/.config/content-creator/tiktok/<slug>/` lewat `npm run tiktok -- login <slug>`.
+  `comment` = izinkan komentar; `duet`/`stitch` kini digabung TikTok menjadi "Reuse of content" (aktif bila salah
+  satunya `true`; tidak tersedia untuk video > 60 detik).
 - Agent memperbarui `catatan` setelah video disetujui (apa yang disukai/ditolak pengguna).
