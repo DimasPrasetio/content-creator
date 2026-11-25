@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.1
+- Kit HTML: watermark boleh berupa **logo gambar** (`watermark.image` di theme brand, path relatif ke `Brands/<slug>/`,
+  PNG transparan untuk latar gelap). `npm run new` menyalinnya ke `html/watermark.*`; `size` = tinggi px (bawaan 40).
+  Thumbnail tetap memakai `mark` teks. Dipakai pertama oleh brand rudisone (logo Neuron putih).
+
 ## 0.12.0
 Mode baru **edit film "cinema story"** (style `sinema`, perintah `npm run sinema`), untuk brand Feminine Allure.
 - Raw film → video 9:16 45-60 dtk: film dipotong persegi di kanvas hitam, subtitle dialog asli kata per kata di tengah

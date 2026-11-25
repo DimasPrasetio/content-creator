@@ -109,7 +109,7 @@ atau style bawaan brand di `profile.json`) → **identitas brand** dari `Brands/
 = palet style). Tanpa style: `theme.default.json` + seluruh `Brands/<slug>/theme.json` (cara lama). Kunci di bawah boleh
 ditulis di style maupun brand; brand idealnya hanya berisi identitas + `colors`.
 `layout` ("aman" bawaan = zona aman TikTok, "penuh" = tata letak lama) · `timing` {lead, crossfade} · `colors` (bg, grid, panel, track, text, dim, accent, accent2, info, ok, warn, bad, extra) · `fonts` (head, body, mono) · `stroke` ·
-`progress` · `label.text` · `glow` · `highlight` {bg, fg} · `subtitle` {said, unsaid, key} · `watermark` {parts: [[teks, warna]], opacity, size (px, bawaan 36; thumbnail ikut diskalakan)}
+`progress` · `label.text` · `glow` · `highlight` {bg, fg} · `subtitle` {said, unsaid, key} · `watermark` {parts: [[teks, warna]], opacity, size (px, bawaan 36; thumbnail ikut diskalakan); atau `image` (logo, path relatif ke `Brands/<slug>/`, PNG transparan untuk latar gelap; disalin `npm run new` ke `html/watermark.*`, `size` = tinggi px, bawaan 40; thumbnail memakai `mark` teks)}
 (null = tanpa) · `mark` · `cta.label` · `closing` {wordmark, descriptor, lines: [[kata, kata disorot, cue]]} (null = tanpa) ·
 `storyboard` {skill, brandOverlay, music, closingSfx}. Nilai warna boleh nama warna tema atau hex.
 

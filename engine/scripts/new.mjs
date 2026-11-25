@@ -39,6 +39,12 @@ if (theme.ui?.stamp) {
   if (existsSync(src)) { const dst = `stamp${path.extname(src)}`; copyFileSync(src, path.join(p.html, dst)); theme.ui.stampSrc = dst; }
   else console.warn(`  !     ui.stamp ${path.relative(ROOT, src)} tidak ada: cap memakai lingkaran ✓ bawaan`);
 }
+// logo brand sebagai watermark (theme.watermark.image = path relatif ke Brands/<slug>/) -> html/watermark.<ext>
+if (theme.watermark?.image) {
+  const src = path.join(DIRS.brands, brand, theme.watermark.image);
+  if (existsSync(src)) { const dst = `watermark${path.extname(src)}`; copyFileSync(src, path.join(p.html, dst)); theme.watermark.src = dst; }
+  else console.warn(`  !     watermark.image ${path.relative(ROOT, src)} tidak ada: watermark memakai teks parts`);
+}
 writeFileSync(path.join(p.html, "theme.js"), `// tema ${style ? `style ${style} · brand ${brand} · warna ${warna}` : brand} (dibuat npm run new dari ${sumber.join(" < ")})\nconst THEME = ${JSON.stringify(theme, null, 2)};\n`);
 for (const f of ["index.html", "kit.css", "kit-core.js", "kit-camera.js", "kit-run.js"]) copyFileSync(path.join(KIT, f), path.join(p.html, f));
 console.log(`  OK    kit + ${style ? `style ${style} (warna ${warna}) + brand ${brand}` : `tema ${brand}`} -> ${path.relative(ROOT, p.html)}/`);

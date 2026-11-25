@@ -20,7 +20,8 @@ const tint = (hex, a) => { const h = col(hex).replace("#", ""); const n = parseI
   r.setProperty("--glow1", tint(THEME_.glow?.[0] || "accent", 0.09)); r.setProperty("--glow2", tint(THEME_.glow?.[1] || "accent2", 0.035));
   const hl = THEME_.highlight || {}; r.setProperty("--hl-bg", col(hl.bg || "accent")); r.setProperty("--hl-fg", col(hl.fg || "bg")); r.setProperty("--hl-glow", tint(hl.bg || "accent", 0.35));
   const wm = document.getElementById("wm"), W = THEME_.watermark;
-  if (W && W.parts) { W.parts.forEach(([t, c]) => { const s = document.createElement("span"); s.textContent = t; s.style.color = col(c); wm.appendChild(s); }); wm.style.opacity = W.opacity ?? 1; if (W.size) wm.style.fontSize = W.size + "px"; }
+  if (W && W.src) { const im = document.createElement("img"); im.src = W.src; im.alt = W.alt || "logo"; Object.assign(im.style, { height: (W.size || 40) + "px", display: "block" }); wm.appendChild(im); wm.style.opacity = W.opacity ?? 1; }
+  else if (W && W.parts) { W.parts.forEach(([t, c]) => { const s = document.createElement("span"); s.textContent = t; s.style.color = col(c); wm.appendChild(s); }); wm.style.opacity = W.opacity ?? 1; if (W.size) wm.style.fontSize = W.size + "px"; }
   else wm.remove();
 })();
 // ---------- kanvas (v0.8): 9:16 bawaan (kit.css), 16:9 / 4:5 / 1:1 ditata di sini ----------
