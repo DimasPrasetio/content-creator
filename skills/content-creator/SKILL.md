@@ -75,6 +75,8 @@ Yang sudah didukung sekarang (sampaikan jujur saat grill-me):
   Bagian "Mode rekaman layar" di bawah.
 - **Vlog / montase** (style Kilas, 9:16): montase musik dari banyak klip (momen dipilih AI, potongan pada ketukan), montase
   + voice over AI, atau vlog bicara + sisipan B-roll + musik latar (style Ngobrol). Bagian "Mode vlog / montase" di bawah.
+- **Edit film "cinema story"** (style Sinema, 9:16, v0.12): raw film → 45-60 dtk: dialog asli bersubtitle kata per kata,
+  3 narasi pencerita diucapkan, aksi cepat, montase di ketukan lagu pengguna. Bagian "Mode film (Sinema)" di bawah.
 - **Unggah TikTok** (opsional, setelah video disetujui): akun TikTok per brand (pengguna login sendiri sekali), tayang
   sekarang atau dijadwalkan, sampul = thumbnail, label konten AI otomatis. Robot browser tidak resmi (tiktok-uploader).
   Bagian 6 langkah 3.
@@ -483,6 +485,21 @@ Mesin edit yang sama dengan style **Layar** (`layar`, 16:9 bawaan, layar asli ta
    → `--analyze` (konteks.md mendaftar momen terbaik tiap B-roll) → objek `clip` di kalimat yang cocok:
    `{"type": "clip", "file": "assets/broll/01-b1.mp4", "from": <detik momen>, "at": "<kata>", "fit": "full"}` (suara
    tetap dari rekaman bicara) → seperti "Mode edit footage". Musik latar di-duck di bawah suara.
+
+## Mode film (Sinema)
+
+Pengguna memberi **raw film + judulnya** (+ lagu). Ikuti `Engine/styles/sinema/STYLE.md` (prosedur lengkap, format
+`sinema.json`); brand pertama: Feminine Allure (`Brands/feminine-allure/`, bahasa Inggris, watermark, narator per genre).
+1. `npm run sinema -- --new --film=<file> --judul="..." --tahun=.. --genre=.. --musik=<lagu> [--srt=<subtitle>]`.
+2. **Pahami ceritanya dulu**: riset sinopsis & tokoh (sumber web) → `sinema/konteks.md`; `--analyze` (gratis) → lihat
+   lembar kontak `sinema/kontak/` (+ `--sheet=a-b:langkah` untuk rentang rapat).
+3. Transkrip **hanya** rentang terpilih (`kandidat`, ±5-8 mnt): `--transkrip --estimate`, pertama kali `--ukur`
+   (60 dtk) lalu `--transkrip`; atau gratis dari `--srt`.
+4. Tulis shots (3 babak), 3 narasi (orang ketiga, 3-7 kata, nada ikut genre, twist di narasi 3; cek ejaan), montase,
+   kunci → `--storyboard` → kirim `preview/board.jpg` + `sinema/storyboard.md` → **tunggu persetujuan**.
+5. Narator belum ada → `--audisi --voices=..` (sebut kredit). Lalu `npm run sinema -- <nama>` (sebut kredit narasi) →
+   caption Inggris di `posting/caption.md` → `npm run posting` → tanya Drive.
+Uji tanpa kredit: `--suara-uji` (suara macOS) pada `--storyboard` maupun render.
 
 ## Klip pendek dari video panjang
 

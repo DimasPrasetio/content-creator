@@ -29,6 +29,7 @@
     "thumbnail": "node scripts/thumbnail.mjs",
     "edit": "node scripts/edit.mjs",
     "clips": "node scripts/clips.mjs",
+    "sinema": "node scripts/sinema.mjs",
     "style": "node scripts/style.mjs",
     "akun": "node scripts/akun.mjs",
     "tiktok": "node scripts/tiktok.mjs"

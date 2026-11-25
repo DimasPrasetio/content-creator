@@ -1,0 +1,76 @@
+{
+  "_doc": "Style bawaan plugin 'Sinema' (v0.12): edit film menjadi cerita sinema 9:16. Footage film dipotong persegi 1:1 di kanvas hitam, subtitle dialog asli kata per kata di tengah footage (italic tebal, putih + kata kunci kuning), 3 narasi pencerita yang diucapkan (voice over AI), babak aksi berpotongan cepat, montase penutup tepat di ketukan musik, flash putih penutup. Rincian: STYLE.md. Perintah: npm run sinema.",
+  "name": "sinema",
+  "title": "Sinema",
+  "aliases": ["cinema", "cinema-story", "film", "movie-edit", "fan-edit"],
+  "kind": "edit",
+  "jalur": "sinema",
+  "footage": "film",
+  "canvas": { "width": 1080, "height": 1920, "fps": 30, "safeZone": "tiktok" },
+  "layout": {
+    "_doc": "Footage persegi di kanvas hitam (referensi: atas 14%, footage 56%, bawah 30%). Semua angka dalam piksel kanvas 1080x1920.",
+    "background": "#000000",
+    "footage": { "aspect": 1, "y": 267, "size": 1080 },
+    "subtitle": { "centerY": 0.465, "maxWidth": 760 },
+    "watermark": { "centerY": 0.905 }
+  },
+  "type": {
+    "subtitle": {
+      "font": "Montserrat",
+      "weight": 900,
+      "italic": true,
+      "size": 40,
+      "lineHeight": 1.18,
+      "letterSpacing": -0.5,
+      "uppercase": true,
+      "wordsPerLine": [2, 4],
+      "lines": 2,
+      "color": "#F8F5F0",
+      "key": "#F5E14A",
+      "emotion": "#E8423A",
+      "shadow": "0 2px 6px rgba(0,0,0,0.85), 0 0 2px rgba(0,0,0,0.9)",
+      "keyGlow": "0 0 10px rgba(245,225,74,0.55)",
+      "appear": "word",
+      "autoKey": "ujung"
+    },
+    "watermark": { "font": "Montserrat", "weight": 400, "size": 21, "letterSpacing": "0.62em", "opacity": 0.72 }
+  },
+  "grade": {
+    "_doc": "Look referensi: kontras & saturasi tinggi, bayangan teal, warna menyala, gambar dipertajam (ffmpeg eq/colorbalance/unsharp).",
+    "contrast": 1.12,
+    "saturation": 1.38,
+    "brightness": 0.0,
+    "gamma": 1.0,
+    "shadows": { "r": -0.04, "g": 0.0, "b": 0.06 },
+    "highlights": { "r": 0.03, "g": 0.01, "b": -0.03 },
+    "sharpen": 0.9
+  },
+  "babak": {
+    "_doc": "Struktur 3 babak (detik total 45-60): dialog konfrontasi -> aksi bernarasi -> montase beat.",
+    "duration": [40, 62],
+    "dialog": { "shotSec": [1.5, 8] },
+    "aksi": { "shotSec": [0.25, 2.2] },
+    "montase": { "beatsPerShot": 1, "shotSec": [0.4, 1.4], "durationSec": [6, 10] }
+  },
+  "narasi": {
+    "_doc": "Tepat 3 narasi pencerita (orang ketiga, 3-6 kata, Inggris): 1 = konflik/aksi dimulai, 2 = puncak pertarungan/emosi, 3 = twist (lucu bila ada momen lucu; romance/drama = haru/ironis). Diucapkan narator brand (pria/perempuan menurut genre); audio film diredam saat narasi.",
+    "count": 3,
+    "words": [3, 7],
+    "filmDuck": 0.25,
+    "gapAfterSec": 0.25
+  },
+  "audio": {
+    "dialogLufs": -16,
+    "musicUnderDialog": 0.12,
+    "musicUnderAction": 0.55,
+    "musicMontage": 1.0,
+    "filmUnderMontage": 0.15,
+    "targetLufs": -14
+  },
+  "fx": {
+    "punchIn": 1.08,
+    "flashFrames": 2,
+    "whipSec": 0.25,
+    "ending": { "whipSec": 0.3, "flashSec": 0.15, "fadeSec": 0.6 }
+  }
+}

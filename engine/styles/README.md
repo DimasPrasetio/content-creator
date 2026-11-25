@@ -21,6 +21,10 @@ npm run edit -- <nama> --new --style=layar --input=layar.mp4[,wajah.mp4 --faceca
 npm run edit -- <nama> --new --style=kilas --input=a.mp4,b.mov,c.mp4 [--music=lagu.mp3] [--duration=30] [--narasi=ai]
 # vlog bicara + B-roll + musik latar (style edit apa pun):
 npm run edit -- <nama> --new --style=ngobrol --input=bicara.mp4 --broll=b1.mp4,b2.mov [--music=lagu.mp3]
+# edit film "cinema story" (style sinema, 9:16; v0.12) — perintah sendiri, rincian styles/sinema/STYLE.md:
+npm run sinema -- --new --film=film.mkv --judul="Judul" --genre=animasi --musik=lagu.mp3 [--srt=film.srt]
+npm run sinema -- <nama> --analyze | --sheet=a-b:1 | --transkrip [--estimate|--ukur] | --storyboard | --audisi --voices=A,B
+npm run sinema -- <nama> [--suara-uji]
 # klip pendek 9:16 dari proyek yang sudah --analyze:
 npm run clips -- <nama> [--min=30 --max=60]   # klip/kandidat.md -> agent menulis klip.json (3-5 usulan)
 npm run clips -- <nama> --check               # tabel untuk dipilih pengguna
@@ -31,7 +35,8 @@ Style dicari di `Styles/<slug>/style.json` (workspace, mis. hasil analisis video
 `Engine/styles/<slug>/style.json` (bawaan plugin), digabung dalam. Bawaan: `ngobrol` (dulu `narration`, nama lama tetap dikenali
 lewat `aliases`), `siniar` (podcast/wawancara 16:9: warna netral, tanpa subtitle tertanam, nama pembicara, kamera pada
 yang bicara), `layar` (rekaman layar/tutorial 16:9: zoom otomatis, loading dipercepat, kamera wajah opsional),
-`kilas` (vlog/montase 9:16: momen terbaik dipotong pada ketukan musik) dan `komik` (animasi Pop).
+`kilas` (vlog/montase 9:16: momen terbaik dipotong pada ketukan musik), `sinema` (edit film menjadi cerita 9:16:
+footage persegi, subtitle kata per kata, 3 narasi diucapkan, montase di ketukan; `npm run sinema`) dan `komik` (animasi Pop).
 
 ## Alur pemahaman konteks
 1. **Isi**: transkrip per kata (ElevenLabs Scribe; atau sidecar `<footage>.words.json` = `[{w,s,e}]`, tanpa kredit) →

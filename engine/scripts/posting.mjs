@@ -93,7 +93,7 @@ const capPath = path.join(out, "caption.md");
 if (!existsSync(capPath)) {
   writeFileSync(
     capPath,
-    `<!-- Tulis caption di bawah. Baris pertama = hook (≤ 125 huruf, terlihat sebelum "selengkapnya"). -->\n${s1.text}\n\nTODO: isi caption (manfaat, konteks singkat) dan CTA.\n\n#TODO\n`,
+    `<!-- Tulis caption di bawah. Baris pertama = hook (≤ 125 huruf, terlihat sebelum "selengkapnya"). -->\n${timing.scenes[0]?.text ?? ""}\n\nTODO: isi caption (manfaat, konteks singkat) dan CTA.\n\n#TODO\n`,
   );
   bad("caption.md baru dibuat sebagai templat: isi lalu jalankan posting lagi");
 } else {

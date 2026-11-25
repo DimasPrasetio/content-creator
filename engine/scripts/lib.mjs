@@ -34,6 +34,9 @@ export const brandOf = (name) => {
   // proyek edit footage: profil brand dari edit.json (--brand=<slug>)
   const ep = readJson(path.join(dir, "edit.json"), null)?.profile;
   if (ep) return ep;
+  // proyek edit film (style Sinema): profil brand dari sinema.json
+  const sp = readJson(path.join(dir, "sinema.json"), null)?.profile;
+  if (sp) return sp;
   const b = readJson(path.join(dir, "storyboard.json"), {}).brand ?? {};
   const texts = [b.left, b.right].filter(Boolean).map((x) => x.toLowerCase());
   if (texts.length && existsSync(DIRS.brands))

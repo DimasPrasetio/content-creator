@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.12.0
+Mode baru **edit film "cinema story"** (style `sinema`, perintah `npm run sinema`), untuk brand Feminine Allure.
+- Raw film → video 9:16 45-60 dtk: film dipotong persegi di kanvas hitam, subtitle dialog asli kata per kata di tengah
+  footage (Montserrat Black Italic, kunci kuning, emosi merah), watermark berjarak, 3 narasi pencerita yang diucapkan,
+  babak aksi dengan flash/whip/punch-in, montase dipotong tepat di ketukan lagu, penutup blur → flash → lingkaran hitam.
+- Pemahaman film dua tahap agar hemat kredit: `--analyze` gratis (area aktif/letterbox, potongan, gerak, ucapan, jendela
+  dialog & aksi, lembar kontak) → transkrip ElevenLabs **hanya rentang kandidat** (`--estimate`, `--ukur` mengukur tarif
+  60 dtk dan menyimpannya) atau gratis dari `--srt`.
+- Titik cek `--storyboard` (tanpa kredit): potongan + preview tiap shot + `sinema/storyboard.md`. `--suara-uji` = narasi
+  suara macOS untuk uji gratis; `--audisi` memilih narator (pria/perempuan per genre dari profil brand).
+- Mixer: dialog film per potongan (atempo untuk gerak lambat), duck saat narasi, musik ber-envelope per babak dengan
+  "drop" lagu jatuh di narasi 2, loudness -14 LUFS dua tahap. Hasil kompatibel dengan `npm run posting`.
+- Perbaikan: `npm run posting` gagal (`s1 is not defined`) saat membuat templat `caption.md` di proyek tanpa caption.
+
 ## 0.11.4
 Unggah TikTok kini **tanpa jendela browser** (headless) secara bawaan, atas permintaan pengguna.
 - Browser tersembunyi memakai Chrome yang sama dengan identitas Chrome biasa (bukan "HeadlessChrome"), jadi TikTok
