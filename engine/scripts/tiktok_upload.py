@@ -368,10 +368,36 @@ def set_interactivity(state_out: dict):
     return run
 
 
+def cover_signature(edit_btn):
+    """Ciri gambar sampul di formulir (src <img> di kotak Cover, cadangan: hash tangkapan kotak itu)."""
+    import hashlib
+
+    try:
+        box = edit_btn.locator("xpath=ancestor::*[.//img or .//canvas][1]")
+        img = box.locator("img")
+        if img.count():
+            src = img.first.get_attribute("src") or ""
+            if src:
+                return "src:" + hashlib.sha1(src.encode()).hexdigest()
+        return "shot:" + hashlib.sha1(box.first.screenshot(timeout=5000)).hexdigest()
+    except Exception:
+        return None
+
+
 def set_cover(state_out: dict):
-    """Sampul khusus lewat editor 'Edit cover' (tab Upload cover -> Save). Gagal -> SampulGagal (unggahan dibatalkan)."""
+    """Sampul khusus lewat editor 'Edit cover': tombol Upload cover (pemilih file) -> Save -> sampul formulir harus
+    berubah. Gagal -> SampulGagal (unggahan dibatalkan)."""
 
     def run(page, cover_path: str) -> None:
+        dbg = os.environ.get("TIKTOK_DEBUG_DIR")
+
+        def shot(tag):
+            if dbg:
+                try:
+                    page.screenshot(path=str(Path(dbg) / f"sampul-{tag}.png"), full_page=False)
+                except Exception:
+                    pass
+
         try:
             if not cover_path or not Path(cover_path).exists():
                 raise RuntimeError("file sampul tidak ada")
@@ -379,16 +405,30 @@ def set_cover(state_out: dict):
             if not btn.count():
                 btn = page.locator("xpath=//div[contains(@class, 'edit-container')]")
             btn.first.scroll_into_view_if_needed()
+            sebelum = cover_signature(btn.first)
             btn.first.click(timeout=15000)
             time.sleep(1.5)
-            tab = page.get_by_text("Upload cover", exact=True)
-            inp = page.locator("input[type='file'][accept*='image']")
-            if not inp.count() and tab.count():
-                tab.first.click(timeout=5000)  # gaya lama: input muncul setelah tab dibuka
-                time.sleep(1)
-            inp.first.wait_for(state="attached", timeout=15000)
-            inp.first.set_input_files(cover_path)
-            time.sleep(3)
+            shot("1-editor")
+            # Editor baru (2026-11): "Upload cover" = tombol di samping strip frame, membuka pemilih file.
+            # input[type=file] yang tersembunyi diabaikan editor, jadi pakai file chooser dari tombol itu.
+            up = page.get_by_text("Upload cover", exact=True).filter(visible=True)
+            up.first.wait_for(state="visible", timeout=30000)  # editor selesai memuat frame
+            time.sleep(1)
+            shot("1b-editor-siap")
+            try:
+                with page.expect_file_chooser(timeout=8000) as fc:
+                    up.first.click(timeout=5000)
+                fc.value.set_files(cover_path)
+                cara = "pemilih file"
+            except Exception:
+                inp = page.locator("input[type='file'][accept*='image']")
+                inp.last.wait_for(state="attached", timeout=10000)
+                inp.last.set_input_files(cover_path)
+                cara = "input tersembunyi"
+            if dbg:
+                say(f"  [debug] sampul dipilih lewat {cara}")
+            time.sleep(4)
+            shot("2-setelah-pilih-file")
             save = page.get_by_role("button", name=re.compile(r"^\s*(Save|Confirm|Done)\s*$", re.I))
             for i in range(save.count()):
                 b = save.nth(i)
@@ -397,6 +437,7 @@ def set_cover(state_out: dict):
                         if b.is_enabled() and (b.get_attribute("aria-disabled") or "false") != "true":
                             break
                         time.sleep(0.5)
+                    shot("3-sebelum-save")
                     b.click(timeout=10000)
                     break
             else:
@@ -407,6 +448,22 @@ def set_cover(state_out: dict):
                 time.sleep(0.5)
             else:
                 raise RuntimeError("editor sampul tidak tertutup setelah Save")
+            time.sleep(1)
+            shot("4-setelah-save")
+            # Bukti nyata: gambar sampul di formulir harus berubah (editor tertutup saja belum tentu tersimpan).
+            sesudah = None
+            for _ in range(20):
+                b2 = page.get_by_text("Edit cover", exact=True)
+                sesudah = cover_signature(b2.first) if b2.count() else None
+                if sebelum and sesudah and sesudah != sebelum:
+                    break
+                time.sleep(0.5)
+            if dbg:
+                say(f"  [debug] sampul formulir: sebelum {str(sebelum)[:60]!r} · sesudah {str(sesudah)[:60]!r}")
+            if not sebelum or not sesudah:
+                raise RuntimeError("gambar sampul di formulir tidak terbaca, tidak bisa memastikan sampul terpasang")
+            if sesudah == sebelum:
+                raise RuntimeError("sampul di formulir tidak berubah setelah Save (TikTok tetap memakai frame video)")
             state_out["sampul"] = True
         except Exception as e:
             state_out["sampul"] = False
