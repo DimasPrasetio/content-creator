@@ -88,6 +88,8 @@ def install_mock(ctx) -> bool:
     ctx.route("**/*", handle)
     if os.environ.get("CC_TIKTOK_MOCK_COVER") == "gagal":  # selftest: editor sampul menolak Save
         ctx.add_init_script("window.__mockCoverFail = true")
+    if os.environ.get("CC_TIKTOK_MOCK_JADWAL"):  # selftest: varian pemilih jadwal (baru|baru-macet|lama|aneh)
+        ctx.add_init_script(f"window.__mockJadwal = {json.dumps(os.environ['CC_TIKTOK_MOCK_JADWAL'])}")
     if os.environ.get("CC_TIKTOK_MOCK_CAPTCHA") == "ya":  # selftest: TikTok meminta CAPTCHA setelah video dipilih
         ctx.add_init_script("window.__mockCaptcha = true")
     return True
@@ -522,19 +524,132 @@ def dismiss_popups(page, rounds: int = 4) -> int:
     return closed
 
 
-def set_schedule(page, schedule):
-    """Isi jadwal di formulir TikTok Studio (tampilan 2026: radio Now/Schedule + izin + pemilih jam & tanggal).
+# Pemilih jadwal TikTok Studio. TikTok sering mengganti tampilan ini per akun (A/B test), jadi:
+#  1. tampilan dikenali dulu (combobox 2026-11 atau kolom input lama), tidak menebak dari satu selektor;
+#  2. tiap tampilan dicoba sampai 2 kali (popup/tooltip TikTok kadang menutupi pemilih);
+#  3. hasil akhirnya DIBACA ULANG dari formulir dan dibandingkan dengan jadwal yang diminta (bukan sekadar "sudah diklik");
+#  4. gagal di langkah mana pun -> exception (video tidak pernah terposting langsung) + diagnostik HTML & tangkapan
+#     layar pemilih jadwal disimpan, supaya tampilan TikTok yang baru bisa langsung ditambahkan di sini.
+SCHED_BOX = "div[data-e2e='schedule_container']"
+SCHED_RADIO = "input[name='postSchedule'][value='schedule']"
+CB_DATE = "[role='combobox'][aria-label='Select date']"
+CB_TIME = "[role='combobox'][aria-label='Select time']"
+OLD_INPUT = ".scheduled-picker input"
+BULAN_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+            "November", "December"]
+SCHED_DIAG: dict = {}  # diisi cmd_upload: {"html": <berkas diagnostik>, "png": <tangkapan>}
 
-    Gagal di langkah mana pun -> exception, sehingga video tidak pernah terposting langsung."""
+
+class JadwalGagal(RuntimeError):
+    """Jadwal tidak bisa dipasang di formulir TikTok (video tidak diposting)."""
+
+
+def parse_date_text(s: str):
+    """Tanggal yang tampil di formulir TikTok -> date. Mengenali 2026-11-29, Nov 29, 2026, November 29, 2026, 29 Nov 2026."""
+    s = re.sub(r"\s+", " ", (s or "").strip())
+    for fmt in ("%Y-%m-%d", "%b %d, %Y", "%B %d, %Y", "%d %b %Y", "%d %B %Y", "%m/%d/%Y", "%d/%m/%Y"):
+        try:
+            return dt.datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def parse_time_text(s: str):
+    """Jam yang tampil -> (jam, menit) 24 jam. Mengenali 07:00, 7:00, 07:00 AM, 7:00 PM."""
+    m = re.fullmatch(r"\s*(\d{1,2}):(\d{2})\s*([AaPp][Mm])?\s*", s or "")
+    if not m:
+        return None
+    h, mi = int(m.group(1)), int(m.group(2))
+    if m.group(3):
+        h = h % 12 + (12 if m.group(3).lower() == "pm" else 0)
+    return h, mi
+
+
+def _ordinal(n: int) -> str:
+    return f"{n}{'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')}"
+
+
+def _visible(loc):
+    return [loc.nth(k) for k in range(loc.count()) if loc.nth(k).is_visible()]
+
+
+def _enabled(el) -> bool:
+    return el.get_attribute("data-disabled") != "true" and el.get_attribute("aria-disabled") != "true" and el.get_attribute("disabled") is None and "disabled" not in (el.get_attribute("class") or "").lower()
+
+
+def schedule_ui(box) -> str | None:
+    """Kenali tampilan pemilih jadwal: "combobox" (2026-11), "input" (lama), atau None (tidak dikenali)."""
+    try:
+        box.locator(CB_DATE).or_(box.locator(OLD_INPUT)).first.wait_for(state="visible", timeout=15000)
+    except Exception:
+        return None
+    if box.locator(CB_DATE).count() and box.locator(CB_TIME).count():
+        return "combobox"
+    if box.locator(OLD_INPUT).count() >= 2:
+        return "input"
+    return None
+
+
+def schedule_diag(page, alasan: str) -> str:
+    """Simpan HTML wadah jadwal + popup yang terbuka + tangkapan layar. Mengembalikan catatan lokasi berkasnya."""
+    out = SCHED_DIAG.get("html")
+    if not out:
+        return ""
+    try:
+        html = page.evaluate(
+            """(sel) => { const parts = []; const box = document.querySelector(sel);
+                parts.push(box ? box.outerHTML : '<!-- wadah jadwal tidak ada -->');
+                for (const e of document.querySelectorAll("[role=dialog], [role=listbox], [data-floating-ui-portal]"))
+                  if (e.offsetParent !== null) parts.push(e.outerHTML.slice(0, 50000));
+                return parts.join('\\n\\n<!-- ===== -->\\n\\n'); }""", SCHED_BOX)
+        Path(out).write_text(f"<!-- diagnostik pemilih jadwal TikTok: {alasan} -->\n{html}\n")
+        if SCHED_DIAG.get("png"):
+            page.screenshot(path=SCHED_DIAG["png"], full_page=True)
+        return f" (diagnostik: {Path(out).name})"
+    except Exception:
+        return ""
+
+
+def _close_picker(page, box) -> None:
+    try:
+        page.keyboard.press("Escape")
+    except Exception:
+        pass
+    try:
+        if box.locator(".scheduled-title-container").count():
+            box.locator(".scheduled-title-container").first.click(timeout=2000)
+    except Exception:
+        pass
+    page.wait_for_timeout(300)
+
+
+def set_schedule_factory(state_out: dict):
+    def run(page, schedule) -> None:
+        try:
+            state_out["jadwalTerbaca"] = set_schedule(page, schedule)
+        except Exception as e:
+            msg = (str(e).strip().splitlines() or [type(e).__name__])[0][:180]
+            state_out["jadwalGagal"] = msg + schedule_diag(page, msg)
+            raise JadwalGagal(state_out["jadwalGagal"]) from e
+
+    return run
+
+
+def set_schedule(page, schedule) -> str:
+    """Isi jadwal di formulir TikTok Studio. Mengembalikan jadwal yang terbaca di formulir ("YYYY-MM-DD HH:MM")."""
     import pytz
 
     tz = pytz.timezone(page.evaluate("Intl.DateTimeFormat().resolvedOptions().timeZone"))
     when = schedule.astimezone(tz)
     hh, mm, tanggal = f"{when.hour:02d}", f"{when.minute:02d}", when.strftime("%Y-%m-%d")
     say(f"  jadwal {tanggal} {hh}:{mm} ({tz.zone}) ...")
-    box = page.locator("div[data-e2e='schedule_container']")
-    radio = box.locator("input[name='postSchedule'][value='schedule']")
-    radio.locator("xpath=ancestor::label[1]").click()
+    box = page.locator(SCHED_BOX)
+    box.wait_for(state="attached", timeout=15000)
+    box.scroll_into_view_if_needed()
+    radio = box.locator(SCHED_RADIO)
+    if not radio.is_checked():
+        radio.locator("xpath=ancestor::label[1]").click()
     allow = page.get_by_role("button", name="Allow", exact=True)
     try:
         allow.wait_for(state="visible", timeout=4000)
@@ -544,51 +659,120 @@ def set_schedule(page, schedule):
     page.wait_for_timeout(800)
     if not radio.is_checked():
         raise RuntimeError("pilihan Schedule tidak aktif")
-    inputs = box.locator(".scheduled-picker input.TUXTextInputCore-input")
-    inputs.first.wait_for(state="visible", timeout=10000)
+    ui = schedule_ui(box)
+    if ui is None:
+        raise RuntimeError("tampilan pemilih jadwal TikTok tidak dikenali (TikTok mengubah tampilannya)")
+    fill = set_schedule_picker if ui == "combobox" else set_schedule_inputs
+    err = None
+    for attempt in (1, 2):
+        try:
+            got = fill(page, box, when)
+            if got == (when.date(), (when.hour, when.minute)) and radio.is_checked():
+                say(f"  jadwal terpasang: {tanggal} {hh}:{mm} (tampilan {ui})")
+                return f"{tanggal} {hh}:{mm}"
+            err = RuntimeError(f"jadwal terbaca {got[0]} {got[1][0]:02d}:{got[1][1]:02d}, seharusnya {tanggal} {hh}:{mm}" if got[0] and got[1] else f"jadwal di formulir tidak terbaca (tampilan {ui})")
+        except Exception as e:
+            err = e
+        if attempt == 1:
+            say(f"  jadwal belum pas ({str(err).splitlines()[0][:100]}), coba sekali lagi ...")
+            _close_picker(page, box)
+            dismiss_popups(page)
+    raise err
+
+
+def set_schedule_inputs(page, box, when):
+    """Tampilan lama: dua kolom input (YYYY-MM-DD & HH:MM) + kalender & roda jam tiktok-timepicker."""
+    inputs = box.locator(OLD_INPUT)
     jam_in = date_in = None
     for k in range(inputs.count()):
         v = inputs.nth(k).input_value()
-        if re.fullmatch(r"\d{2}:\d{2}", v):
+        if parse_time_text(v):
             jam_in = inputs.nth(k)
-        elif re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+        elif parse_date_text(v):
             date_in = inputs.nth(k)
     if jam_in is None or date_in is None:
-        raise RuntimeError("pemilih jam/tanggal tidak ditemukan")
+        raise RuntimeError("kolom jam/tanggal tidak ditemukan")
 
-    if date_in.input_value() != tanggal:
+    if parse_date_text(date_in.input_value()) != when.date():
         date_in.click()
         page.wait_for_timeout(600)
-        hari = page.locator(f"xpath=//*[contains(@class,'calendar') or contains(@class,'Calendar')]//*[normalize-space(text())='{when.day}' and not(contains(@class,'disabled'))]")
+        cal = "xpath=//*[contains(@class,'calendar') or contains(@class,'Calendar')]"
         for _ in range(3):
-            if date_in.input_value() == tanggal:
-                break
-            vis = [hari.nth(k) for k in range(hari.count()) if hari.nth(k).is_visible()]
-            if vis:
-                vis[0].click()
+            hari = [h for h in _visible(page.locator(f"{cal}//*[normalize-space(text())='{when.day}']")) if _enabled(h)]
+            if hari:
+                hari[0].click()
                 page.wait_for_timeout(500)
-            if date_in.input_value() != tanggal:  # mungkin bulan berikutnya
-                nxt = page.locator("xpath=//*[contains(@class,'calendar') or contains(@class,'Calendar')]//*[contains(@class,'arrow') or contains(@class,'next')]")
-                if nxt.count():
-                    nxt.last.click()
-                    page.wait_for_timeout(500)
-        if date_in.input_value() != tanggal:
-            raise RuntimeError(f"tanggal tidak bisa dipilih (terbaca {date_in.input_value()}, perlu {tanggal})")
+            if parse_date_text(date_in.input_value()) == when.date():
+                break
+            nxt = _visible(page.locator(f"{cal}//*[contains(@class,'arrow') or contains(@class,'next') or @aria-label='Next month']"))
+            if nxt:  # mungkin bulan berikutnya
+                nxt[-1].click()
+                page.wait_for_timeout(500)
 
-    jam_in.click()
-    pick = page.locator(".tiktok-timepicker-time-picker-container:not(.tiktok-timepicker-invisible)")
-    pick.wait_for(state="visible", timeout=5000)
-    for cls, val in (("tiktok-timepicker-left", hh), ("tiktok-timepicker-right", mm)):
-        opt = pick.locator(f"span.{cls}", has_text=re.compile(rf"^{val}$"))
-        opt.scroll_into_view_if_needed()
-        opt.click()
-        page.wait_for_timeout(400)
-    page.locator("div[data-e2e='schedule_container'] .scheduled-title-container").click()  # tutup pemilih
-    page.wait_for_timeout(500)
-    got = (jam_in.input_value(), date_in.input_value())
-    if got != (f"{hh}:{mm}", tanggal) or not radio.is_checked():
-        raise RuntimeError(f"jadwal terbaca {got[1]} {got[0]}, seharusnya {tanggal} {hh}:{mm}")
-    say(f"  jadwal terpasang: {got[1]} {got[0]}")
+    if parse_time_text(jam_in.input_value()) != (when.hour, when.minute):
+        jam_in.click()
+        pick = page.locator(".tiktok-timepicker-time-picker-container:not(.tiktok-timepicker-invisible)")
+        pick.wait_for(state="visible", timeout=5000)
+        for cls, val in (("tiktok-timepicker-left", f"{when.hour:02d}"), ("tiktok-timepicker-right", f"{when.minute:02d}")):
+            opt = pick.locator(f"span.{cls}", has_text=re.compile(rf"^{val}$")).first
+            if not opt.count():
+                raise RuntimeError(f"pilihan jam {val} tidak ada")
+            opt.scroll_into_view_if_needed()
+            opt.click()
+            page.wait_for_timeout(400)
+        _close_picker(page, box)
+    return parse_date_text(date_in.input_value()), parse_time_text(jam_in.input_value())
+
+
+def set_schedule_picker(page, box, when):
+    """Tampilan 2026-11 (sebagian akun): combobox "Select date" (kalender bertombol ber-aria-label
+    "Sunday, November 29th, 2026") + combobox "Select time" (kolom listbox "Hours"/"Minutes", opsi "Hours 07")."""
+    date_cb = box.locator(CB_DATE).first
+    time_cb = box.locator(CB_TIME).first
+    bulan = BULAN_EN[when.month - 1]
+    dialog = page.locator("[role='dialog']")
+
+    def value(cb) -> str:
+        v = cb.locator(".Picker__value")
+        return (v.first.inner_text() if v.count() else cb.inner_text()).strip()
+
+    if parse_date_text(value(date_cb)) != when.date():
+        date_cb.click()
+        page.wait_for_timeout(500)
+        # tombol hari dikenali dari aria-label-nya (nama kelas bisa berganti); "Sunday, November 29th, 2026"
+        label = re.compile(rf"\b{bulan} {when.day}(st|nd|rd|th)?,? {when.year}\b")
+        for _ in range(13):  # maju per bulan sampai tanggalnya tampil (jadwal maks. 10 hari: 1-2 kali)
+            days = _visible(dialog.locator("button[aria-label], [role='gridcell'][aria-label]"))
+            hit = [d for d in days if label.search(d.get_attribute("aria-label") or "") and _enabled(d)]
+            if hit:
+                hit[0].click()
+                break
+            nxt = _visible(dialog.locator("button[aria-label='Next month'], button[aria-label*='next' i]"))
+            if not nxt:
+                raise RuntimeError(f"tanggal {when.day} {bulan} {when.year} tidak ada di kalender")
+            nxt[0].click()
+            page.wait_for_timeout(400)
+        page.wait_for_timeout(600)
+
+    if parse_time_text(value(time_cb)) != (when.hour, when.minute):
+        time_cb.click()
+        page.wait_for_timeout(500)
+        for col, val in (("Hours", f"{when.hour:02d}"), ("Minutes", f"{when.minute:02d}")):
+            lb = dialog.locator(f"[role='listbox'][aria-label='{col}']").first
+            opt = lb.locator(f"[role='option'][aria-label='{col} {val}']")
+            if not opt.count():
+                opt = lb.locator("[role='option']", has_text=re.compile(rf"^\s*{val}\s*$"))
+            if not opt.count():
+                raise RuntimeError(f"pilihan {col} {val} tidak ada (menit TikTok kelipatan 5)")
+            if not _enabled(opt.first):
+                raise RuntimeError(f"{col} {val} tidak bisa dipilih (terlalu dekat atau sudah lewat)")
+            opt.first.scroll_into_view_if_needed()
+            opt.first.click()
+            page.wait_for_timeout(400)
+        if _visible(dialog.locator("[role='listbox']")):
+            _close_picker(page, box)
+        page.wait_for_timeout(300)
+    return parse_date_text(value(date_cb)), parse_time_text(value(time_cb))
 
 
 def patch_library(page, job: dict, state: dict, headless: bool = True):
@@ -615,7 +799,7 @@ def patch_library(page, job: dict, state: dict, headless: bool = True):
 
         return run
 
-    tup._set_schedule_video = set_schedule
+    tup._set_schedule_video = set_schedule_factory(state)
     if job.get("jadwalUTC"):  # konfirmasi untuk video terjadwal berbunyi "scheduled", bukan "uploaded"
         up = tup.config.selectors.upload
         if "scheduled" not in up.post_confirmation:
@@ -638,8 +822,9 @@ def patch_library(page, job: dict, state: dict, headless: bool = True):
             say("  label konten AI ...")
             set_ai_label(pg)
             state["labelAI"] = True
-        if job.get("jadwalUTC") and not pg.locator("input[name='postSchedule'][value='schedule']").is_checked():
-            raise RuntimeError("jadwal tidak terpasang di formulir; video tidak diposting")  # jangan pernah tayang langsung
+        if job.get("jadwalUTC") and (not state.get("jadwalTerbaca") or not pg.locator(SCHED_RADIO).is_checked()):
+            state.setdefault("jadwalGagal", "jadwal tidak terpasang di formulir")
+            raise JadwalGagal(state["jadwalGagal"])  # jangan pernah tayang langsung
         if job.get("latihan"):
             shot = job.get("screenshot")
             if shot:
@@ -682,6 +867,9 @@ def cmd_upload(a) -> int:
         say("Tidak ada layar di komputer ini: memakai browser tersembunyi.")
         headless = True
     state: dict = {}
+    SCHED_DIAG.clear()
+    if job.get("screenshotGagal"):
+        SCHED_DIAG.update(html=str(Path(job["screenshotGagal"]).with_name("tiktok-jadwal-gagal.html")), png=job["screenshotGagal"])
     col = Collect()
     logging.getLogger("tiktok_uploader").addHandler(col)
     with sync_playwright() as pw:
@@ -723,11 +911,16 @@ def cmd_upload(a) -> int:
             if job.get("latihan") and not state.get("posted"):
                 # Latihan dilempar sebagai pengecualian -> dicatat pustaka sebagai gagal; itu yang diharapkan
                 ok = bool(state.get("form")) and state.get("sampul") is True and (bool(state.get("labelAI")) or not job.get("labelAI"))
-                result(ok=ok, latihan=True, akun=akun, labelAI=bool(state.get("labelAI")), sampul=state.get("sampul"), sampulPesan=state.get("sampulPesan"), interaksi=state.get("interaksi"), screenshot=job.get("screenshot"),
+                if state.get("jadwalGagal"):
+                    result(ok=False, alasan="jadwal", latihan=True, akun=akun, pesan=state["jadwalGagal"])
+                    return 5
+                result(ok=ok, latihan=True, akun=akun, jadwalTerbaca=state.get("jadwalTerbaca"), labelAI=bool(state.get("labelAI")), sampul=state.get("sampul"), sampulPesan=state.get("sampulPesan"), interaksi=state.get("interaksi"), screenshot=job.get("screenshot"),
                        pesan=None if ok else "; ".join(errs[-3:]))
                 return 0 if ok else 5
             if failed or not state.get("posted"):
-                if state.get("sampul") is False:
+                if state.get("jadwalGagal"):
+                    result(ok=False, alasan="jadwal", akun=akun, pesan=state["jadwalGagal"])
+                elif state.get("sampul") is False:
                     result(ok=False, alasan="sampul", akun=akun, sampul=False, pesan=state.get("sampulPesan") or "sampul khusus tidak terpasang")
                 elif job.get("labelAI") and state.get("form") and not state.get("labelAI"):
                     result(ok=False, alasan="labelAI", akun=akun, pesan="label konten AI tidak bisa dicentang; unggah video ini manual")
@@ -740,7 +933,7 @@ def cmd_upload(a) -> int:
                     pass
                 return 5
             extra = {"tiruan": page.evaluate("window.__posted || null")} if mock else {}
-            result(ok=True, akun=akun, labelAI=bool(state.get("labelAI")), sampul=state.get("sampul"), sampulPesan=state.get("sampulPesan"), interaksi=state.get("interaksi"), browser=browser, **extra)
+            result(ok=True, akun=akun, jadwalTerbaca=state.get("jadwalTerbaca"), labelAI=bool(state.get("labelAI")), sampul=state.get("sampul"), sampulPesan=state.get("sampulPesan"), interaksi=state.get("interaksi"), browser=browser, **extra)
             return 0
         except Exception as e:
             msg = (str(e).strip().splitlines() or [type(e).__name__])[0][:200]

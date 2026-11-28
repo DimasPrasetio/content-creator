@@ -25,6 +25,14 @@
       <label class="Checkbox__root" id="lr" data-checked="false" data-disabled="false"><input type="checkbox" id="r" style="position:absolute;opacity:0;width:1px;height:1px"><span>Reuse of content</span></label>
       <div class="row"><span>AI-generated content</span><input type="checkbox" id="ai"></div>
     </div>
+    <!-- pemilih jadwal: varian dipilih CC_TIKTOK_MOCK_JADWAL = baru (combobox 2026-11, bawaan) | baru-macet (klik pertama
+         ke kalender tidak membuka apa-apa -> uji coba ulang) | lama (kolom input + tiktok-timepicker) | aneh (tidak dikenali) -->
+    <div data-e2e="schedule_container" id="sched">
+      <div class="scheduled-title-container">When to post</div>
+      <label><input type="radio" name="postSchedule" value="now" checked> Now</label>
+      <label><input type="radio" name="postSchedule" value="schedule" id="rsched"> Schedule</label>
+      <div class="scheduled-picker" id="spick" style="display:none"></div>
+    </div>
     <button data-e2e="post_video_button" data-disabled="false" id="post">Post</button>
   </div>
   <div id="done"></div>
@@ -56,8 +64,80 @@ for (const [l, i] of [["lc", "c"], ["lr", "r"]]) $(i).addEventListener("change",
 $("desc").addEventListener("input", () => ($("pop").style.display = /[#@][\w]+$/.test($("desc").innerText) ? "block" : "none"));
 $("desc").addEventListener("keydown", (e) => { if (e.key === "Escape") $("pop").style.display = "none"; });
 $("more").onclick = () => { $("adv").style.display = "block"; $("more").textContent = "Show less"; };
+// ---- pemilih jadwal tiruan ----
+const pad = (n) => String(n).padStart(2, "0");
+const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const MON = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAY = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+const ord = (n) => n + ((n % 100 >= 10 && n % 100 <= 20) ? "th" : ({1: "st", 2: "nd", 3: "rd"}[n % 10] || "th"));
+const today = new Date(); today.setHours(0, 0, 0, 0);
+const maxDay = new Date(today.getTime() + 10 * 864e5);
+let dateVal = ymd(today), timeVal = `${pad((new Date().getHours() + 1) % 24)}:00`, viewMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+let macet = (window.__mockJadwal || "baru") === "baru-macet";
+const shortDate = () => new Date(dateVal + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+const closePop = () => { const d = document.getElementById("pdlg"); if (d) d.remove(); const tp = document.getElementById("tpick"); if (tp) tp.remove(); const c = document.getElementById("cal"); if (c) c.remove(); };
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePop(); });
+document.querySelector(".scheduled-title-container").onclick = closePop;
+const monthDays = (onPick, oldStyle) => {
+  const y = viewMonth.getFullYear(), m = viewMonth.getMonth(), n = new Date(y, m + 1, 0).getDate();
+  let h = "";
+  for (let d = 1; d <= n; d++) {
+    const dd = new Date(y, m, d), off = dd < today || dd > maxDay;
+    h += oldStyle ? `<span class="day${off ? " disabled" : ""}" data-d="${ymd(dd)}">${d}</span> `
+                  : `<button class="DatePicker__day" data-disabled="${off}" aria-label="${DAY[dd.getDay()]}, ${MON[m]} ${ord(d)}, ${y}" data-d="${ymd(dd)}">${d}</button>`;
+  }
+  return `<span class="month-title">${MON[m]} ${y}</span>` + h;
+};
+function renderNew() {
+  $("spick").innerHTML = `<div role="combobox" aria-label="Select date" id="cbd" tabindex="0"><span class="Picker__value">${shortDate()}</span></div>
+    <div role="combobox" aria-label="Select time" id="cbt" tabindex="0"><span class="Picker__value">${timeVal}</span></div>`;
+  $("cbd").onclick = () => { if (macet) { macet = false; return; } closePop(); openCal(); };
+  $("cbt").onclick = () => { closePop(); openTime(); };
+}
+function openCal() {
+  const dlg = document.createElement("div"); dlg.id = "pdlg"; dlg.setAttribute("role", "dialog");
+  dlg.innerHTML = `<div class="Picker__panel"><div class="DatePicker__panel"><button class="DatePicker__nav" aria-label="Previous month">&lsaquo;</button><button class="DatePicker__nav" aria-label="Next month">&rsaquo;</button>${monthDays(null, false)}</div></div>`;
+  document.body.appendChild(dlg);
+  dlg.querySelector("[aria-label='Next month']").onclick = () => { viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1); closePop(); openCal(); };
+  for (const b of dlg.querySelectorAll(".DatePicker__day")) b.onclick = () => { if (b.dataset.disabled === "true") return; dateVal = b.dataset.d; closePop(); renderNew(); };
+}
+function openTime() {
+  const dlg = document.createElement("div"); dlg.id = "pdlg"; dlg.setAttribute("role", "dialog");
+  let hs = "", ms = "";
+  for (let h = 0; h < 24; h++) hs += `<div role="option" aria-label="Hours ${pad(h)}" data-disabled="false" data-v="${pad(h)}">${pad(h)}</div>`;
+  for (let m = 0; m < 60; m += 5) ms += `<div role="option" aria-label="Minutes ${pad(m)}" data-disabled="false" data-v="${pad(m)}">${pad(m)}</div>`;
+  dlg.innerHTML = `<div class="Picker__panel"><div class="TimePicker__panel"><div role="listbox" aria-label="Hours">${hs}</div><div role="listbox" aria-label="Minutes">${ms}</div></div></div>`;
+  document.body.appendChild(dlg);
+  for (const o of dlg.querySelectorAll("[aria-label='Hours'] [role=option]")) o.onclick = () => { timeVal = o.dataset.v + timeVal.slice(2); document.querySelector("#cbt .Picker__value").textContent = timeVal; };
+  for (const o of dlg.querySelectorAll("[aria-label='Minutes'] [role=option]")) o.onclick = () => { timeVal = timeVal.slice(0, 3) + o.dataset.v; document.querySelector("#cbt .Picker__value").textContent = timeVal; };
+}
+function renderOld() {
+  $("spick").innerHTML = `<input class="TUXTextInputCore-input" id="ti" readonly value="${timeVal}"><input class="TUXTextInputCore-input" id="di" readonly value="${dateVal}">`;
+  $("di").onclick = () => { closePop(); openOldCal(); };
+  $("ti").onclick = () => {
+    closePop();
+    const tp = document.createElement("div"); tp.id = "tpick"; tp.className = "tiktok-timepicker-time-picker-container";
+    let h = ""; for (let i = 0; i < 24; i++) h += `<span class="tiktok-timepicker-left">${pad(i)}</span> `;
+    for (let i = 0; i < 60; i += 5) h += `<span class="tiktok-timepicker-right">${pad(i)}</span> `;
+    tp.innerHTML = h; document.body.appendChild(tp);
+    for (const o of tp.querySelectorAll(".tiktok-timepicker-left")) o.onclick = () => { timeVal = o.textContent + timeVal.slice(2); $("ti").value = timeVal; };
+    for (const o of tp.querySelectorAll(".tiktok-timepicker-right")) o.onclick = () => { timeVal = timeVal.slice(0, 3) + o.textContent; $("ti").value = timeVal; };
+  };
+}
+function openOldCal() {
+  const c = document.createElement("div"); c.id = "cal"; c.className = "calendar-wrapper";
+  c.innerHTML = `<span class="arrow next">&rsaquo;</span> ` + monthDays(null, true);
+  document.body.appendChild(c);
+  c.querySelector(".arrow").onclick = () => { viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1); closePop(); openOldCal(); };
+  for (const d of c.querySelectorAll(".day")) d.onclick = () => { if (d.classList.contains("disabled")) return; dateVal = d.dataset.d; $("di").value = dateVal; closePop(); };
+}
+$("rsched").onchange = () => {
+  $("spick").style.display = "block";
+  const v = window.__mockJadwal || "baru";
+  if (v === "lama") renderOld(); else if (v === "aneh") $("spick").innerHTML = '<div class="slot-chooser">Pick a slot</div>'; else renderNew();
+};
 $("post").onclick = () => {
-  window.__posted = { caption: $("desc").innerText, ai: $("ai").checked, comment: $("c").checked, reuse: $("r").checked, cover: !!window.__cover, checksOn: !!window.__checksOn };
+  window.__posted = { jadwal: $("rsched").checked ? `${dateVal} ${timeVal}` : null, caption: $("desc").innerText, ai: $("ai").checked, comment: $("c").checked, reuse: $("r").checked, cover: !!window.__cover, checksOn: !!window.__checksOn };
   $("done").textContent = "Your video has been uploaded";
 };
 </script>

@@ -14,6 +14,7 @@ export async function tiktokTest({ npm, rows, step, keep }) {
   const env0 = { dir: process.env.CC_TIKTOK_DIR, mock: process.env.CC_TIKTOK_MOCK };
   delete process.env.CC_TIKTOK_MOCK_COVER;
   delete process.env.CC_TIKTOK_MOCK_CAPTCHA;
+  delete process.env.CC_TIKTOK_MOCK_JADWAL;
   const clean = () => {
     for (const d of [p.dir, p.work, p.resultDir, base]) rmSync(d, { recursive: true, force: true });
   };
@@ -86,12 +87,32 @@ export async function tiktokTest({ npm, rows, step, keep }) {
     const c = (json(path.join(p.dir, "tiktok.json"), { unggahan: [] }).unggahan.at(-1)) ?? {};
     row("tiktok: CAPTCHA di headless -> batal + saran --jendela", c.ok === false && c.alasan === "captcha" && /--jendela/.test(step.last) && /TIDAK diunggah/.test(step.last), `${c.alasan} · ${c.pesan ?? ""}`);
 
-    npm("tiktok: unggah ke halaman tiruan (--headless lama tetap diterima)", "tiktok", [NAME, "--sekarang", "--headless"]);
+    // pemilih jadwal: besok 10:45 WIB, diisi lewat tiap tampilan TikTok yang dikenal lalu DIBACA ULANG dari formulir.
+    // Tampilan yang tidak dikenali -> batal + diagnostik, video tidak pernah tayang langsung (kegagalan 2026-11-28).
+    const J = `${new Date(Date.now() + 864e5 + 7 * 36e5).toISOString().slice(0, 10)} 10:45`;
+    const jd = new Date(m.parseSchedule(J).utc), two = (n) => String(n).padStart(2, "0");
+    const lokal = `${jd.getFullYear()}-${two(jd.getMonth() + 1)}-${two(jd.getDate())} ${two(jd.getHours())}:${two(jd.getMinutes())}`; // zona browser
+    const lastEntry = () => (json(path.join(p.dir, "tiktok.json"), { unggahan: [] }).unggahan.at(-1)) ?? {};
+    for (const v of ["lama", "baru-macet"]) {
+      process.env.CC_TIKTOK_MOCK_JADWAL = v;
+      npm(`tiktok: latihan jadwal (pemilih ${v})`, "tiktok", [NAME, "--latihan", `--jadwal=${J}`], { allowFail: true });
+      delete process.env.CC_TIKTOK_MOCK_JADWAL;
+      const e = lastEntry();
+      row(`tiktok: jadwal terpasang & terbaca ulang (pemilih ${v})`, e.ok === true && e.latihan === true && e.jadwalTerbaca === lokal && /dibaca ulang dari formulir/.test(step.last), `${e.jadwalTerbaca ?? e.pesan ?? "?"} vs ${lokal}`);
+    }
+    process.env.CC_TIKTOK_MOCK_JADWAL = "aneh";
+    npm("tiktok: pemilih jadwal tak dikenal -> batal", "tiktok", [NAME, `--jadwal=${J}`], { allowFail: true });
+    delete process.env.CC_TIKTOK_MOCK_JADWAL;
+    const ja = lastEntry();
+    row("tiktok: jadwal gagal -> tidak diposting + diagnostik", ja.ok === false && ja.alasan === "jadwal" && !ja.tiruan && existsSync(path.join(p.dir, "posting", "tiktok-jadwal-gagal.html")) && /TIDAK diunggah/.test(step.last), `${ja.alasan} · ${ja.pesan ?? ""}`);
+
+    npm("tiktok: unggah terjadwal ke halaman tiruan (--headless lama tetap diterima)", "tiktok", [NAME, `--jadwal=${J}`, "--headless"]);
     const rec = json(path.join(p.dir, "tiktok.json"), { unggahan: [] });
     const last = rec.unggahan.at(-1) ?? {};
-    row("tiktok: tercatat di tiktok.json", last.ok === true && !last.latihan && last.labelAI === true && last.akun === "@akun_uji" && rec.unggahan.length === 4, `${rec.unggahan.length} entri`);
+    row("tiktok: tercatat di tiktok.json", last.ok === true && !last.latihan && last.labelAI === true && last.akun === "@akun_uji" && rec.unggahan.length === 7, `${rec.unggahan.length} entri`);
     const t = last.tiruan ?? {};
     row("tiktok: popup ditutup; caption, sampul (Edit cover), komentar/reuse, label AI terisi", /Video uji unggah otomatis!/.test(t.caption ?? "") && /#belajar #fyp/.test(t.caption ?? "") && !/nama-file-video/.test(t.caption ?? "") && t.cover && last.sampul === true && t.ai && t.comment && t.reuse && last.interaksi?.Comment === "ya" && !t.checksOn, JSON.stringify(t.caption ?? "").slice(0, 60));
+    row("tiktok: jadwal ikut terposting (pemilih combobox)", t.jadwal === lokal && last.jadwalTerbaca === lokal && /Terjadwal tayang/.test(step.last), `${t.jadwal} vs ${lokal}`);
     row("tiktok: tidak ada cookie di keluaran", !/nilai-uji|sessionid/i.test(step.last));
 
     npm("tiktok: tolak unggah ganda", "tiktok", [NAME, "--sekarang"], { allowFail: true });

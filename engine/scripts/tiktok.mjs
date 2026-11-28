@@ -284,6 +284,7 @@ const main = async () => {
     privat: job.privat || undefined,
     labelAI: res?.labelAI ?? false,
     sampul: res?.sampul ?? null,
+    ...(res?.jadwalTerbaca ? { jadwalTerbaca: res.jadwalTerbaca } : {}), // jadwal yang dibaca ulang dari formulir TikTok
     ...(res?.interaksi ? { interaksi: res.interaksi } : {}),
     detik: Math.round((Date.now() - t0) / 1000),
     ...(res?.tiruan ? { tiruan: res.tiruan } : {}), // selftest: isi formulir halaman tiruan
@@ -292,6 +293,7 @@ const main = async () => {
   rec.unggahan.push(entry);
   writeFileSync(recPath, JSON.stringify(rec, null, 2) + "\n");
   if (status === 0 && res?.ok) {
+    if (res?.jadwalTerbaca) console.log(`  jadwal   : ${res.jadwalTerbaca} (dibaca ulang dari formulir TikTok)`);
     if (res?.interaksi) console.log(`  interaksi: ${Object.entries(res.interaksi).map(([k, v]) => `${k} ${v}`).join(" · ")}`);
     if (job.latihan) return console.log(`\nLatihan selesai: formulir terisi${entry.labelAI ? " + label AI tercentang" : ""}, TIDAK diposting. Tangkapan: ${path.relative(ROOT, job.screenshot)}`);
     return console.log(`\n${sched ? `Terjadwal tayang ${sched.local} WIB` : "Terunggah"} di TikTok ${entry.akun ?? slug}${entry.labelAI ? " (berlabel konten AI)" : ""}. Tercatat di ${path.relative(ROOT, recPath)}.`);
@@ -303,6 +305,7 @@ const main = async () => {
     captcha: res?.headless === false
       ? `TikTok meminta CAPTCHA dan tidak diselesaikan di jendela (${res?.pesan ?? "?"}), jadi video TIDAK diunggah. Ulangi perintah yang sama dengan --jendela dan selesaikan CAPTCHA-nya sendiri`
       : `TikTok meminta CAPTCHA (verifikasi manusia). Browser tersembunyi tidak bisa menampilkannya, jadi video TIDAK diunggah. Ulangi perintah yang sama dengan --jendela, lalu pengguna menyelesaikan CAPTCHA sendiri di jendela yang terbuka`,
+    jadwal: `jadwal tidak bisa dipasang di formulir TikTok (${res?.pesan ?? "?"}), jadi video TIDAK diunggah (tidak pernah tayang langsung). Diagnostik pemilih jadwal: ${path.relative(ROOT, path.join(path.dirname(job.screenshotGagal), "tiktok-jadwal-gagal.html"))} + ${path.relative(ROOT, job.screenshotGagal)}; tampilan TikTok kemungkinan berubah: perbaiki set_schedule di tiktok_upload.py, uji dengan --latihan, lalu ulangi`,
     labelAI: "label konten AI tidak bisa dicentang otomatis, jadi video TIDAK diunggah. Unggah manual lewat aplikasi/web TikTok dan nyalakan label AI",
   }[entry.alasan] ?? `${entry.pesan ?? "gagal"}. Bisa karena tampilan TikTok berubah, CAPTCHA, atau jaringan; lihat ${path.relative(ROOT, job.screenshotGagal)}`;
   throw new Error(`Unggah TikTok gagal: ${why}`);
