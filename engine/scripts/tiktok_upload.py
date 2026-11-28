@@ -522,6 +522,75 @@ def dismiss_popups(page, rounds: int = 4) -> int:
     return closed
 
 
+def set_schedule(page, schedule):
+    """Isi jadwal di formulir TikTok Studio (tampilan 2026: radio Now/Schedule + izin + pemilih jam & tanggal).
+
+    Gagal di langkah mana pun -> exception, sehingga video tidak pernah terposting langsung."""
+    import pytz
+
+    tz = pytz.timezone(page.evaluate("Intl.DateTimeFormat().resolvedOptions().timeZone"))
+    when = schedule.astimezone(tz)
+    hh, mm, tanggal = f"{when.hour:02d}", f"{when.minute:02d}", when.strftime("%Y-%m-%d")
+    say(f"  jadwal {tanggal} {hh}:{mm} ({tz.zone}) ...")
+    box = page.locator("div[data-e2e='schedule_container']")
+    radio = box.locator("input[name='postSchedule'][value='schedule']")
+    radio.locator("xpath=ancestor::label[1]").click()
+    allow = page.get_by_role("button", name="Allow", exact=True)
+    try:
+        allow.wait_for(state="visible", timeout=4000)
+        allow.click()
+    except Exception:
+        pass  # izin sudah pernah diberikan
+    page.wait_for_timeout(800)
+    if not radio.is_checked():
+        raise RuntimeError("pilihan Schedule tidak aktif")
+    inputs = box.locator(".scheduled-picker input.TUXTextInputCore-input")
+    inputs.first.wait_for(state="visible", timeout=10000)
+    jam_in = date_in = None
+    for k in range(inputs.count()):
+        v = inputs.nth(k).input_value()
+        if re.fullmatch(r"\d{2}:\d{2}", v):
+            jam_in = inputs.nth(k)
+        elif re.fullmatch(r"\d{4}-\d{2}-\d{2}", v):
+            date_in = inputs.nth(k)
+    if jam_in is None or date_in is None:
+        raise RuntimeError("pemilih jam/tanggal tidak ditemukan")
+
+    if date_in.input_value() != tanggal:
+        date_in.click()
+        page.wait_for_timeout(600)
+        hari = page.locator(f"xpath=//*[contains(@class,'calendar') or contains(@class,'Calendar')]//*[normalize-space(text())='{when.day}' and not(contains(@class,'disabled'))]")
+        for _ in range(3):
+            if date_in.input_value() == tanggal:
+                break
+            vis = [hari.nth(k) for k in range(hari.count()) if hari.nth(k).is_visible()]
+            if vis:
+                vis[0].click()
+                page.wait_for_timeout(500)
+            if date_in.input_value() != tanggal:  # mungkin bulan berikutnya
+                nxt = page.locator("xpath=//*[contains(@class,'calendar') or contains(@class,'Calendar')]//*[contains(@class,'arrow') or contains(@class,'next')]")
+                if nxt.count():
+                    nxt.last.click()
+                    page.wait_for_timeout(500)
+        if date_in.input_value() != tanggal:
+            raise RuntimeError(f"tanggal tidak bisa dipilih (terbaca {date_in.input_value()}, perlu {tanggal})")
+
+    jam_in.click()
+    pick = page.locator(".tiktok-timepicker-time-picker-container:not(.tiktok-timepicker-invisible)")
+    pick.wait_for(state="visible", timeout=5000)
+    for cls, val in (("tiktok-timepicker-left", hh), ("tiktok-timepicker-right", mm)):
+        opt = pick.locator(f"span.{cls}", has_text=re.compile(rf"^{val}$"))
+        opt.scroll_into_view_if_needed()
+        opt.click()
+        page.wait_for_timeout(400)
+    page.locator("div[data-e2e='schedule_container'] .scheduled-title-container").click()  # tutup pemilih
+    page.wait_for_timeout(500)
+    got = (jam_in.input_value(), date_in.input_value())
+    if got != (f"{hh}:{mm}", tanggal) or not radio.is_checked():
+        raise RuntimeError(f"jadwal terbaca {got[1]} {got[0]}, seharusnya {tanggal} {hh}:{mm}")
+    say(f"  jadwal terpasang: {got[1]} {got[0]}")
+
+
 def patch_library(page, job: dict, state: dict, headless: bool = True):
     """Sambungkan tiktok-uploader ke browser ber-profil kita, bungkam cetakan cookie, sisipkan label AI & latihan."""
     import tiktok_uploader.auth as tauth
@@ -546,6 +615,12 @@ def patch_library(page, job: dict, state: dict, headless: bool = True):
 
         return run
 
+    tup._set_schedule_video = set_schedule
+    if job.get("jadwalUTC"):  # konfirmasi untuk video terjadwal berbunyi "scheduled", bukan "uploaded"
+        up = tup.config.selectors.upload
+        if "scheduled" not in up.post_confirmation:
+            up.post_confirmation = up.post_confirmation[:-1] + " or contains(text(), 'scheduled') or contains(text(), 'Scheduled')]"
+
     for name in ("_set_video", "_set_cover", "_remove_split_window", "_set_interactivity", "_set_description", "_set_visibility", "_set_schedule_video"):
         if hasattr(tup, name):
             setattr(tup, name, guarded(getattr(tup, name)))
@@ -563,6 +638,8 @@ def patch_library(page, job: dict, state: dict, headless: bool = True):
             say("  label konten AI ...")
             set_ai_label(pg)
             state["labelAI"] = True
+        if job.get("jadwalUTC") and not pg.locator("input[name='postSchedule'][value='schedule']").is_checked():
+            raise RuntimeError("jadwal tidak terpasang di formulir; video tidak diposting")  # jangan pernah tayang langsung
         if job.get("latihan"):
             shot = job.get("screenshot")
             if shot:
@@ -622,7 +699,9 @@ def cmd_upload(a) -> int:
                 result(ok=False, alasan="akun", pesan=f"browser login sebagai {akun}, bukan {job['akunDiharapkan']}")
                 return 4
             tup = patch_library(page, job, state, headless)
-            sched = dt.datetime.fromisoformat(job["jadwalUTC"]).astimezone(dt.timezone.utc) if job.get("jadwalUTC") else None
+            # tiktok-uploader hanya menerima jam naif (dianggap jam lokal komputer) atau UTC naif-pytz; jam ber-tzinfo UTC
+            # dari datetime standar ditolak pytz.localize ("Not naive datetime"). Kirim jam lokal tanpa tzinfo.
+            sched = dt.datetime.fromisoformat(job["jadwalUTC"]).astimezone().replace(tzinfo=None) if job.get("jadwalUTC") else None
             up = tup.TikTokUploader(cookies_list=[c for c in ctx.cookies(MAIN)], browser="chromium", headless=headless)
             say(f"Mengunggah ke TikTok {akun or ''} ({'jadwal ' + job['jadwalLokal'] if sched else 'tayang sekarang'}"
                 f"{', privat' if job.get('privat') else ''}{', LATIHAN tanpa klik Post' if job.get('latihan') else ''}) ...")
